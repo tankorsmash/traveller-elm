@@ -34,6 +34,7 @@ import RemoteData exposing (RemoteData)
 import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (fill, points, viewBox)
 import Svg.Styled.Events as SvgEvents
+import Svg.Styled.Lazy
 import Traveller.HexId as HexId exposing (HexId)
 import Traveller.SectorData exposing (SectorData, SectorSolarSystem, codecSectorData)
 
@@ -598,7 +599,8 @@ view model =
             -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
             case model.sectorData of
                 RemoteData.Success sectorData ->
-                    Html.toUnstyled (viewHexes sectorData model.offset model.playerHex model.hexScale)
+                    Svg.Styled.Lazy.lazy4 viewHexes sectorData model.offset model.playerHex model.hexScale
+                        |> Html.toUnstyled
 
                 _ ->
                     Html.toUnstyled <| Html.text "Loading..."

@@ -6,6 +6,7 @@ import Chart.Item as CI
 import Codec
 import Dict exposing (Dict)
 import Element exposing (Element)
+import Element.Lazy
 import Element.Background as Background
 import Element.Border as Border
 import Element.Events as Events
