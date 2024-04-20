@@ -76,7 +76,7 @@ init : ( Model, Cmd Msg )
 init =
     ( { hexScale = 35
       , sectorData = RemoteData.NotAsked
-      , offset = ( 0.2, 0.1 )
+      , offset = ( 0.0, 0.0 )
       , playerHex = HexId.createFromInt 135
       , hoveringHex = Nothing
       }
@@ -463,7 +463,7 @@ viewHexes ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexI
                     (\colIdx origin ->
                         let
                             idx =
-                                rowIdx * numHexCols + colIdx
+                                rowIdx + (colIdx + 1) * 100 + 1
 
                             solarSystem =
                                 Dict.get idx solarSystemDict
