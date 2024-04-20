@@ -24,7 +24,7 @@
         node: document.getElementById("root"),
       });
 
-      elm.ports.writeToLocalStorage.subscribe(receiveFromElm);
+      <!-- elm.ports.writeToLocalStorage.subscribe(receiveFromElm); -->
 
       elm.ports.toggleDialog.subscribe(id => {
         console.log("toggling")
