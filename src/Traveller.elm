@@ -93,17 +93,20 @@ hoverableStyle =
 hexagonPoints : ( Int, Int ) -> Float -> String
 hexagonPoints ( xOrigin, yOrigin ) size =
     let
+        a =
+            2 * pi / 6
+
         angle deg =
-            deg * pi / 180
+            (deg + 90) * pi / 180
 
         x n =
             toFloat xOrigin
-                + (size * cos (angle (60 * n - 30)))
+                + (size * cos (a * n))
                 |> String.fromFloat
 
         y n =
             toFloat yOrigin
-                + (size * sin (angle (60 * n - 30)))
+                + (size * sin (a * n))
                 |> String.fromFloat
 
         buildPoint n =
@@ -165,7 +168,7 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
             , SvgAttrs.stroke <|
                 ifStarOrNot "#4A0000" defaultHexBg
             , SvgAttrs.strokeWidth <|
-                ifStarOrNot "5" "2"
+                ifStarOrNot "3" "2"
             , SvgAttrs.pointerEvents "visiblePainted"
             , Html.Styled.Events.onClick NoOpMsg
             , SvgAttrs.css [ hoverableStyle ]
@@ -266,7 +269,7 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
 
 
 defaultHexBg =
-    "#4A90E2"
+    "#e3e3e3"
 
 
 viewHexSimple : Maybe SectorSolarSystem -> HexId -> Int -> HexOrigin -> Float -> Svg Msg
@@ -275,13 +278,11 @@ viewHexSimple maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
         systemName =
             maybeSolarSystem
                 |> Maybe.map (.coordinates >> .raw)
-                -- |> Maybe.andThen (.stars >> List.head)
-                -- |> Maybe.map (\)
                 |> Maybe.withDefault "Unknown"
 
         hexBg =
             if playerHexId.value == hexIdx then
-                "#0A00E2"
+                "#FF30E2"
 
             else
                 defaultHexBg
@@ -319,7 +320,7 @@ viewHexSimple maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
             , SvgAttrs.stroke <|
                 ifStarOrNot "#4A0000" defaultHexBg
             , SvgAttrs.strokeWidth <|
-                ifStarOrNot "5" "2"
+                ifStarOrNot "3" "2"
             , SvgAttrs.pointerEvents "visiblePainted"
             , SvgEvents.onClick NoOpMsg
             ]
@@ -383,16 +384,59 @@ hexHeight =
     floor <| toFloat hexWidth * 1.2
 
 
+isEmptyHex : Maybe a -> Int
+isEmptyHex maybeSolarSystem =
+    case maybeSolarSystem of
+        Just solarSystem ->
+            1
+
+        Nothing ->
+            0
+
+
+hexColOffset row =
+    if remainderBy 2 row == 0 then
+        0
+
+    else
+        1
+
+
 {-| View all the hexes in the system
 -}
 viewHexes : ( SectorData, Dict.Dict Int SectorSolarSystem ) -> ( Float, Float ) -> HexId -> Float -> Html Msg
-viewHexes ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexId hexScale =
+viewHexes ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexId hexSize =
     let
         calcOrigin : Int -> Int -> HexOrigin
-        calcOrigin row col =
-            ( floor <| (hexScale * 1.8) + (hexScale * 1.8) * toFloat col + (hexScale * 0.89 * (toFloat <| modBy 2 row))
-            , floor <| (hexScale * 1.8) + hexScale * 2 * 0.75 * toFloat row
-            )
+        calcOrigin col row =
+            let
+                r =
+                    hexSize / 2
+
+                a =
+                    2 * pi / 6
+
+                x =
+                    r + toFloat col * (r + r * sin a)
+
+                y =
+                    r + toFloat row * hexSize + r * hexColOffset col * sin a
+
+                dc =
+                    Debug.log "col " col
+
+                dr =
+                    Debug.log "Row " row
+
+                dx =
+                    Debug.log "x " x
+
+                dy =
+                    Debug.log "y " y
+
+                --r + ((-1 ^ toFloat col) * (r * toFloat col) * sin a)
+            in
+            ( floor x, floor y )
 
         viewHexRow rowIdx =
             List.range 0 numHexCols
@@ -402,36 +446,42 @@ viewHexes ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexI
                         let
                             solarSystem =
                                 Dict.get (rowIdx * numHexCols + colIdx) solarSystemDict
-                        in
-                        if hexScale <= 35 then
-                            viewHexSimple solarSystem playerHexId (rowIdx * numHexCols + colIdx) origin hexScale
 
-                        else
-                            viewHexDetailed solarSystem playerHexId (rowIdx * numHexCols + colIdx) origin hexScale
+                            hexSVG =
+                                if hexSize <= 35 then
+                                    viewHexSimple solarSystem playerHexId (rowIdx * numHexCols + colIdx) origin hexSize
+
+                                else
+                                    viewHexDetailed solarSystem playerHexId (rowIdx * numHexCols + colIdx) origin hexSize
+                        in
+                        ( hexSVG, isEmptyHex solarSystem )
                     )
     in
-    Svg.svg
-        [ SvgAttrs.width "600"
-        , SvgAttrs.height "500"
-        , let
-            xOffset =
-                -- view horizontal offset
-                String.fromFloat (hexScale * numHexCols * horizOffset)
+    List.range 0 numHexRows
+        |> List.map viewHexRow
+        |> List.concat
+        |> List.sortBy Tuple.second
+        |> List.map Tuple.first
+        |> Svg.svg
+            [ SvgAttrs.width "600"
+            , SvgAttrs.height "500"
+            , let
+                xOffset =
+                    -- view horizontal offset
+                    String.fromFloat (hexSize * numHexCols * horizOffset)
 
-            yOffset =
-                -- view vertical offset
-                String.fromFloat (hexScale * numHexRows * vertOffset)
-          in
-          viewBox <|
-            -- figure out a nicer way of dealing with this lol
-            (xOffset
-                ++ " "
-                ++ yOffset
-                ++ " 600 500"
-            )
-        ]
-    <|
-        (List.range 0 numHexRows |> List.map viewHexRow |> List.concat)
+                yOffset =
+                    -- view vertical offset
+                    String.fromFloat (hexSize * numHexRows * vertOffset)
+              in
+              viewBox <|
+                -- figure out a nicer way of dealing with this lol
+                (xOffset
+                    ++ " "
+                    ++ yOffset
+                    ++ " 600 500"
+                )
+            ]
 
 
 hexToCoords : HexId -> ( Int, Int )
@@ -587,16 +637,19 @@ update msg model =
         DownloadedSectorJson (Ok sectorData) ->
             let
                 sortedSolarSystems =
-                    sectorData.solarSystems |> List.sortBy (.coordinates >> .value)
+                    sectorData.solarSystems |> List.take 10 |> List.sortBy (.coordinates >> .value)
 
                 solarSystemDict =
                     sortedSolarSystems
                         |> List.map (\system -> ( system.coordinates.value, system ))
                         |> Dict.fromList
+
+                newSectorData =
+                    { sectorData | solarSystems = sortedSolarSystems }
             in
             ( { model
                 | sectorData =
-                    ( { sectorData | solarSystems = sortedSolarSystems }, solarSystemDict )
+                    ( newSectorData, solarSystemDict )
                         -- |> Debug.log "sector data"
                         |> RemoteData.Success
               }
