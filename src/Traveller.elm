@@ -434,25 +434,11 @@ viewHexes ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexI
                 a =
                     2 * pi / 6
 
-                -- x =
-                --     r + toFloat col * (r + r * sin a)
                 x =
                     r + toFloat col * (r + r * cos a)
 
                 y =
                     r + toFloat row * 2 * r * sin a + r * hexColOffset col * sin a
-
-                -- y =
-                --     -- r + toFloat row * hexSize + r * hexColOffset col * sin a
-                --     let
-                --         base =
-                --             r * sin a
-                --     in
-                --     hexSize
-                --         + base
-                --         + (base * toFloat (row - 0))
-                --         + (-1 ^ toFloat (col - 0) * base)
-                --r + ((-1 ^ toFloat col) * (r * toFloat col) * sin a)
             in
             ( floor x, floor y )
 
