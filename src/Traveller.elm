@@ -319,6 +319,7 @@ viewHexSimple maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
             , SvgAttrs.strokeWidth "1"
             , SvgAttrs.pointerEvents "visiblePainted"
             , SvgEvents.onClick NoOpMsg
+            , SvgAttrs.css [ hoverableStyle ]
             ]
             []
         , -- x,y
