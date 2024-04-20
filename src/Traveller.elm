@@ -97,9 +97,8 @@ hexagonPoints ( xOrigin, yOrigin ) size =
         a =
             2 * pi / 6
 
-        angle deg =
-            (deg + 90) * pi / 180
-
+        -- angle deg =
+        --     (deg + 90) * pi / 180
         x n =
             toFloat xOrigin
                 + (size * cos (a * n))
@@ -326,6 +325,12 @@ viewHexSimple maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
             , SvgEvents.onClick NoOpMsg
             ]
             []
+        , Svg.text_
+            [ SvgAttrs.x <| String.fromInt <| x
+            , SvgAttrs.y <| String.fromInt <| y
+            , SvgAttrs.fontSize "12"
+            ]
+            [ Svg.text (String.fromInt x ++ ", " ++ String.fromInt y)  ]
         , -- center star
           ifStarOrNot
             (Svg.circle
@@ -359,7 +364,7 @@ viewHexSimple maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                     []
                 ]
             )
-            (Svg.text "")
+            (Svg.text "asd")
         ]
 
 
@@ -409,31 +414,32 @@ viewHexes : ( SectorData, Dict.Dict Int SectorSolarSystem ) -> ( Float, Float ) 
 viewHexes ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexId hexSize =
     let
         calcOrigin : Int -> Int -> HexOrigin
-        calcOrigin col row =
+        calcOrigin row col =
             let
                 r =
-                    hexSize / 2
+                    hexSize / 1
 
                 a =
                     2 * pi / 6
 
+                -- x =
+                --     r + toFloat col * (r + r * sin a)
                 x =
-                    r + toFloat col * (r + r * sin a)
+                    r + toFloat col * (r + r * cos a)
 
                 y =
-                    r + toFloat row * hexSize + r * hexColOffset col * sin a
+                    r + toFloat row * 2 * r * sin a + r * hexColOffset col * sin a
 
-                dc =
-                    Debug.log "col " col
-
-                dr =
-                    Debug.log "Row " row
-
-                dx =
-                    Debug.log "x " x
-
-                dy =
-                    Debug.log "y " y
+                -- y =
+                --     -- r + toFloat row * hexSize + r * hexColOffset col * sin a
+                --     let
+                --         base =
+                --             r * sin a
+                --     in
+                --     hexSize
+                --         + base
+                --         + (base * toFloat (row - 0))
+                --         + (-1 ^ toFloat (col - 0) * base)
 
                 --r + ((-1 ^ toFloat col) * (r * toFloat col) * sin a)
             in
@@ -445,15 +451,18 @@ viewHexes ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexI
                 |> List.indexedMap
                     (\colIdx origin ->
                         let
+                            idx =
+                                rowIdx * numHexCols + colIdx
+
                             solarSystem =
-                                Dict.get (rowIdx * numHexCols + colIdx) solarSystemDict
+                                Dict.get idx solarSystemDict
 
                             hexSVG =
                                 if hexSize <= 35 then
-                                    viewHexSimple solarSystem playerHexId (rowIdx * numHexCols + colIdx) origin hexSize
+                                    viewHexSimple solarSystem playerHexId idx origin hexSize
 
                                 else
-                                    viewHexDetailed solarSystem playerHexId (rowIdx * numHexCols + colIdx) origin hexSize
+                                    viewHexDetailed solarSystem playerHexId idx origin hexSize
                         in
                         ( hexSVG, isEmptyHex solarSystem )
                     )
