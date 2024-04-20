@@ -325,12 +325,24 @@ viewHexSimple maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
             , SvgEvents.onClick NoOpMsg
             ]
             []
-        , Svg.text_
+        , -- x,y
+          Svg.text_
+            [ SvgAttrs.x <| String.fromInt <| x
+            , SvgAttrs.y <| String.fromInt <| (y - 10)
+            , SvgAttrs.fontSize "12"
+            , SvgAttrs.textAnchor "middle"
+            ]
+            [ Svg.text (String.fromInt x ++ ", " ++ String.fromInt y)
+            ]
+        , -- hex id
+          Svg.text_
             [ SvgAttrs.x <| String.fromInt <| x
             , SvgAttrs.y <| String.fromInt <| y
             , SvgAttrs.fontSize "12"
+            , SvgAttrs.textAnchor "middle"
             ]
-            [ Svg.text (String.fromInt x ++ ", " ++ String.fromInt y)  ]
+            [ Svg.text <| "h: " ++ String.fromInt hexIdx
+            ]
         , -- center star
           ifStarOrNot
             (Svg.circle
@@ -440,7 +452,6 @@ viewHexes ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexI
                 --         + base
                 --         + (base * toFloat (row - 0))
                 --         + (-1 ^ toFloat (col - 0) * base)
-
                 --r + ((-1 ^ toFloat col) * (r * toFloat col) * sin a)
             in
             ( floor x, floor y )
