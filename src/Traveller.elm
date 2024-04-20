@@ -126,7 +126,7 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                 |> Maybe.withDefault "Unknown"
 
         hexBg =
-            "#4A90E2"
+            "#ffffff"
 
         travelZoneColor =
             defaultHexBg
@@ -165,10 +165,8 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
           Svg.polygon
             [ points (hexagonPoints origin size)
             , SvgAttrs.fill defaultHexBg
-            , SvgAttrs.stroke <|
-                ifStarOrNot "#4A0000" defaultHexBg
-            , SvgAttrs.strokeWidth <|
-                ifStarOrNot "3" "2"
+            , SvgAttrs.stroke "#CCCCCC"
+            , SvgAttrs.strokeWidth "1"
             , SvgAttrs.pointerEvents "visiblePainted"
             , Html.Styled.Events.onClick NoOpMsg
             , SvgAttrs.css [ hoverableStyle ]
@@ -198,7 +196,7 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                     , SvgAttrs.r <| String.fromInt <| floor <| size * 0.7
                     , SvgAttrs.fill "none"
                     , SvgAttrs.stroke travelZoneColor
-                    , SvgAttrs.strokeWidth "3"
+                    , SvgAttrs.strokeWidth "1"
 
                     -- hack dashes to get the circle. hope you can find a better combo of numbers
                     , SvgAttrs.strokeDasharray "170"
@@ -269,7 +267,7 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
 
 
 defaultHexBg =
-    "#e3e3e3"
+    "#ffffff"
 
 
 viewHexSimple : Maybe SectorSolarSystem -> HexId -> Int -> HexOrigin -> Float -> Svg Msg
@@ -317,10 +315,8 @@ viewHexSimple maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
           Svg.polygon
             [ points (hexagonPoints origin size)
             , SvgAttrs.fill hexBg
-            , SvgAttrs.stroke <|
-                ifStarOrNot "#4A0000" defaultHexBg
-            , SvgAttrs.strokeWidth <|
-                ifStarOrNot "3" "2"
+            , SvgAttrs.stroke "#CCCCCC"
+            , SvgAttrs.strokeWidth "1"
             , SvgAttrs.pointerEvents "visiblePainted"
             , SvgEvents.onClick NoOpMsg
             ]
@@ -367,7 +363,7 @@ viewHexSimple maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                     , SvgAttrs.r <| String.fromInt <| floor <| size * 0.7
                     , SvgAttrs.fill "none"
                     , SvgAttrs.stroke travelZoneColor
-                    , SvgAttrs.strokeWidth "3"
+                    , SvgAttrs.strokeWidth "1"
 
                     -- hack dashes to get the circle. hope you can find a better combo of numbers
                     , SvgAttrs.strokeDasharray "170"
@@ -645,7 +641,7 @@ update msg model =
         DownloadedSectorJson (Ok sectorData) ->
             let
                 sortedSolarSystems =
-                    sectorData.solarSystems |> List.take 10 |> List.sortBy (.coordinates >> .value)
+                    sectorData.solarSystems |> List.sortBy (.coordinates >> .value)
 
                 solarSystemDict =
                     sortedSolarSystems
