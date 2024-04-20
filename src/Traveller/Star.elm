@@ -1,4 +1,4 @@
-module Traveller.System exposing (System, codecSystem, sampleSystemText)
+module Traveller.Star exposing (Star, codecStar, sampleSystemText)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -61,7 +61,7 @@ sampleSystemText =
 """
 
 
-type alias System =
+type alias Star =
     { orbitPosition : StellarPoint
     , inclination : Int
     , eccentricity : Float
@@ -90,9 +90,9 @@ type alias System =
     }
 
 
-codecSystem : Codec System
-codecSystem =
-    Codec.object System
+codecStar : Codec Star
+codecStar =
+    Codec.object Star
         |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
         |> Codec.field "inclination" .inclination Codec.int
         |> Codec.field "eccentricity" .eccentricity Codec.float

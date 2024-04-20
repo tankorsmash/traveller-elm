@@ -6,11 +6,11 @@ import Json.Encode as JsEncode
 import Parser exposing ((|.), (|=), Parser)
 import Parser.Extras as Parser
 import Traveller.HexId exposing (HexId, codecHexId)
-import Traveller.System exposing (System, codecSystem)
+import Traveller.Star exposing (Star, codecStar)
 
 
 type alias SectorSolarSystem =
-    { stars : List System, coordinates : HexId }
+    { stars : List Star, coordinates : HexId }
 
 
 type alias SectorData =
@@ -27,6 +27,6 @@ codecSectorData =
 codecSectorSolarSystems : Codec.Codec SectorSolarSystem
 codecSectorSolarSystems =
     Codec.object SectorSolarSystem
-        |> Codec.field "stars" .stars (Codec.list codecSystem)
+        |> Codec.field "stars" .stars (Codec.list codecStar)
         |> Codec.field "coordinates" .coordinates codecHexId
         |> Codec.buildObject
