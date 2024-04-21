@@ -57,6 +57,7 @@ type alias Model =
     , playerHex : HexId
     , hoveringHex : Maybe HexId
     , viewingHexId : Maybe HexId
+    , viewingHexOrigin : Maybe ( Int, Int )
     , viewport : Maybe Browser.Dom.Viewport
     }
 
@@ -95,6 +96,7 @@ init =
       , playerHex = HexId.createFromInt 135
       , hoveringHex = Nothing
       , viewingHexId = Nothing
+      , viewingHexOrigin = Nothing
       , viewport = Nothing
       }
     , Cmd.batch
@@ -433,8 +435,8 @@ calcOrigin hexSize row col =
 
 {-| View all the hexes in the system
 -}
-viewHexes : Browser.Dom.Viewport -> ( SectorData, Dict.Dict Int SolarSystem ) -> ( Float, Float ) -> HexId -> Float -> Html Msg
-viewHexes viewport ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexId hexSize =
+viewHexes : Maybe ( Int, Int ) -> Browser.Dom.Viewport -> ( SectorData, Dict.Dict Int SolarSystem ) -> ( Float, Float ) -> HexId -> Float -> Html Msg
+viewHexes viewingHexOrigin viewport ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexId hexSize =
     let
         viewHexRow rowIdx =
             List.range 0 numHexCols
@@ -461,14 +463,20 @@ viewHexes viewport ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) p
         |> List.map Tuple.first
         |> (let
                 width =
-                    String.fromFloat <| viewport.viewport.width * 0.9
+                    viewport.viewport.width * 0.9
 
                 height =
-                    String.fromFloat <| viewport.viewport.height * 0.9
+                    viewport.viewport.height * 0.9
+
+                stringWidth =
+                    String.fromFloat <| width
+
+                stringHeight =
+                    String.fromFloat <| height
             in
             Svg.svg
-                [ SvgAttrs.width <| width
-                , SvgAttrs.height <| height
+                [ SvgAttrs.width <| stringWidth
+                , SvgAttrs.height <| stringHeight
                 , let
                     xOffset =
                         -- view horizontal offset
@@ -479,15 +487,13 @@ viewHexes viewport ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) p
                         String.fromFloat (hexSize * numHexRows * vertOffset)
                   in
                   viewBox <|
-                    -- figure out a nicer way of dealing with this lol
-                    (xOffset
+                    xOffset
                         ++ " "
                         ++ yOffset
                         ++ " "
-                        ++ width
+                        ++ stringWidth
                         ++ " "
-                        ++ height
-                    )
+                        ++ stringHeight
                 ]
            )
 
@@ -624,6 +630,8 @@ view model =
                                            )
                                         ++ " "
                                         ++ star.stellarClass
+                                        ++ " origin: "
+                                        ++ Debug.toString model.viewingHexOrigin
                             in
                             solarSystem.stars
                                 |> List.map
@@ -650,7 +658,7 @@ view model =
             -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
             case ( model.sectorData, model.viewport ) of
                 ( RemoteData.Success sectorData, Just viewport ) ->
-                    Svg.Styled.Lazy.lazy5 viewHexes viewport sectorData model.offset model.playerHex model.hexScale
+                    Svg.Styled.Lazy.lazy6 viewHexes model.viewingHexOrigin viewport sectorData model.offset model.playerHex model.hexScale
                         |> Html.toUnstyled
 
                 _ ->
@@ -734,7 +742,12 @@ update msg model =
             ( { model | offset = Tuple.mapFirst (always horizOffset) model.offset }, Cmd.none )
 
         OffsetChanged Vertical vertOffset ->
-            ( { model | offset = Tuple.mapSecond (always vertOffset) model.offset }, Cmd.none )
+            ( { model
+                | offset =
+                    Tuple.mapSecond (always vertOffset) model.offset
+              }
+            , Cmd.none
+            )
 
         HoveringHex hoveringHex ->
             ( { model | hoveringHex = Just hoveringHex }, Cmd.none )
@@ -751,13 +764,39 @@ update msg model =
         ViewingHex hexId ->
             let
                 goodValX =
-                    Debug.log "y" <| (hexId.value // 100) - 1
+                    Debug.log "x" <| (hexId.value // 100) - 1
 
                 goodValY =
                     Debug.log "y" <| modBy 100 hexId.value - 1
 
-                origin =
+                ( ox, oy ) =
                     Debug.log "orign" <|
                         calcOrigin model.hexScale goodValY goodValX
+
+                ( fox, foy ) =
+                    ( toFloat ox, toFloat oy )
+
+                newOffsetPct : ( Float, Float )
+                newOffsetPct =
+                    let
+                        vpWidth =
+                            model.viewport
+                                |> Maybe.map (\vp -> vp.viewport.width * 0.9)
+                                |> Maybe.withDefault 100.0
+
+                        vpHeight =
+                            model.viewport
+                                |> Maybe.map (\vp -> vp.viewport.height * 0.9)
+                                |> Maybe.withDefault 100.0
+                    in
+                    ( clamp 0 1.0 <| Debug.log "x" ((fox - (vpWidth * 0.5)) / vpWidth)
+                    , clamp 0 1.0 (foy - (vpHeight * 0.5)) / vpHeight
+                    )
             in
-            ( { model | viewingHexId = Just hexId }, Cmd.none )
+            ( { model
+                | viewingHexId = Just hexId
+                , viewingHexOrigin = Just ( ox, oy )
+                , offset = Debug.log "new offset" newOffsetPct
+              }
+            , Cmd.none
+            )
