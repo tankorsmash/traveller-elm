@@ -705,7 +705,7 @@ update msg model =
                 Http.BadBody bodyErr ->
                     let
                         _ =
-                            Debug.log "bodyErr" bodyErr
+                            Debug.log bodyErr ""
                     in
                     Debug.todo "branch 'DownloadedSectorJson BadBody' not implemented"
 
