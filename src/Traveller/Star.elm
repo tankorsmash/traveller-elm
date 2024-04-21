@@ -133,7 +133,35 @@ type alias Star =
     , temperature : Int
     , age : Float
     , colour : Maybe StarColour
-    , companion : Maybe String
+    , companion : Maybe CompanionStar
+    , orbit : Float
+    , period : Float
+    , baseline : Int
+    , emptyOrbits : Int
+    , spread : Float
+    , availableOrbits : List ( Float, Float )
+    , stellarObjects : List StellarObject
+    , occupiedOrbits : List Float
+    , orbitSequence : String
+    , jump : Float
+    }
+
+
+type alias CompanionStar =
+    { orbitPosition : StellarPoint
+    , inclination : Int
+    , eccentricity : Float
+    , effectiveHZCODeviation : Maybe Float
+    , stellarClass : String
+    , stellarType : String
+    , totalObjects : Int
+    , subtype : Maybe Int
+    , orbitType : Int
+    , mass : Float
+    , diameter : Float
+    , temperature : Int
+    , age : Float
+    , colour : Maybe StarColour
     , orbit : Float
     , period : Float
     , baseline : Int
@@ -164,7 +192,37 @@ codecStar =
         |> Codec.field "temperature" .temperature Codec.int
         |> Codec.field "age" .age Codec.float
         |> Codec.optionalField "colour" .colour codecStarColour
-        |> Codec.field "companion" .companion (Codec.maybe Codec.string)
+        |> Codec.optionalNullableField "companion" .companion codecCompanionStar
+        |> Codec.field "orbit" .orbit Codec.float
+        |> Codec.field "period" .period Codec.float
+        |> Codec.field "baseline" .baseline Codec.int
+        |> Codec.field "emptyOrbits" .emptyOrbits Codec.int
+        |> Codec.field "spread" .spread Codec.float
+        |> Codec.field "availableOrbits" .availableOrbits (Codec.list (Codec.tuple Codec.float Codec.float))
+        |> Codec.field "stellarObjects" .stellarObjects (Codec.list codecStellarObject)
+        |> Codec.field "occupiedOrbits" .occupiedOrbits (Codec.list Codec.float)
+        |> Codec.field "orbitSequence" .orbitSequence Codec.string
+        |> Codec.field "jump" .jump Codec.float
+        |> Codec.buildObject
+
+
+codecCompanionStar : Codec CompanionStar
+codecCompanionStar =
+    Codec.object CompanionStar
+        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+        |> Codec.field "inclination" .inclination Codec.int
+        |> Codec.field "eccentricity" .eccentricity Codec.float
+        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
+        |> Codec.field "stellarClass" .stellarClass Codec.string
+        |> Codec.field "stellarType" .stellarType Codec.string
+        |> Codec.field "totalObjects" .totalObjects Codec.int
+        |> Codec.field "subtype" .subtype (Codec.nullable Codec.int)
+        |> Codec.field "orbitType" .orbitType Codec.int
+        |> Codec.field "mass" .mass Codec.float
+        |> Codec.field "diameter" .diameter Codec.float
+        |> Codec.field "temperature" .temperature Codec.int
+        |> Codec.field "age" .age Codec.float
+        |> Codec.optionalField "colour" .colour codecStarColour
         |> Codec.field "orbit" .orbit Codec.float
         |> Codec.field "period" .period Codec.float
         |> Codec.field "baseline" .baseline Codec.int

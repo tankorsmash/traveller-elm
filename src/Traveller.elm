@@ -523,8 +523,7 @@ view model =
             , max = 75
             , step = Just 5
             , value = model.hexScale
-            , thumb =
-                Input.defaultThumb
+            , thumb = Input.defaultThumb
             }
         , -- horiz slider
           let
@@ -540,8 +539,7 @@ view model =
             , max = 1.0
             , step = Just 0.025
             , value = horizOffset
-            , thumb =
-                Input.defaultThumb
+            , thumb = Input.defaultThumb
             }
         , -- vertical slider
           let
@@ -593,18 +591,29 @@ view model =
                                 )
                     of
                         Just solarSystem ->
+                            let
+                                renderStar star =
+                                    star.stellarClass
+                                        ++ ",  "
+                                        ++ star.stellarType
+                                        ++ (case star.subtype of
+                                                Just num ->
+                                                    ", " ++ String.fromInt num
+
+                                                Nothing ->
+                                                    ""
+                                           )
+                            in
                             solarSystem.stars
                                 |> List.map
                                     (\star ->
-                                        star.stellarClass
-                                            ++ ",  "
-                                            ++ star.stellarType
-                                            ++ (case star.subtype of
-                                                    Just num ->
-                                                        ", " ++ String.fromInt num
-
-                                                    Nothing ->
-                                                        ""
+                                        renderStar star
+                                            ++ (star.companion
+                                                    |> Maybe.map
+                                                        (\compStar ->
+                                                            "comp: " ++ renderStar (Debug.log "comp" compStar)
+                                                        )
+                                                    |> Maybe.withDefault ""
                                                )
                                     )
                                 |> List.map text
