@@ -199,6 +199,7 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
             , SvgAttrs.pointerEvents "visiblePainted"
             , Html.Styled.Events.onClick NoOpMsg
             , SvgAttrs.css [ hoverableStyle ]
+            , SvgEvents.onMouseOver (HoveringHex (HexId.createFromInt hexIdx))
             ]
             []
         , -- center star
@@ -215,7 +216,7 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                                 starColourRGB starColor
 
                             Nothing ->
-                                "white"
+                                "#FF00FF"
                     ]
                     []
           in
@@ -256,53 +257,55 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                 Html.text ""
         , ifStarOrNot
             (Svg.g []
-                [ -- travel zone ring
-                  Svg.circle
-                    [ SvgAttrs.cx <| String.fromInt <| x
-                    , SvgAttrs.cy <| String.fromInt <| y
-                    , SvgAttrs.r <| String.fromInt <| floor <| size * 0.7
-                    , SvgAttrs.fill "none"
-                    , SvgAttrs.stroke travelZoneColor
-                    , SvgAttrs.strokeWidth "1"
-
-                    -- hack dashes to get the circle. hope you can find a better combo of numbers
-                    , SvgAttrs.strokeDasharray "170"
-                    , SvgAttrs.strokeDashoffset "210"
-                    ]
-                    []
-
-                --, -- miliary base red star in the top left
-                --  Svg.circle
-                --    [ SvgAttrs.cx <| String.fromInt <| x - (floor <| size * 0.3)
-                --    , SvgAttrs.cy <| String.fromInt <| y - (floor <| size * 0.3)
-                --    , SvgAttrs.r "5"
-                --    , SvgAttrs.fill militaryBaseColor
-                --    ]
-                --    []
-                --, -- naval base  in the bottom left
-                --  Svg.circle
-                --    [ SvgAttrs.cx <| String.fromInt <| x - (floor <| size * 0.4)
-                --    , SvgAttrs.cy <| String.fromInt <| y + (floor <| size * 0.2)
-                --    , SvgAttrs.r "5"
-                --    , SvgAttrs.fill navalBaseColor
-                --    ]
-                --    []
-                -- hex index
-                , Svg.text_
+                [ --   -- travel zone ring
+                  -- Svg.circle
+                  --   [ SvgAttrs.cx <| String.fromInt <| x
+                  --   , SvgAttrs.cy <| String.fromInt <| y
+                  --   , SvgAttrs.r <| String.fromInt <| floor <| size * 0.7
+                  --   , SvgAttrs.fill "none"
+                  --   , SvgAttrs.stroke travelZoneColor
+                  --   , SvgAttrs.strokeWidth "1"
+                  --
+                  --   -- hack dashes to get the circle. hope you can find a better combo of numbers
+                  --   , SvgAttrs.strokeDasharray "170"
+                  --   , SvgAttrs.strokeDashoffset "210"
+                  --   ]
+                  --   []
+                  --, -- miliary base red star in the top left
+                  --  Svg.circle
+                  --    [ SvgAttrs.cx <| String.fromInt <| x - (floor <| size * 0.3)
+                  --    , SvgAttrs.cy <| String.fromInt <| y - (floor <| size * 0.3)
+                  --    , SvgAttrs.r "5"
+                  --    , SvgAttrs.fill militaryBaseColor
+                  --    ]
+                  --    []
+                  --, -- naval base  in the bottom left
+                  --  Svg.circle
+                  --    [ SvgAttrs.cx <| String.fromInt <| x - (floor <| size * 0.4)
+                  --    , SvgAttrs.cy <| String.fromInt <| y + (floor <| size * 0.2)
+                  --    , SvgAttrs.r "5"
+                  --    , SvgAttrs.fill navalBaseColor
+                  --    ]
+                  --    []
+                  -- hex index
+                  Svg.text_
                     [ SvgAttrs.x <| String.fromInt <| x
                     , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
                     , SvgAttrs.fontSize "12"
                     , SvgAttrs.textAnchor "middle"
                     ]
-                    [ Svg.text <| String.fromInt hexIdx ]
-                , -- starport
-                  Svg.text_
-                    [ SvgAttrs.x <| String.fromInt <| x
-                    , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.35)
-                    , SvgAttrs.textAnchor "middle"
+                    [ String.fromInt hexIdx
+                        |> String.pad 4 '0'
+                        |> Svg.text
                     ]
-                    [ Svg.text "A" ]
 
+                -- , -- starport
+                --   Svg.text_
+                --     [ SvgAttrs.x <| String.fromInt <| x
+                --     , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.35)
+                --     , SvgAttrs.textAnchor "middle"
+                --     ]
+                --     [ Svg.text "A" ]
                 -- , -- allegiance
                 --   Svg.text_
                 --     [ SvgAttrs.x <| String.fromInt <| x + (floor <| size * 0.55)
@@ -311,22 +314,22 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                 --     , SvgAttrs.fontSize "14"
                 --     ]
                 --     [ Svg.text allegiance ]
-                , -- UWP
-                  Svg.text_
-                    [ SvgAttrs.x <| String.fromInt <| x
-                    , SvgAttrs.y <| String.fromInt <| y + (floor <| size * 0.5)
-                    , SvgAttrs.fontFamily "Courier New"
-                    , SvgAttrs.fontSize "14"
-                    , SvgAttrs.textAnchor "middle"
-                    ]
-                    [ Svg.text "A7889C9–C" ]
-                , -- system name
-                  Svg.text_
-                    [ SvgAttrs.x <| String.fromInt <| x
-                    , SvgAttrs.y <| String.fromInt <| y + (floor <| size * 0.75)
-                    , SvgAttrs.textAnchor "middle"
-                    ]
-                    [ Svg.text systemName ]
+                -- , -- UWP
+                --   Svg.text_
+                --     [ SvgAttrs.x <| String.fromInt <| x
+                --     , SvgAttrs.y <| String.fromInt <| y + (floor <| size * 0.5)
+                --     , SvgAttrs.fontFamily "Courier New"
+                --     , SvgAttrs.fontSize "14"
+                --     , SvgAttrs.textAnchor "middle"
+                --     ]
+                --     [ Svg.text "A7889C9–C" ]
+                -- , -- system name
+                --   Svg.text_
+                --     [ SvgAttrs.x <| String.fromInt <| x
+                --     , SvgAttrs.y <| String.fromInt <| y + (floor <| size * 0.75)
+                --     , SvgAttrs.textAnchor "middle"
+                --     ]
+                --     [ Svg.text systemName ]
                 ]
             )
             (Svg.text "")
