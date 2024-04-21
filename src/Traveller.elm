@@ -794,14 +794,13 @@ update msg model =
         ViewingHex hexId ->
             let
                 goodValX =
-                    Debug.log "x" <| (hexId.value // 100) - 1
+                    (hexId.value // 100) - 1
 
                 goodValY =
-                    Debug.log "y" <| modBy 100 hexId.value - 1
+                    modBy 100 hexId.value - 1
 
                 ( ox, oy ) =
-                    Debug.log "orign" <|
-                        calcOrigin model.hexScale goodValY goodValX
+                    calcOrigin model.hexScale goodValY goodValX
 
                 ( fox, foy ) =
                     ( toFloat ox, toFloat oy )
@@ -810,21 +809,26 @@ update msg model =
                 newOffsetPct =
                     let
                         vpWidth =
-                            model.hexmapViewport
-                                |> Debug.log "hexmapViewport"
-                                |> Maybe.map
-                                    (Result.map (\vp -> vp.viewport.width * 0.9)
-                                        >> Result.withDefault 111
-                                    )
-                                |> Maybe.withDefault 6666.0
+                            case model.hexmapViewport of
+                                Nothing ->
+                                    Debug.todo "GotHexMapViewport doesnt exist yet"
+
+                                Just (Ok vp) ->
+                                    vp.viewport.width * 0.9
+
+                                Just (Err _) ->
+                                    Debug.todo "GotHexMapViewport error"
 
                         vpHeight =
-                            model.hexmapViewport
-                                |> Maybe.map
-                                    (Result.map (\vp -> vp.viewport.height * 0.9)
-                                        >> Result.withDefault 111
-                                    )
-                                |> Maybe.withDefault 100.0
+                            case model.hexmapViewport of
+                                Nothing ->
+                                    Debug.todo "GotHexMapViewport doesnt exist yet"
+
+                                Just (Ok vp) ->
+                                    vp.viewport.height * 0.9
+
+                                Just (Err _) ->
+                                    Debug.todo "GotHexMapViewport error"
                     in
                     ( (fox - (vpWidth * 0.5)) / vpWidth
                     , (foy - (vpHeight * 0.5)) / vpHeight
