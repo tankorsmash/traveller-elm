@@ -484,11 +484,11 @@ viewHexes viewingHexOrigin viewport ( sectorData, solarSystemDict ) ( horizOffse
                 , let
                     xOffset =
                         -- view horizontal offset
-                        String.fromFloat (hexSize * numHexCols * horizOffset)
+                        String.fromFloat (width * horizOffset)
 
                     yOffset =
                         -- view vertical offset
-                        String.fromFloat (hexSize * numHexRows * vertOffset)
+                        String.fromFloat (height * vertOffset)
                   in
                   viewBox <|
                     xOffset
