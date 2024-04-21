@@ -1,4 +1,4 @@
-module Traveller.HexId exposing (HexId, codecHexId, hexId, createFromInt)
+module Traveller.HexId exposing (HexId, codecHexId, createFromInt, hexId)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -10,9 +10,11 @@ import Parser.Extras as Parser
 type alias HexId =
     { value : Int, raw : String }
 
+
 createFromInt : Int -> HexId
 createFromInt value =
     { value = value, raw = String.fromInt value }
+
 
 hexId : Parser HexId
 hexId =

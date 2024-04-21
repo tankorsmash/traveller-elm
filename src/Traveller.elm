@@ -5,8 +5,7 @@ module Traveller exposing (Model, Msg(..), init, subscriptions, update, view)
 import Browser.Dom
 import Browser.Events
 import Codec
-import Css exposing (hover)
-import Css.Transitions exposing (offset)
+import Css
 import Dict
 import Element
     exposing
@@ -479,10 +478,24 @@ viewHexes viewingHexOrigin viewport ( sectorData, solarSystemDict ) ( horizOffse
 
                 stringHeight =
                     String.fromFloat <| height
+
+                bootstrapDark =
+                    "#212529"
+
+                midColor =
+                    "#f5f5f5"
             in
             Svg.svg
                 [ SvgAttrs.width <| stringWidth
                 , SvgAttrs.height <| stringHeight
+                , SvgAttrs.style <|
+                    "background-image: radial-gradient("
+                        ++ midColor
+                        ++ ", "
+                        ++ bootstrapDark
+                        ++ ", "
+                        ++ bootstrapDark
+                        ++ " );"
                 , SvgAttrs.id "hexmap"
                 , let
                     xOffset =

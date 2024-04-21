@@ -177,7 +177,7 @@ view model =
             , case model.route of
                 Just TravellerPage ->
                     Html.map GotTravellerMsg <|
-                        Element.layout [Element.centerX] <|
+                        Element.layout [ Element.centerX ] <|
                             Traveller.view model.travellerModel
 
                 Nothing ->
