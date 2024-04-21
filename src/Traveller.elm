@@ -33,6 +33,7 @@ import Html.Styled.Events
 import Http
 import Json.Decode as JsDecode
 import RemoteData exposing (RemoteData)
+import Svg.Attributes exposing (width)
 import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (fill, points, viewBox)
 import Svg.Styled.Events as SvgEvents
@@ -467,7 +468,8 @@ viewHexes viewingHexOrigin viewport ( sectorData, solarSystemDict ) ( horizOffse
         |> List.map Tuple.first
         |> (let
                 width =
-                    viewport.viewport.width * 0.9
+                    min (viewport.viewport.width * 0.9)
+                        (viewport.viewport.width - 500.0)
 
                 height =
                     viewport.viewport.height * 0.9
@@ -539,7 +541,9 @@ view : Model -> Element.Element Msg
 view model =
     let
         controlsColumn =
-            column []
+            column
+                [ centerX
+                ]
                 [ text <|
                     "Welcome to the Traveller app!"
                 , text <|
