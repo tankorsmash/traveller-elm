@@ -162,6 +162,10 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
             else
                 falseValue
 
+        scaleAttr : Int -> Float
+        scaleAttr default =
+            toFloat default * min 1 (size / 40)
+
         rotatePoint idx ( x_, y_ ) degrees_ =
             let
                 rads =
@@ -175,8 +179,8 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                 sinTheta =
                     sin rads
             in
-            ( x_ + (20 * cosTheta) - (0 * sinTheta)
-            , y_ + (20 * sinTheta) + (0 * cosTheta)
+            ( x_ + (scaleAttr 20 * cosTheta) - (0 * sinTheta)
+            , y_ + (scaleAttr 20 * sinTheta) + (0 * cosTheta)
             )
     in
     Svg.g []
@@ -209,7 +213,9 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                 Svg.circle
                     [ SvgAttrs.cx <| String.fromFloat <| starX
                     , SvgAttrs.cy <| String.fromFloat <| starY
-                    , SvgAttrs.r <| String.fromInt radius
+                    , SvgAttrs.r <|
+                        String.fromFloat <|
+                            scaleAttr radius
                     , SvgAttrs.fill <|
                         case star.colour of
                             Just starColor ->
@@ -226,20 +232,13 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                     [] ->
                         Html.text ""
 
-                    [ star1 ] ->
-                        drawStar (toFloat x) (toFloat y) 9 star1
-
                     star1 :: stars ->
                         Svg.g
                             []
-                            (drawStar (toFloat x) (toFloat y) 15 star1
+                            (drawStar (toFloat x) (toFloat y) 12 star1
                                 :: List.indexedMap
                                     (\idx star ->
                                         let
-                                            -- starX =
-                                            --     x + (idx + 1) * 15
-                                            --
-                                            -- starY = y
                                             ( starX, starY ) =
                                                 rotatePoint
                                                     idx
