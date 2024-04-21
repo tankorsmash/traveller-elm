@@ -678,6 +678,10 @@ view model =
                                         hexmapViewport
 
                                     Just (Err domError) ->
+                                        let
+                                            _ =
+                                                Debug.log "domError" domError
+                                        in
                                         viewport
                                 )
                                 sectorData
@@ -822,8 +826,8 @@ update msg model =
                                 Nothing ->
                                     Debug.todo "GotHexMapViewport doesnt exist yet"
 
-                                Just (Ok vp) ->
-                                    vp.viewport.width * 0.9
+                                Just (Ok hexmapViewport) ->
+                                    hexmapViewport.viewport.width
 
                                 Just (Err _) ->
                                     Debug.todo "GotHexMapViewport error"
@@ -833,8 +837,8 @@ update msg model =
                                 Nothing ->
                                     Debug.todo "GotHexMapViewport doesnt exist yet"
 
-                                Just (Ok vp) ->
-                                    vp.viewport.height * 0.9
+                                Just (Ok hexmapViewport) ->
+                                    hexmapViewport.viewport.height
 
                                 Just (Err _) ->
                                     Debug.todo "GotHexMapViewport error"
