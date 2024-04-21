@@ -536,153 +536,162 @@ calcDistance hex1 hex2 =
 
 view : Model -> Element.Element Msg
 view model =
-    column [ Font.size 20, centerX, centerY, Font.color <| Element.rgb 0.5 1.5 0.5 ]
-        [ text <|
-            "Welcome to the Traveller app!"
-        , text <|
-            "Viewing "
-                ++ String.fromInt numHexCols
-                ++ " columns and "
-                ++ String.fromInt numHexRows
-                ++ " rows"
-        , text <| "Total hexes: " ++ String.fromInt (numHexCols * numHexRows)
-        , -- zoom slider
-          Input.slider []
-            { onChange = ZoomScaleChanged
-            , label = Input.labelAbove [] (text <| "Zoom: " ++ String.fromFloat model.hexScale)
-            , min = 0
-            , max = 75
-            , step = Just 5
-            , value = model.hexScale
-            , thumb = Input.defaultThumb
-            }
-        , -- horiz slider
-          let
-            horizOffset =
-                Tuple.first model.offset
-          in
-          Input.slider []
-            { onChange = OffsetChanged Horizontal
-            , label =
-                Input.labelAbove []
-                    (text <| "Horiz: " ++ (String.fromFloat <| horizOffset))
-            , min = 0
-            , max = 1.0
-            , step = Just 0.025
-            , value = horizOffset
-            , thumb = Input.defaultThumb
-            }
-        , -- vertical slider
-          let
-            vertOffset =
-                Tuple.second model.offset
-          in
-          Input.slider []
-            { onChange = OffsetChanged Vertical
-            , label =
-                Input.labelAbove []
-                    (text <| "Vert: " ++ (String.fromFloat <| vertOffset))
-            , min = 0
-            , max = 1.0
-            , step = Just 0.025
-            , value = vertOffset
-            , thumb =
-                Input.defaultThumb
-            }
-        , column
-            [ Font.size 14
-            , Font.color <| Element.rgb 0.5 1.5 0.5
-            ]
-          <|
-            [ row [ Element.spacing 15 ]
-                [ text "Player HexId:"
-                , text <| String.fromInt model.playerHex.value
-                , case model.hoveringHex of
-                    Just hoveringHex ->
-                        column []
-                            [ text "Hovering HexId:"
-                            , text <| String.fromInt hoveringHex.value
-                            , text "distance to player hex"
-                            , text <| String.fromInt <| calcDistance model.playerHex hoveringHex
-                            ]
+    let
+        controlsColumn =
+            column []
+                [ text <|
+                    "Welcome to the Traveller app!"
+                , text <|
+                    "Viewing "
+                        ++ String.fromInt numHexCols
+                        ++ " columns and "
+                        ++ String.fromInt numHexRows
+                        ++ " rows"
+                , text <| "Total hexes: " ++ String.fromInt (numHexCols * numHexRows)
+                , -- zoom slider
+                  Input.slider []
+                    { onChange = ZoomScaleChanged
+                    , label = Input.labelAbove [] (text <| "Zoom: " ++ String.fromFloat model.hexScale)
+                    , min = 0
+                    , max = 75
+                    , step = Just 5
+                    , value = model.hexScale
+                    , thumb = Input.defaultThumb
+                    }
+                , -- horiz slider
+                  let
+                    horizOffset =
+                        Tuple.first model.offset
+                  in
+                  Input.slider []
+                    { onChange = OffsetChanged Horizontal
+                    , label =
+                        Input.labelAbove []
+                            (text <| "Horiz: " ++ (String.fromFloat <| horizOffset))
+                    , min = 0
+                    , max = 1.0
+                    , step = Just 0.025
+                    , value = horizOffset
+                    , thumb = Input.defaultThumb
+                    }
+                , -- vertical slider
+                  let
+                    vertOffset =
+                        Tuple.second model.offset
+                  in
+                  Input.slider []
+                    { onChange = OffsetChanged Vertical
+                    , label =
+                        Input.labelAbove []
+                            (text <| "Vert: " ++ (String.fromFloat <| vertOffset))
+                    , min = 0
+                    , max = 1.0
+                    , step = Just 0.025
+                    , value = vertOffset
+                    , thumb =
+                        Input.defaultThumb
+                    }
+                , column
+                    [ Font.size 14
+                    , Font.color <| Element.rgb 0.5 1.5 0.5
+                    ]
+                  <|
+                    [ row [ Element.spacing 15 ]
+                        [ text "Player HexId:"
+                        , text <| String.fromInt model.playerHex.value
+                        , case model.hoveringHex of
+                            Just hoveringHex ->
+                                column []
+                                    [ text "Hovering HexId:"
+                                    , text <| String.fromInt hoveringHex.value
+                                    , text "distance to player hex"
+                                    , text <| String.fromInt <| calcDistance model.playerHex hoveringHex
+                                    ]
 
-                    Nothing ->
-                        text <| "None yet"
-                ]
-            ]
-        , column
-            []
-            [ case model.sectorData of
-                RemoteData.Success ( sectorData, solarSystemDict ) ->
-                    case
-                        model.viewingHexId
-                            |> Maybe.andThen
-                                (\hid ->
-                                    Dict.get hid.value solarSystemDict
-                                )
-                    of
-                        Just solarSystem ->
-                            let
-                                renderStar star =
-                                    star.stellarType
-                                        ++ (case star.subtype of
-                                                Just num ->
-                                                    "" ++ String.fromInt num
-
-                                                Nothing ->
-                                                    ""
-                                           )
-                                        ++ " "
-                                        ++ star.stellarClass
-                                        ++ " origin: "
-                                        ++ Debug.toString model.viewingHexOrigin
-                            in
-                            solarSystem.stars
-                                |> List.map
-                                    (\star ->
-                                        renderStar star
-                                            ++ (star.companion
-                                                    |> Maybe.map
-                                                        (\compStar ->
-                                                            "\n  \\----> " ++ renderStar compStar
-                                                        )
-                                                    |> Maybe.withDefault ""
-                                               )
-                                    )
-                                |> List.map text
-                                |> column []
-
-                        Nothing ->
-                            text "No solar system data yet"
-
-                _ ->
-                    text "No sector data yet"
-            ]
-        , Element.html <|
-            -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
-            case ( model.sectorData, model.viewport ) of
-                ( RemoteData.Success sectorData, Just viewport ) ->
-                    Svg.Styled.Lazy.lazy6 viewHexes
-                        model.viewingHexOrigin
-                        (case model.hexmapViewport of
                             Nothing ->
-                                viewport
+                                text <| "None yet"
+                        ]
+                    ]
+                , column
+                    []
+                    [ case model.sectorData of
+                        RemoteData.Success ( sectorData, solarSystemDict ) ->
+                            case
+                                model.viewingHexId
+                                    |> Maybe.andThen
+                                        (\hid ->
+                                            Dict.get hid.value solarSystemDict
+                                        )
+                            of
+                                Just solarSystem ->
+                                    let
+                                        renderStar star =
+                                            star.stellarType
+                                                ++ (case star.subtype of
+                                                        Just num ->
+                                                            "" ++ String.fromInt num
 
-                            Just (Ok hexmapViewport) ->
-                                hexmapViewport
+                                                        Nothing ->
+                                                            ""
+                                                   )
+                                                ++ " "
+                                                ++ star.stellarClass
+                                                ++ " origin: "
+                                                ++ Debug.toString model.viewingHexOrigin
+                                    in
+                                    solarSystem.stars
+                                        |> List.map
+                                            (\star ->
+                                                renderStar star
+                                                    ++ (star.companion
+                                                            |> Maybe.map
+                                                                (\compStar ->
+                                                                    "\n  \\----> " ++ renderStar compStar
+                                                                )
+                                                            |> Maybe.withDefault ""
+                                                       )
+                                            )
+                                        |> List.map text
+                                        |> column []
 
-                            Just (Err domError) ->
-                                viewport
-                        )
-                        sectorData
-                        model.offset
-                        model.playerHex
-                        model.hexScale
-                        |> Html.toUnstyled
+                                Nothing ->
+                                    text "No solar system data yet"
 
-                _ ->
-                    Html.toUnstyled <| Html.text "Loading..."
-        ]
+                        _ ->
+                            text "No sector data yet"
+                    ]
+                ]
+
+        hexesColumn =
+            column []
+                [ Element.html <|
+                    -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
+                    case ( model.sectorData, model.viewport ) of
+                        ( RemoteData.Success sectorData, Just viewport ) ->
+                            Svg.Styled.Lazy.lazy6 viewHexes
+                                model.viewingHexOrigin
+                                (case model.hexmapViewport of
+                                    Nothing ->
+                                        viewport
+
+                                    Just (Ok hexmapViewport) ->
+                                        hexmapViewport
+
+                                    Just (Err domError) ->
+                                        viewport
+                                )
+                                sectorData
+                                model.offset
+                                model.playerHex
+                                model.hexScale
+                                |> Html.toUnstyled
+
+                        _ ->
+                            Html.toUnstyled <| Html.text "Loading..."
+                ]
+    in
+    row [ Font.size 20, centerX, centerY, Font.color <| Element.rgb 0.5 1.5 0.5 ]
+        [ controlsColumn, hexesColumn ]
 
 
 sendSectorRequest : Cmd Msg
