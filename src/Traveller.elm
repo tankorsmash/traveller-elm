@@ -59,6 +59,7 @@ type alias Model =
     , viewingHexId : Maybe HexId
     , viewingHexOrigin : Maybe ( Int, Int )
     , viewport : Maybe Browser.Dom.Viewport
+    , hexmapViewport : Maybe (Result Browser.Dom.Error Browser.Dom.Viewport)
     }
 
 
@@ -76,6 +77,7 @@ type Msg
     | HoveringHex HexId
     | ViewingHex HexId
     | GotViewport Browser.Dom.Viewport
+    | GotHexMapViewport (Result Browser.Dom.Error Browser.Dom.Viewport)
     | GotResize Int Int
 
 
@@ -98,6 +100,7 @@ init =
       , viewingHexId = Nothing
       , viewingHexOrigin = Nothing
       , viewport = Nothing
+      , hexmapViewport = Nothing
       }
     , Cmd.batch
         [ sendSectorRequest
@@ -477,6 +480,7 @@ viewHexes viewingHexOrigin viewport ( sectorData, solarSystemDict ) ( horizOffse
             Svg.svg
                 [ SvgAttrs.width <| stringWidth
                 , SvgAttrs.height <| stringHeight
+                , SvgAttrs.id "hexmap"
                 , let
                     xOffset =
                         -- view horizontal offset
@@ -753,12 +757,22 @@ update msg model =
             ( { model | hoveringHex = Just hoveringHex }, Cmd.none )
 
         GotViewport viewport ->
-            ( { model | viewport = Just viewport }, Cmd.none )
+            ( { model | viewport = Just viewport }
+            , Browser.Dom.getViewportOf "hexmap"
+                |> Task.attempt GotHexMapViewport
+            )
+
+        GotHexMapViewport hexmapOrErr ->
+            ( { model | hexmapViewport = Just hexmapOrErr }, Cmd.none )
 
         GotResize width_ height_ ->
             ( model
-            , Browser.Dom.getViewport
-                |> Task.perform GotViewport
+            , Cmd.batch
+                [ Browser.Dom.getViewport
+                    |> Task.perform GotViewport
+                , Browser.Dom.getViewportOf "hexmap"
+                    |> Task.attempt GotHexMapViewport
+                ]
             )
 
         ViewingHex hexId ->
@@ -780,13 +794,20 @@ update msg model =
                 newOffsetPct =
                     let
                         vpWidth =
-                            model.viewport
-                                |> Maybe.map (\vp -> vp.viewport.width * 0.9)
-                                |> Maybe.withDefault 100.0
+                            model.hexmapViewport
+                                |> Debug.log "hexmapViewport"
+                                |> Maybe.map
+                                    (Result.map (\vp -> vp.viewport.width * 0.9)
+                                        >> Result.withDefault 111
+                                    )
+                                |> Maybe.withDefault 6666.0
 
                         vpHeight =
-                            model.viewport
-                                |> Maybe.map (\vp -> vp.viewport.height * 0.9)
+                            model.hexmapViewport
+                                |> Maybe.map
+                                    (Result.map (\vp -> vp.viewport.height * 0.9)
+                                        >> Result.withDefault 111
+                                    )
                                 |> Maybe.withDefault 100.0
                     in
                     ( (fox - (vpWidth * 0.5)) / vpWidth
