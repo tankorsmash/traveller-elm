@@ -662,7 +662,22 @@ view model =
             -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
             case ( model.sectorData, model.viewport ) of
                 ( RemoteData.Success sectorData, Just viewport ) ->
-                    Svg.Styled.Lazy.lazy6 viewHexes model.viewingHexOrigin viewport sectorData model.offset model.playerHex model.hexScale
+                    Svg.Styled.Lazy.lazy6 viewHexes
+                        model.viewingHexOrigin
+                        (case model.hexmapViewport of
+                            Nothing ->
+                                viewport
+
+                            Just (Ok hexmapViewport) ->
+                                hexmapViewport
+
+                            Just (Err domError) ->
+                                viewport
+                        )
+                        sectorData
+                        model.offset
+                        model.playerHex
+                        model.hexScale
                         |> Html.toUnstyled
 
                 _ ->
@@ -718,7 +733,8 @@ update msg model =
                         -- |> Debug.log "sector data"
                         |> RemoteData.Success
               }
-            , Cmd.none
+            , Browser.Dom.getViewportOf "hexmap"
+                |> Task.attempt GotHexMapViewport
             )
 
         DownloadedSectorJson (Err err) ->
