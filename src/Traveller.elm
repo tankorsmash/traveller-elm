@@ -789,8 +789,8 @@ update msg model =
                                 |> Maybe.map (\vp -> vp.viewport.height * 0.9)
                                 |> Maybe.withDefault 100.0
                     in
-                    ( clamp 0 1.0 <| Debug.log "x" ((fox - (vpWidth * 0.5)) / vpWidth)
-                    , clamp 0 1.0 (foy - (vpHeight * 0.5)) / vpHeight
+                    ( (fox - (vpWidth * 0.5)) / vpWidth
+                    , (foy - (vpHeight * 0.5)) / vpHeight
                     )
             in
             ( { model
