@@ -76,7 +76,7 @@ type alias HexOrigin =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { hexScale = 35
+    ( { hexScale = defaultHexSize
       , sectorData = RemoteData.NotAsked
       , offset = ( 0.0, 0.0 )
       , playerHex = HexId.createFromInt 135
@@ -164,7 +164,7 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
 
         scaleAttr : Int -> Float
         scaleAttr default =
-            toFloat default * min 1 (size / 40)
+            toFloat default * min 1 (size / defaultHexSize)
 
         rotatePoint idx ( x_, y_ ) degrees_ =
             let
@@ -187,17 +187,7 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
         [ -- background hex
           Svg.polygon
             [ points (hexagonPoints origin size)
-            , SvgAttrs.fill <|
-                case maybeSolarSystem of
-                    Just solarSystem ->
-                        if List.length solarSystem.stars > 2 then
-                            "#dddddd"
-
-                        else
-                            defaultHexBg
-
-                    Nothing ->
-                        defaultHexBg
+            , SvgAttrs.fill defaultHexBg
             , SvgAttrs.stroke "#CCCCCC"
             , SvgAttrs.strokeWidth "1"
             , SvgAttrs.pointerEvents "visiblePainted"
@@ -337,6 +327,10 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
 
 defaultHexBg =
     "#ffffff"
+
+
+defaultHexSize =
+    40
 
 
 numHexCols =
