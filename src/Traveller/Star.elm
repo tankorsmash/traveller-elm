@@ -1,4 +1,4 @@
-module Traveller.Star exposing (Star, codecStar, sampleSystemText)
+module Traveller.Star exposing (Star, codecStar, sampleSystemText, starColourRGB)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -61,6 +61,63 @@ sampleSystemText =
 """
 
 
+type StarColour
+    = Blue
+    | BlueWhite
+    | White
+    | YellowWhite
+    | Yellow
+    | LightOrange
+    | OrangeRed
+    | Red
+    | Brown
+
+
+codecStarColour : Codec StarColour
+codecStarColour =
+    Codec.enum Codec.string
+        [ ( "Blue", Blue )
+        , ( "Blue White", BlueWhite )
+        , ( "White", White )
+        , ( "Yellow White", YellowWhite )
+        , ( "Yellow", Yellow )
+        , ( "Light Orange", LightOrange )
+        , ( "Orange Red", OrangeRed )
+        , ( "Red", Red )
+        , ( "Brown", Brown )
+        ]
+
+
+starColourRGB colour =
+    case colour of
+        Blue ->
+            "#000077"
+
+        BlueWhite ->
+            "#87cefa"
+
+        White ->
+            "#EEEEEE"
+
+        YellowWhite ->
+            "#ffffe0"
+
+        Yellow ->
+            "#ffff00"
+
+        LightOrange ->
+            "#ffbf00"
+
+        OrangeRed ->
+            "#ff4500"
+
+        Red ->
+            "#ff0000"
+
+        Brown ->
+            "#f4a460"
+
+
 type alias Star =
     { orbitPosition : StellarPoint
     , inclination : Int
@@ -75,7 +132,7 @@ type alias Star =
     , diameter : Float
     , temperature : Int
     , age : Float
-    , colour : Maybe String
+    , colour : Maybe StarColour
     , companion : Maybe String
     , orbit : Float
     , period : Float
@@ -106,7 +163,7 @@ codecStar =
         |> Codec.field "diameter" .diameter Codec.float
         |> Codec.field "temperature" .temperature Codec.int
         |> Codec.field "age" .age Codec.float
-        |> Codec.optionalField "colour" .colour Codec.string
+        |> Codec.optionalField "colour" .colour codecStarColour
         |> Codec.field "companion" .companion (Codec.maybe Codec.string)
         |> Codec.field "orbit" .orbit Codec.float
         |> Codec.field "period" .period Codec.float

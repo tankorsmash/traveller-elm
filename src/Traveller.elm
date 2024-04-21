@@ -36,7 +36,9 @@ import Svg.Styled.Attributes as SvgAttrs exposing (fill, points, viewBox)
 import Svg.Styled.Events as SvgEvents
 import Svg.Styled.Lazy
 import Traveller.HexId as HexId exposing (HexId)
-import Traveller.SectorData exposing (SectorData, SectorSolarSystem, codecSectorData)
+import Traveller.SectorData exposing (SectorData, codecSectorData)
+import Traveller.SolarSystem exposing (SolarSystem)
+import Traveller.Star exposing (starColourRGB)
 
 
 {-| needs to be a plain int for hashing in a Dict, otherwise we'd use full HexIds
@@ -47,7 +49,7 @@ type alias RawHexId =
 
 type alias Model =
     { hexScale : Float
-    , sectorData : RemoteData Http.Error ( SectorData, Dict.Dict RawHexId SectorSolarSystem )
+    , sectorData : RemoteData Http.Error ( SectorData, Dict.Dict RawHexId SolarSystem )
     , offset : ( Float, Float )
     , playerHex : HexId
     , hoveringHex : Maybe HexId
@@ -117,7 +119,7 @@ hexagonPoints ( xOrigin, yOrigin ) size =
         |> String.join " "
 
 
-viewHexDetailed : Maybe SectorSolarSystem -> HexId -> Int -> HexOrigin -> Float -> Svg Msg
+viewHexDetailed : Maybe SolarSystem -> HexId -> Int -> HexOrigin -> Float -> Svg Msg
 viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
     let
         systemName =
@@ -179,10 +181,17 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                 , SvgAttrs.cy <| String.fromInt <| y
                 , SvgAttrs.r "15"
                 , SvgAttrs.fill <|
-                    (maybeSolarSystem
-                        |> Maybe.map (always "white")
-                        |> Maybe.withDefault "black"
-                    )
+                    case maybeSolarSystem of
+                        Just solarSystem ->
+                            case solarSystem.primaryStar.colour of
+                                Just colour ->
+                                    Debug.log "colour" <| starColourRGB colour
+
+                                Nothing ->
+                                    "white"
+
+                        Nothing ->
+                            "black"
                 ]
                 []
             )
@@ -270,113 +279,6 @@ defaultHexBg =
     "#ffffff"
 
 
-viewHexSimple : Maybe SectorSolarSystem -> HexId -> Int -> HexOrigin -> Float -> Svg Msg
-viewHexSimple maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
-    let
-        systemName =
-            maybeSolarSystem
-                |> Maybe.map (.coordinates >> .raw)
-                |> Maybe.withDefault "Unknown"
-
-        hexBg =
-            if playerHexId.value == hexIdx then
-                "#FF30E2"
-
-            else
-                defaultHexBg
-
-        travelZoneColor =
-            if modBy 4 hexIdx == 0 then
-                "red"
-
-            else if modBy 2 hexIdx == 0 then
-                "yellow"
-
-            else
-                defaultHexBg
-
-        hasStar =
-            case maybeSolarSystem of
-                Just solarSystem ->
-                    True
-
-                Nothing ->
-                    False
-
-        ifStarOrNot trueValue falseValue =
-            if hasStar then
-                trueValue
-
-            else
-                falseValue
-    in
-    Svg.g [ SvgEvents.onMouseOver (HoveringHex (HexId.createFromInt hexIdx)) ]
-        [ -- background hex
-          Svg.polygon
-            [ points (hexagonPoints origin size)
-            , SvgAttrs.fill hexBg
-            , SvgAttrs.stroke "#CCCCCC"
-            , SvgAttrs.strokeWidth "1"
-            , SvgAttrs.pointerEvents "visiblePainted"
-            , SvgEvents.onClick NoOpMsg
-            , SvgAttrs.css [ hoverableStyle ]
-            ]
-            []
-        , -- x,y
-          Svg.text_
-            [ SvgAttrs.x <| String.fromInt <| x
-            , SvgAttrs.y <| String.fromInt <| (y - 10)
-            , SvgAttrs.fontSize "12"
-            , SvgAttrs.textAnchor "middle"
-            ]
-            [ Svg.text (String.fromInt x ++ ", " ++ String.fromInt y)
-            ]
-        , -- hex id
-          Svg.text_
-            [ SvgAttrs.x <| String.fromInt <| x
-            , SvgAttrs.y <| String.fromInt <| y
-            , SvgAttrs.fontSize "12"
-            , SvgAttrs.textAnchor "middle"
-            ]
-            [ Svg.text <| "h: " ++ String.fromInt hexIdx
-            ]
-        , -- center star
-          ifStarOrNot
-            (Svg.circle
-                [ SvgAttrs.cx <| String.fromInt <| x
-                , SvgAttrs.cy <| String.fromInt <| y
-                , SvgAttrs.r "10"
-                , SvgAttrs.fill <|
-                    (maybeSolarSystem
-                        |> Maybe.map (always "white")
-                        |> Maybe.withDefault "black"
-                    )
-                ]
-                []
-            )
-            (Html.text "")
-        , ifStarOrNot
-            (Svg.g []
-                [ -- travel zone ring
-                  Svg.circle
-                    [ SvgAttrs.cx <| String.fromInt <| x
-                    , SvgAttrs.cy <| String.fromInt <| y
-                    , SvgAttrs.r <| String.fromInt <| floor <| size * 0.7
-                    , SvgAttrs.fill "none"
-                    , SvgAttrs.stroke travelZoneColor
-                    , SvgAttrs.strokeWidth "1"
-
-                    -- hack dashes to get the circle. hope you can find a better combo of numbers
-                    , SvgAttrs.strokeDasharray "170"
-                    , SvgAttrs.strokeDashoffset "210"
-                    ]
-                    []
-                ]
-            )
-            (Svg.text "asd")
-        ]
-
-
 numHexCols =
     32 * 1
 
@@ -419,7 +321,7 @@ hexColOffset row =
 
 {-| View all the hexes in the system
 -}
-viewHexes : ( SectorData, Dict.Dict Int SectorSolarSystem ) -> ( Float, Float ) -> HexId -> Float -> Html Msg
+viewHexes : ( SectorData, Dict.Dict Int SolarSystem ) -> ( Float, Float ) -> HexId -> Float -> Html Msg
 viewHexes ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexId hexSize =
     let
         calcOrigin : Int -> Int -> HexOrigin
@@ -452,11 +354,7 @@ viewHexes ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexI
                                 Dict.get idx solarSystemDict
 
                             hexSVG =
-                                if hexSize <= 35 then
-                                    viewHexSimple solarSystem playerHexId idx origin hexSize
-
-                                else
-                                    viewHexDetailed solarSystem playerHexId idx origin hexSize
+                                viewHexDetailed solarSystem playerHexId idx origin hexSize
                         in
                         ( hexSVG, isEmptyHex solarSystem )
                     )
