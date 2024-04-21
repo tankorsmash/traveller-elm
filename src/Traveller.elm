@@ -593,16 +593,16 @@ view model =
                         Just solarSystem ->
                             let
                                 renderStar star =
-                                    star.stellarClass
-                                        ++ ",  "
-                                        ++ star.stellarType
+                                    star.stellarType
                                         ++ (case star.subtype of
                                                 Just num ->
-                                                    ", " ++ String.fromInt num
+                                                    "" ++ String.fromInt num
 
                                                 Nothing ->
                                                     ""
                                            )
+                                        ++ " "
+                                        ++ star.stellarClass
                             in
                             solarSystem.stars
                                 |> List.map
@@ -611,7 +611,7 @@ view model =
                                             ++ (star.companion
                                                     |> Maybe.map
                                                         (\compStar ->
-                                                            "comp: " ++ renderStar (Debug.log "comp" compStar)
+                                                            "\n  \\----> " ++ renderStar (Debug.log "comp" compStar)
                                                         )
                                                     |> Maybe.withDefault ""
                                                )
