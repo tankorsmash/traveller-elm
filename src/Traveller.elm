@@ -207,7 +207,10 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
             , y_ + (scaleAttr distance * sinTheta) + (0 * cosTheta)
             )
     in
-    Svg.g []
+    Svg.g
+        [ SvgEvents.onMouseOver (HoveringHex (HexId.createFromInt hexIdx))
+        , SvgEvents.onClick (ViewingHex (HexId.createFromInt hexIdx))
+        ]
         [ -- background hex
           Svg.polygon
             [ points (hexagonPoints origin size)
@@ -216,8 +219,6 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
             , SvgAttrs.strokeWidth "1"
             , SvgAttrs.pointerEvents "visiblePainted"
             , SvgAttrs.css [ hoverableStyle ]
-            , SvgEvents.onMouseOver (HoveringHex (HexId.createFromInt hexIdx))
-            , SvgEvents.onClick (ViewingHex (HexId.createFromInt hexIdx))
             ]
             []
         , -- center star
@@ -448,7 +449,7 @@ viewHexes viewingHexOrigin viewport ( sectorData, solarSystemDict ) ( horizOffse
                     (\colIdx origin ->
                         let
                             idx =
-                                rowIdx + 1 + (colIdx + 1) * 100
+                                (rowIdx + 1) + (colIdx + 1) * 100
 
                             solarSystem =
                                 Dict.get idx solarSystemDict
