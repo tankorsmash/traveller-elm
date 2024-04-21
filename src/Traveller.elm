@@ -185,7 +185,7 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
         scaleAttr default =
             toFloat default * min 1 (size / defaultHexSize)
 
-        rotatePoint idx ( x_, y_ ) degrees_ =
+        rotatePoint idx ( x_, y_ ) degrees_ distance =
             let
                 rads =
                     (toFloat idx * degrees_)
@@ -198,8 +198,8 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                 sinTheta =
                     sin rads
             in
-            ( x_ + (scaleAttr 20 * cosTheta) - (0 * sinTheta)
-            , y_ + (scaleAttr 20 * sinTheta) + (0 * cosTheta)
+            ( x_ + (scaleAttr distance * cosTheta) - (0 * sinTheta)
+            , y_ + (scaleAttr distance * sinTheta) + (0 * cosTheta)
             )
     in
     Svg.g []
@@ -218,8 +218,8 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
             []
         , -- center star
           let
-            drawStar : Float -> Float -> Int -> Star.Star -> Svg Msg
-            drawStar starX starY radius star =
+            -- drawStar : Float -> Float -> Int -> Star.Star -> Svg Msg
+            drawStar ( starX, starY ) radius star =
                 Svg.circle
                     [ SvgAttrs.cx <| String.fromFloat <| starX
                     , SvgAttrs.cy <| String.fromFloat <| starY
@@ -242,22 +242,46 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                     [] ->
                         Html.text ""
 
-                    star1 :: stars ->
+                    primaryStar :: stars ->
+                        let
+                            primaryPos =
+                                ( toFloat x, toFloat y )
+                        in
                         Svg.g
                             []
-                            (drawStar (toFloat x) (toFloat y) 12 star1
+                            ((case primaryStar.companion of
+                                Just compStar ->
+                                    let
+                                        compStarPos =
+                                            Tuple.mapFirst (\x_ -> x_ - 5) primaryPos
+                                    in
+                                    Svg.g []
+                                        [ drawStar primaryPos 12 primaryStar
+                                        , drawStar compStarPos 6 compStar
+                                        ]
+
+                                Nothing ->
+                                    drawStar primaryPos 12 primaryStar
+                             )
                                 :: List.indexedMap
-                                    (\idx star ->
+                                    (\idx secondaryStar ->
                                         let
-                                            ( starX, starY ) =
-                                                rotatePoint
-                                                    idx
-                                                    ( toFloat <| x
-                                                    , toFloat <| y
-                                                    )
-                                                    60
+                                            secondaryStarPos =
+                                                rotatePoint idx primaryPos 60 20
                                         in
-                                        drawStar starX starY 7 star
+                                        case secondaryStar.companion of
+                                            Just compStar ->
+                                                let
+                                                    compStarPos =
+                                                        Tuple.mapFirst (\x_ -> x_ - 5) secondaryStarPos
+                                                in
+                                                Svg.g []
+                                                    [ drawStar secondaryStarPos 7 secondaryStar
+                                                    , drawStar compStarPos 3 compStar
+                                                    ]
+
+                                            Nothing ->
+                                                drawStar secondaryStarPos 7 secondaryStar
                                     )
                                     stars
                             )
