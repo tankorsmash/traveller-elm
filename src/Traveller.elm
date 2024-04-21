@@ -1,7 +1,9 @@
-module Traveller exposing (Model, Msg(..), init, update, view)
+module Traveller exposing (Model, Msg(..), init, subscriptions, update, view)
 
 -- import Svg exposing (..)
 
+import Browser.Dom
+import Browser.Events
 import Codec
 import Css exposing (hover)
 import Css.Transitions exposing (offset)
@@ -35,6 +37,7 @@ import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (fill, points, viewBox)
 import Svg.Styled.Events as SvgEvents
 import Svg.Styled.Lazy
+import Task
 import Traveller.HexId as HexId exposing (HexId)
 import Traveller.SectorData exposing (SectorData, codecSectorData)
 import Traveller.SolarSystem exposing (SolarSystem)
@@ -53,6 +56,7 @@ type alias Model =
     , offset : ( Float, Float )
     , playerHex : HexId
     , hoveringHex : Maybe HexId
+    , viewport : Maybe Browser.Dom.Viewport
     }
 
 
@@ -68,10 +72,17 @@ type Msg
     | DownloadedSectorJson (Result Http.Error SectorData)
     | OffsetChanged OffsetDirection Float
     | HoveringHex HexId
+    | GotViewport Browser.Dom.Viewport
+    | GotResize Int Int
 
 
 type alias HexOrigin =
     ( Int, Int )
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Browser.Events.onResize GotResize
 
 
 init : ( Model, Cmd Msg )
@@ -81,8 +92,13 @@ init =
       , offset = ( 0.0, 0.0 )
       , playerHex = HexId.createFromInt 135
       , hoveringHex = Nothing
+      , viewport = Nothing
       }
-    , sendSectorRequest
+    , Cmd.batch
+        [ sendSectorRequest
+        , Browser.Dom.getViewport
+            |> Task.perform GotViewport
+        ]
     )
 
 
@@ -326,7 +342,7 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
 
 
 defaultHexBg =
-    "#ffffff"
+    "#f5f5f5"
 
 
 defaultHexSize =
@@ -375,8 +391,8 @@ hexColOffset row =
 
 {-| View all the hexes in the system
 -}
-viewHexes : ( SectorData, Dict.Dict Int SolarSystem ) -> ( Float, Float ) -> HexId -> Float -> Html Msg
-viewHexes ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexId hexSize =
+viewHexes : Browser.Dom.Viewport -> ( SectorData, Dict.Dict Int SolarSystem ) -> ( Float, Float ) -> HexId -> Float -> Html Msg
+viewHexes viewport ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexId hexSize =
     let
         calcOrigin : Int -> Int -> HexOrigin
         calcOrigin row col =
@@ -418,26 +434,37 @@ viewHexes ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexI
         |> List.concat
         |> List.sortBy Tuple.second
         |> List.map Tuple.first
-        |> Svg.svg
-            [ SvgAttrs.width "600"
-            , SvgAttrs.height "500"
-            , let
-                xOffset =
-                    -- view horizontal offset
-                    String.fromFloat (hexSize * numHexCols * horizOffset)
+        |> (let
+                width =
+                    String.fromFloat <| viewport.viewport.width * 0.9
 
-                yOffset =
-                    -- view vertical offset
-                    String.fromFloat (hexSize * numHexRows * vertOffset)
-              in
-              viewBox <|
-                -- figure out a nicer way of dealing with this lol
-                (xOffset
-                    ++ " "
-                    ++ yOffset
-                    ++ " 600 500"
-                )
-            ]
+                height =
+                    String.fromFloat <| viewport.viewport.height * 0.9
+            in
+            Svg.svg
+                [ SvgAttrs.width <| width
+                , SvgAttrs.height <| height
+                , let
+                    xOffset =
+                        -- view horizontal offset
+                        String.fromFloat (hexSize * numHexCols * horizOffset)
+
+                    yOffset =
+                        -- view vertical offset
+                        String.fromFloat (hexSize * numHexRows * vertOffset)
+                  in
+                  viewBox <|
+                    -- figure out a nicer way of dealing with this lol
+                    (xOffset
+                        ++ " "
+                        ++ yOffset
+                        ++ " "
+                        ++ width
+                        ++ " "
+                        ++ height
+                    )
+                ]
+           )
 
 
 hexToCoords : HexId -> ( Int, Int )
@@ -474,7 +501,7 @@ calcDistance hex1 hex2 =
 
 view : Model -> Element.Element Msg
 view model =
-    column [ Font.size 20, centerY ]
+    column [ Font.size 20, centerX, centerY ]
         [ text <|
             "Welcome to the Traveller app!"
         , text <|
@@ -552,9 +579,9 @@ view model =
             ]
         , Element.html <|
             -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
-            case model.sectorData of
-                RemoteData.Success sectorData ->
-                    Svg.Styled.Lazy.lazy4 viewHexes sectorData model.offset model.playerHex model.hexScale
+            case ( model.sectorData, model.viewport ) of
+                ( RemoteData.Success sectorData, Just viewport ) ->
+                    Svg.Styled.Lazy.lazy5 viewHexes viewport sectorData model.offset model.playerHex model.hexScale
                         |> Html.toUnstyled
 
                 _ ->
@@ -642,3 +669,12 @@ update msg model =
 
         HoveringHex hoveringHex ->
             ( { model | hoveringHex = Just hoveringHex }, Cmd.none )
+
+        GotViewport viewport ->
+            ( { model | viewport = Just viewport }, Cmd.none )
+
+        GotResize width_ height_ ->
+            ( model
+            , Browser.Dom.getViewport
+                |> Task.perform GotViewport
+            )

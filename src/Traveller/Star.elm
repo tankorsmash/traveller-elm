@@ -97,7 +97,7 @@ starColourRGB colour =
             "#87cefa"
 
         White ->
-            "#EEEEEE"
+            "#FFFFFF"
 
         YellowWhite ->
             "#ffffe0"

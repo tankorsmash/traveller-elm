@@ -6,11 +6,11 @@ import Chart.Item as CI
 import Codec
 import Dict exposing (Dict)
 import Element exposing (Element)
-import Element.Lazy
 import Element.Background as Background
 import Element.Border as Border
 import Element.Events as Events
 import Element.Input as Input
+import Element.Lazy
 import Element.Region exposing (description)
 import Html exposing (Html, a, b, button, div, h1, hr, li, span, text, ul)
 import Html.Attributes exposing (class, href, style)
@@ -105,8 +105,9 @@ main =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
+subscriptions { travellerModel } =
+    Traveller.subscriptions travellerModel
+        |> Sub.map GotTravellerMsg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -176,7 +177,7 @@ view model =
             , case model.route of
                 Just TravellerPage ->
                     Html.map GotTravellerMsg <|
-                        Element.layout [] <|
+                        Element.layout [Element.centerX] <|
                             Traveller.view model.travellerModel
 
                 Nothing ->
