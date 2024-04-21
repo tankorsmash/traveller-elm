@@ -71,6 +71,7 @@ type StarColour
     | OrangeRed
     | Red
     | Brown
+    | DeepDimRed
 
 
 codecStarColour : Codec StarColour
@@ -85,9 +86,11 @@ codecStarColour =
         , ( "Orange Red", OrangeRed )
         , ( "Red", Red )
         , ( "Brown", Brown )
+        , ( "Deep Dim Red", DeepDimRed )
         ]
 
 
+starColourRGB : StarColour -> String
 starColourRGB colour =
     case colour of
         Blue ->
@@ -116,6 +119,9 @@ starColourRGB colour =
 
         Brown ->
             "#f4a460"
+
+        DeepDimRed ->
+            "#800000"
 
 
 type alias Star =
