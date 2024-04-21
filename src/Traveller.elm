@@ -38,7 +38,7 @@ import Svg.Styled.Lazy
 import Traveller.HexId as HexId exposing (HexId)
 import Traveller.SectorData exposing (SectorData, codecSectorData)
 import Traveller.SolarSystem exposing (SolarSystem)
-import Traveller.Star exposing (starColourRGB)
+import Traveller.Star as Star exposing (starColourRGB)
 
 
 {-| needs to be a plain int for hashing in a Dict, otherwise we'd use full HexIds
@@ -161,12 +161,39 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
 
             else
                 falseValue
+
+        rotatePoint idx ( x_, y_ ) degrees_ =
+            let
+                rads =
+                    (toFloat idx * degrees_)
+                        - 30
+                        |> degrees
+
+                cosTheta =
+                    cos rads
+
+                sinTheta =
+                    sin rads
+            in
+            ( x_ + (20 * cosTheta) - (0 * sinTheta)
+            , y_ + (20 * sinTheta) + (0 * cosTheta)
+            )
     in
     Svg.g []
         [ -- background hex
           Svg.polygon
             [ points (hexagonPoints origin size)
-            , SvgAttrs.fill defaultHexBg
+            , SvgAttrs.fill <|
+                case maybeSolarSystem of
+                    Just solarSystem ->
+                        if List.length solarSystem.stars > 2 then
+                            "#dddddd"
+
+                        else
+                            defaultHexBg
+
+                    Nothing ->
+                        defaultHexBg
             , SvgAttrs.stroke "#CCCCCC"
             , SvgAttrs.strokeWidth "1"
             , SvgAttrs.pointerEvents "visiblePainted"
@@ -176,23 +203,19 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
             []
         , -- center star
           let
-            drawStar starX starY radius =
+            drawStar : Float -> Float -> Int -> Star.Star -> Svg Msg
+            drawStar starX starY radius star =
                 Svg.circle
-                    [ SvgAttrs.cx <| String.fromInt <| starX
-                    , SvgAttrs.cy <| String.fromInt <| starY
+                    [ SvgAttrs.cx <| String.fromFloat <| starX
+                    , SvgAttrs.cy <| String.fromFloat <| starY
                     , SvgAttrs.r <| String.fromInt radius
                     , SvgAttrs.fill <|
-                        case maybeSolarSystem of
-                            Just solarSystem ->
-                                case solarSystem.primaryStar.colour of
-                                    Just colour ->
-                                        starColourRGB colour
-
-                                    Nothing ->
-                                        "white"
+                        case star.colour of
+                            Just starColor ->
+                                starColourRGB starColor
 
                             Nothing ->
-                                "black"
+                                "white"
                     ]
                     []
           in
@@ -203,17 +226,31 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                         Html.text ""
 
                     [ star1 ] ->
-                        drawStar x y 9
+                        drawStar (toFloat x) (toFloat y) 9 star1
 
                     star1 :: stars ->
                         Svg.g
                             []
-                            [ drawStar x y 15
-                            , drawStar (x - 5) y 10
-                            ]
-
-                    _ ->
-                        drawStar x y 10
+                            (drawStar (toFloat x) (toFloat y) 15 star1
+                                :: List.indexedMap
+                                    (\idx star ->
+                                        let
+                                            -- starX =
+                                            --     x + (idx + 1) * 15
+                                            --
+                                            -- starY = y
+                                            ( starX, starY ) =
+                                                rotatePoint
+                                                    idx
+                                                    ( toFloat <| x
+                                                    , toFloat <| y
+                                                    )
+                                                    60
+                                        in
+                                        drawStar starX starY 7 star
+                                    )
+                                    stars
+                            )
 
             Nothing ->
                 Html.text ""
