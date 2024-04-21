@@ -56,6 +56,7 @@ type alias Model =
     , offset : ( Float, Float )
     , playerHex : HexId
     , hoveringHex : Maybe HexId
+    , viewingHexId : Maybe HexId
     , viewport : Maybe Browser.Dom.Viewport
     }
 
@@ -72,6 +73,7 @@ type Msg
     | DownloadedSectorJson (Result Http.Error SectorData)
     | OffsetChanged OffsetDirection Float
     | HoveringHex HexId
+    | ViewingHex HexId
     | GotViewport Browser.Dom.Viewport
     | GotResize Int Int
 
@@ -92,6 +94,7 @@ init =
       , offset = ( 0.0, 0.0 )
       , playerHex = HexId.createFromInt 135
       , hoveringHex = Nothing
+      , viewingHexId = Nothing
       , viewport = Nothing
       }
     , Cmd.batch
@@ -210,6 +213,7 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
             , Html.Styled.Events.onClick NoOpMsg
             , SvgAttrs.css [ hoverableStyle ]
             , SvgEvents.onMouseOver (HoveringHex (HexId.createFromInt hexIdx))
+            , SvgEvents.onClick (ViewingHex (HexId.createFromInt hexIdx))
             ]
             []
         , -- center star
@@ -501,7 +505,7 @@ calcDistance hex1 hex2 =
 
 view : Model -> Element.Element Msg
 view model =
-    column [ Font.size 20, centerX, centerY ]
+    column [ Font.size 20, centerX, centerY, Font.color <| Element.rgb 0.5 1.5 0.5 ]
         [ text <|
             "Welcome to the Traveller app!"
         , text <|
@@ -576,6 +580,41 @@ view model =
                     Nothing ->
                         text <| "None yet"
                 ]
+            ]
+        , column
+            []
+            [ case model.sectorData of
+                RemoteData.Success ( sectorData, solarSystemDict ) ->
+                    case
+                        model.viewingHexId
+                            |> Maybe.andThen
+                                (\hid ->
+                                    Dict.get hid.value solarSystemDict
+                                )
+                    of
+                        Just solarSystem ->
+                            solarSystem.stars
+                                |> List.map
+                                    (\star ->
+                                        star.stellarClass
+                                            ++ ",  "
+                                            ++ star.stellarType
+                                            ++ (case star.subtype of
+                                                    Just num ->
+                                                        ", " ++ String.fromInt num
+
+                                                    Nothing ->
+                                                        ""
+                                               )
+                                    )
+                                |> List.map text
+                                |> column []
+
+                        Nothing ->
+                            text "No solar system data yet"
+
+                _ ->
+                    text "No sector data yet"
             ]
         , Element.html <|
             -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
@@ -678,3 +717,6 @@ update msg model =
             , Browser.Dom.getViewport
                 |> Task.perform GotViewport
             )
+
+        ViewingHex hexId ->
+            ( { model | viewingHexId = Just hexId }, Cmd.none )
