@@ -210,7 +210,6 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
             , SvgAttrs.stroke "#CCCCCC"
             , SvgAttrs.strokeWidth "1"
             , SvgAttrs.pointerEvents "visiblePainted"
-            , Html.Styled.Events.onClick NoOpMsg
             , SvgAttrs.css [ hoverableStyle ]
             , SvgEvents.onMouseOver (HoveringHex (HexId.createFromInt hexIdx))
             , SvgEvents.onClick (ViewingHex (HexId.createFromInt hexIdx))
@@ -417,36 +416,34 @@ hexColOffset row =
         1
 
 
+calcOrigin : Float -> Int -> Int -> HexOrigin
+calcOrigin hexSize row col =
+    let
+        a =
+            2 * pi / 6
+
+        x =
+            hexSize + toFloat col * (hexSize + hexSize * cos a)
+
+        y =
+            hexSize + toFloat row * 2 * hexSize * sin a + hexSize * hexColOffset col * sin a
+    in
+    ( floor x, floor y )
+
+
 {-| View all the hexes in the system
 -}
 viewHexes : Browser.Dom.Viewport -> ( SectorData, Dict.Dict Int SolarSystem ) -> ( Float, Float ) -> HexId -> Float -> Html Msg
 viewHexes viewport ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexId hexSize =
     let
-        calcOrigin : Int -> Int -> HexOrigin
-        calcOrigin row col =
-            let
-                r =
-                    hexSize / 1
-
-                a =
-                    2 * pi / 6
-
-                x =
-                    r + toFloat col * (r + r * cos a)
-
-                y =
-                    r + toFloat row * 2 * r * sin a + r * hexColOffset col * sin a
-            in
-            ( floor x, floor y )
-
         viewHexRow rowIdx =
             List.range 0 numHexCols
-                |> List.map (calcOrigin rowIdx)
+                |> List.map (calcOrigin hexSize rowIdx)
                 |> List.indexedMap
                     (\colIdx origin ->
                         let
                             idx =
-                                rowIdx + (colIdx + 1) * 100 + 1
+                                rowIdx + 1 + (colIdx + 1) * 100
 
                             solarSystem =
                                 Dict.get idx solarSystemDict
@@ -635,7 +632,7 @@ view model =
                                             ++ (star.companion
                                                     |> Maybe.map
                                                         (\compStar ->
-                                                            "\n  \\----> " ++ renderStar (Debug.log "comp" compStar)
+                                                            "\n  \\----> " ++ renderStar compStar
                                                         )
                                                     |> Maybe.withDefault ""
                                                )
@@ -752,4 +749,15 @@ update msg model =
             )
 
         ViewingHex hexId ->
+            let
+                goodValX =
+                    Debug.log "y" <| (hexId.value // 100) - 1
+
+                goodValY =
+                    Debug.log "y" <| modBy 100 hexId.value - 1
+
+                origin =
+                    Debug.log "orign" <|
+                        calcOrigin model.hexScale goodValY goodValX
+            in
             ( { model | viewingHexId = Just hexId }, Cmd.none )
