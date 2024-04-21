@@ -175,27 +175,48 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
             ]
             []
         , -- center star
-          ifStarOrNot
-            (Svg.circle
-                [ SvgAttrs.cx <| String.fromInt <| x
-                , SvgAttrs.cy <| String.fromInt <| y
-                , SvgAttrs.r "15"
-                , SvgAttrs.fill <|
-                    case maybeSolarSystem of
-                        Just solarSystem ->
-                            case solarSystem.primaryStar.colour of
-                                Just colour ->
-                                    Debug.log "colour" <| starColourRGB colour
+          let
+            drawStar starX starY radius =
+                Svg.circle
+                    [ SvgAttrs.cx <| String.fromInt <| starX
+                    , SvgAttrs.cy <| String.fromInt <| starY
+                    , SvgAttrs.r <| String.fromInt radius
+                    , SvgAttrs.fill <|
+                        case maybeSolarSystem of
+                            Just solarSystem ->
+                                case solarSystem.primaryStar.colour of
+                                    Just colour ->
+                                        starColourRGB colour
 
-                                Nothing ->
-                                    "white"
+                                    Nothing ->
+                                        "white"
 
-                        Nothing ->
-                            "black"
-                ]
-                []
-            )
-            (Html.text "")
+                            Nothing ->
+                                "black"
+                    ]
+                    []
+          in
+          case maybeSolarSystem of
+            Just solarSystem ->
+                case solarSystem.stars of
+                    [] ->
+                        Html.text ""
+
+                    [ star1 ] ->
+                        drawStar x y 9
+
+                    star1 :: stars ->
+                        Svg.g
+                            []
+                            [ drawStar x y 15
+                            , drawStar (x - 5) y 10
+                            ]
+
+                    _ ->
+                        drawStar x y 10
+
+            Nothing ->
+                Html.text ""
         , ifStarOrNot
             (Svg.g []
                 [ -- travel zone ring
@@ -212,23 +233,23 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                     , SvgAttrs.strokeDashoffset "210"
                     ]
                     []
-                , -- miliary base red star in the top left
-                  Svg.circle
-                    [ SvgAttrs.cx <| String.fromInt <| x - (floor <| size * 0.3)
-                    , SvgAttrs.cy <| String.fromInt <| y - (floor <| size * 0.3)
-                    , SvgAttrs.r "5"
-                    , SvgAttrs.fill militaryBaseColor
-                    ]
-                    []
-                , -- naval base  in the bottom left
-                  Svg.circle
-                    [ SvgAttrs.cx <| String.fromInt <| x - (floor <| size * 0.4)
-                    , SvgAttrs.cy <| String.fromInt <| y + (floor <| size * 0.2)
-                    , SvgAttrs.r "5"
-                    , SvgAttrs.fill navalBaseColor
-                    ]
-                    []
 
+                --, -- miliary base red star in the top left
+                --  Svg.circle
+                --    [ SvgAttrs.cx <| String.fromInt <| x - (floor <| size * 0.3)
+                --    , SvgAttrs.cy <| String.fromInt <| y - (floor <| size * 0.3)
+                --    , SvgAttrs.r "5"
+                --    , SvgAttrs.fill militaryBaseColor
+                --    ]
+                --    []
+                --, -- naval base  in the bottom left
+                --  Svg.circle
+                --    [ SvgAttrs.cx <| String.fromInt <| x - (floor <| size * 0.4)
+                --    , SvgAttrs.cy <| String.fromInt <| y + (floor <| size * 0.2)
+                --    , SvgAttrs.r "5"
+                --    , SvgAttrs.fill navalBaseColor
+                --    ]
+                --    []
                 -- hex index
                 , Svg.text_
                     [ SvgAttrs.x <| String.fromInt <| x
