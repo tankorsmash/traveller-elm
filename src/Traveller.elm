@@ -672,15 +672,16 @@ view model =
                                 model.viewingHexOrigin
                                 (case model.hexmapViewport of
                                     Nothing ->
-                                        viewport
+                                        Debug.log "using fullscreen" viewport
 
                                     Just (Ok hexmapViewport) ->
-                                        hexmapViewport
+                                        -- Debug.log "using hexmap" hexmapViewport
+                                        Debug.log "using fullscreen anyway" viewport
 
                                     Just (Err domError) ->
                                         let
                                             _ =
-                                                Debug.log "domError" domError
+                                                Debug.log "cant use, domError" domError
                                         in
                                         viewport
                                 )
@@ -827,7 +828,7 @@ update msg model =
                                     Debug.todo "GotHexMapViewport doesnt exist yet"
 
                                 Just (Ok hexmapViewport) ->
-                                    hexmapViewport.viewport.width
+                                    Debug.log "width" hexmapViewport.viewport.width
 
                                 Just (Err _) ->
                                     Debug.todo "GotHexMapViewport error"
