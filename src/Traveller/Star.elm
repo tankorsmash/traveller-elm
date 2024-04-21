@@ -163,13 +163,13 @@ type alias CompanionStar =
     , totalObjects : Int
     , subtype : Maybe Int
     , orbitType : Int
-    , mass : Float
-    , diameter : Float
+    , mass : Maybe Float
+    , diameter : Maybe Float
     , temperature : Int
     , age : Float
     , colour : Maybe StarColour
     , orbit : Float
-    , period : Float
+    , period : Maybe Float
     , baseline : Int
     , emptyOrbits : Int
     , spread : Float
@@ -177,7 +177,7 @@ type alias CompanionStar =
     , stellarObjects : List StellarObject
     , occupiedOrbits : List Float
     , orbitSequence : String
-    , jump : Float
+    , jump : Maybe Float
     }
 
 
@@ -224,13 +224,13 @@ codecCompanionStar =
         |> Codec.field "totalObjects" .totalObjects Codec.int
         |> Codec.field "subtype" .subtype (Codec.nullable Codec.int)
         |> Codec.field "orbitType" .orbitType Codec.int
-        |> Codec.field "mass" .mass Codec.float
-        |> Codec.field "diameter" .diameter Codec.float
+        |> Codec.optionalField "mass" .mass Codec.float
+        |> Codec.optionalField "diameter" .diameter Codec.float
         |> Codec.field "temperature" .temperature Codec.int
         |> Codec.field "age" .age Codec.float
         |> Codec.optionalField "colour" .colour codecStarColour
         |> Codec.field "orbit" .orbit Codec.float
-        |> Codec.field "period" .period Codec.float
+        |> Codec.nullableField "period" .period Codec.float
         |> Codec.field "baseline" .baseline Codec.int
         |> Codec.field "emptyOrbits" .emptyOrbits Codec.int
         |> Codec.field "spread" .spread Codec.float
@@ -238,5 +238,5 @@ codecCompanionStar =
         |> Codec.field "stellarObjects" .stellarObjects (Codec.list codecStellarObject)
         |> Codec.field "occupiedOrbits" .occupiedOrbits (Codec.list Codec.float)
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
-        |> Codec.field "jump" .jump Codec.float
+        |> Codec.optionalField "jump" .jump Codec.float
         |> Codec.buildObject
