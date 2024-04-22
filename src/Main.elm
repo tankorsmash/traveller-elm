@@ -4,6 +4,7 @@ import Browser
 import Browser.Navigation as Nav
 import Chart.Item as CI
 import Codec
+import Dialog
 import Dict exposing (Dict)
 import Element exposing (Element)
 import Element.Background as Background
@@ -152,25 +153,11 @@ update msg model =
             )
 
 
-dialog : String -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
-dialog elementId attr content =
-    Html.node "dialog" (Html.Attributes.id elementId :: attr) content
-
-
 view : Model -> Browser.Document Msg
 view model =
     { title = "Traveller"
     , body =
-        [ dialog "error-dialog"
-            [-- any bootstrap classes in here seem to force visibliy and breaks HTML Dialog
-            ]
-            [ model.dialogBody
-            , Html.button
-                [ Html.Attributes.class "btn btn-primary m-2"
-                , Html.Events.onClick ToggleErrorDialog
-                ]
-                [ text "Close" ]
-            ]
+        [ Dialog.view "error-dialog" ToggleErrorDialog model.dialogBody
         , div
             []
             [ Html.button [ Html.Events.onClick ToggleDarkMode ] [ text "Light/Dark" ]

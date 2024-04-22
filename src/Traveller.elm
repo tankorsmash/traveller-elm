@@ -833,11 +833,12 @@ update msg model =
             ( { model
                 | sectorData =
                     ( newSectorData, solarSystemDict )
-                        -- |> Debug.log "sector data"
                         |> RemoteData.Success
               }
-            , Browser.Dom.getViewportOf "hexmap"
-                |> Task.attempt GotHexMapViewport
+            , Cmd.batch
+                [ Browser.Dom.getViewportOf "hexmap"
+                    |> Task.attempt GotHexMapViewport
+                ]
             )
 
         DownloadedSectorJson (Err err) ->
