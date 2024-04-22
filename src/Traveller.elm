@@ -31,6 +31,7 @@ import Html.Styled.Attributes
 import Html.Styled.Events
 import Http
 import Json.Decode as JsDecode
+import Maybe.Extra as Maybe
 import RemoteData exposing (RemoteData)
 import Svg.Attributes exposing (width)
 import Svg.Styled as Svg exposing (Svg)
@@ -439,23 +440,69 @@ calcOrigin hexSize row col =
 
 {-| View all the hexes in the system
 -}
-viewHexes : Maybe ( Int, Int ) -> Browser.Dom.Viewport -> ( SectorData, Dict.Dict Int SolarSystem ) -> ( Float, Float ) -> HexId -> Float -> Html Msg
-viewHexes viewingHexOrigin viewport ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexId hexSize =
+viewHexes : Maybe ( Int, Int ) -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport } -> ( SectorData, Dict.Dict Int SolarSystem ) -> ( Float, Float ) -> HexId -> Float -> Html Msg
+viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexId hexSize =
     let
+        width =
+            min (screenVp.viewport.width * 0.9)
+                (screenVp.viewport.width - 500.0)
+
+        height =
+            screenVp.viewport.height * 0.9
+
+        xOffset =
+            -- view horizontal offset
+            String.fromFloat (width * horizOffset)
+
+        yOffset =
+            -- view vertical offset
+            String.fromFloat (height * vertOffset)
+
+        viewHexRow : Int -> List ( Maybe (Svg Msg), Int )
         viewHexRow rowIdx =
             List.range 0 numHexCols
                 |> List.map (calcOrigin hexSize rowIdx)
                 |> List.indexedMap
-                    (\colIdx origin ->
+                    (\colIdx ( ox, oy ) ->
                         let
                             idx =
                                 (rowIdx + 1) + (colIdx + 1) * 100
+
+                            widestViewport =
+                                case hexmapVp of
+                                    Nothing ->
+                                        screenVp
+
+                                    Just hexmapViewport ->
+                                        hexmapViewport
+
+                            outsideX =
+                                ((toFloat ox + hexSize - (width * horizOffset)) < 0)
+                                    || ((toFloat ox - hexSize - (width * horizOffset))
+                                            > widestViewport.viewport.width
+                                       )
+
+                            outsideY =
+                                (((toFloat oy + hexSize) - (height * vertOffset)) < 0)
+                                    || (((toFloat oy - hexSize) - (height * vertOffset))
+                                            > widestViewport.viewport.height
+                                       )
 
                             solarSystem =
                                 Dict.get idx solarSystemDict
 
                             hexSVG =
-                                viewHexDetailed solarSystem playerHexId idx origin hexSize
+                                if not (outsideX || outsideY) then
+                                    Just
+                                        (viewHexDetailed solarSystem
+                                            playerHexId
+                                            idx
+                                            ( ox, oy )
+                                            hexSize
+                                        )
+
+                                else
+                                    Nothing
                         in
                         ( hexSVG, isEmptyHex solarSystem )
                     )
@@ -463,16 +510,18 @@ viewHexes viewingHexOrigin viewport ( sectorData, solarSystemDict ) ( horizOffse
     List.range 0 numHexRows
         |> List.map viewHexRow
         |> List.concat
+        |> List.filterMap
+            (\( maybeHex, condition ) ->
+                case maybeHex of
+                    Just hex ->
+                        Just ( hex, condition )
+
+                    Nothing ->
+                        Nothing
+            )
         |> List.sortBy Tuple.second
         |> List.map Tuple.first
         |> (let
-                width =
-                    min (viewport.viewport.width * 0.9)
-                        (viewport.viewport.width - 500.0)
-
-                height =
-                    viewport.viewport.height * 0.9
-
                 stringWidth =
                     String.fromFloat <| width
 
@@ -496,17 +545,23 @@ viewHexes viewingHexOrigin viewport ( sectorData, solarSystemDict ) ( horizOffse
                         ++ ", "
                         ++ bootstrapDark
                         ++ " );"
+                , SvgAttrs.css <|
+                    [ Css.before
+                        [ Css.boxShadowMany
+                            [ { offsetX = Css.px 0
+                              , offsetY = Css.px 0
+                              , blurRadius =
+                                    Just (Css.px 10)
+                              , spreadRadius =
+                                    Just (Css.px 10)
+                              , color = Just (Css.hex "#FFFFFF")
+                              , inset = True
+                              }
+                            ]
+                        ]
+                    ]
                 , SvgAttrs.id "hexmap"
-                , let
-                    xOffset =
-                        -- view horizontal offset
-                        String.fromFloat (width * horizOffset)
-
-                    yOffset =
-                        -- view vertical offset
-                        String.fromFloat (height * vertOffset)
-                  in
-                  viewBox <|
+                , viewBox <|
                     xOffset
                         ++ " "
                         ++ yOffset
@@ -690,18 +745,22 @@ view model =
                                 model.viewingHexOrigin
                                 (case model.hexmapViewport of
                                     Nothing ->
-                                        Debug.log "using fullscreen" viewport
+                                        Debug.log "using fullscreen"
+                                            { screenVp = viewport, hexmapVp = Nothing }
 
                                     Just (Ok hexmapViewport) ->
                                         -- Debug.log "using hexmap" hexmapViewport
-                                        Debug.log "using fullscreen anyway" viewport
+                                        Debug.log "using fullscreen anyway"
+                                            { screenVp = viewport
+                                            , hexmapVp = Just hexmapViewport
+                                            }
 
                                     Just (Err domError) ->
                                         let
                                             _ =
                                                 Debug.log "cant use, domError" domError
                                         in
-                                        viewport
+                                        { screenVp = viewport, hexmapVp = Nothing }
                                 )
                                 sectorData
                                 model.offset
