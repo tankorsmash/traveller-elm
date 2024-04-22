@@ -24,6 +24,7 @@ import List.Extra as List
 import Random
 import Random.List
 import RemoteData exposing (RemoteData(..))
+import StarPage
 import Traveller
 import Url
 import Url.Parser exposing ((</>), Parser, int, map, oneOf, s, string, top)
@@ -36,6 +37,7 @@ type alias Model =
     , dialogBody : Html Msg
     , isDarkMode : Bool
     , travellerModel : Traveller.Model
+    , starPageModel : StarPage.Model
     }
 
 
@@ -46,10 +48,12 @@ type Msg
     | ToggleErrorDialog
     | ToggleDarkMode
     | GotTravellerMsg Traveller.Msg
+    | GotStarPageMsg StarPage.Msg
 
 
 type Route
     = TravellerPage
+    | StarPage
 
 
 port writeToLocalStorage : ( String, String ) -> Cmd msg
@@ -68,6 +72,7 @@ routeParser : Parser (Route -> a) a
 routeParser =
     oneOf
         [ map TravellerPage top
+        , map StarPage (s "view_star")
         ]
 
 
@@ -77,6 +82,9 @@ init flags url key =
         ( travellerModel, travellerCmds ) =
             Traveller.init
 
+        ( starPageModel, starPageCmds ) =
+            StarPage.init
+
         model : Model
         model =
             { key = key
@@ -85,11 +93,12 @@ init flags url key =
             , isDarkMode = False
             , dialogBody = text "Error dialog"
             , travellerModel = travellerModel
+            , starPageModel = starPageModel
             }
     in
     ( model
     , Cmd.batch
-        [ Cmd.map GotTravellerMsg travellerCmds ]
+        [ Cmd.map GotTravellerMsg travellerCmds, Cmd.map GotStarPageMsg starPageCmds]
     )
 
 
@@ -152,6 +161,15 @@ update msg model =
             , Cmd.map GotTravellerMsg newTravellerCmds
             )
 
+        GotStarPageMsg starPageMsg ->
+            let
+                ( newStarPageModel, newStarPageCmds ) =
+                    StarPage.update starPageMsg model.starPageModel
+            in
+            ( { model | starPageModel = newStarPageModel }
+            , Cmd.map GotStarPageMsg newStarPageCmds
+            )
+
 
 view : Model -> Browser.Document Msg
 view model =
@@ -166,6 +184,11 @@ view model =
                     Html.map GotTravellerMsg <|
                         Element.layout [ Element.centerX ] <|
                             Traveller.view model.travellerModel
+
+                Just StarPage ->
+                    Html.map GotStarPageMsg <|
+                        Element.layout [ Element.centerX ] <|
+                            StarPage.view model.starPageModel
 
                 Nothing ->
                     Html.text "404 i guess"
