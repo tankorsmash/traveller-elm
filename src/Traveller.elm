@@ -458,54 +458,66 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
             -- view vertical offset
             String.fromFloat (height * vertOffset)
 
+        viewHex : Int -> Int -> HexOrigin -> ( Maybe (Svg Msg), Int )
+        viewHex rowIdx colIdx ( ox, oy ) =
+            let
+                idx =
+                    (rowIdx + 1) + (colIdx + 1) * 100
+
+                widestViewport =
+                    case hexmapVp of
+                        Nothing ->
+                            screenVp
+
+                        Just hexmapViewport ->
+                            hexmapViewport
+
+                ( fox, foy ) =
+                    ( toFloat ox, toFloat oy )
+
+                outsideX =
+                    let
+                        plus =
+                            fox + hexSize - (width * horizOffset)
+
+                        minus =
+                            fox - hexSize - (width * horizOffset)
+                    in
+                    (plus < 0) || (minus > widestViewport.viewport.width)
+
+                outsideY =
+                    let
+                        plus =
+                            foy + hexSize - (height * vertOffset)
+
+                        minus =
+                            foy - hexSize - (height * vertOffset)
+                    in
+                    (plus < 0) || (minus > widestViewport.viewport.height)
+
+                solarSystem =
+                    Dict.get idx solarSystemDict
+
+                hexSVG =
+                    if not (outsideX || outsideY) then
+                        Just
+                            (viewHexDetailed solarSystem
+                                playerHexId
+                                idx
+                                ( ox, oy )
+                                hexSize
+                            )
+
+                    else
+                        Nothing
+            in
+            ( hexSVG, isEmptyHex solarSystem )
+
         viewHexRow : Int -> List ( Maybe (Svg Msg), Int )
         viewHexRow rowIdx =
             List.range 0 numHexCols
                 |> List.map (calcOrigin hexSize rowIdx)
-                |> List.indexedMap
-                    (\colIdx ( ox, oy ) ->
-                        let
-                            idx =
-                                (rowIdx + 1) + (colIdx + 1) * 100
-
-                            widestViewport =
-                                case hexmapVp of
-                                    Nothing ->
-                                        screenVp
-
-                                    Just hexmapViewport ->
-                                        hexmapViewport
-
-                            outsideX =
-                                ((toFloat ox + hexSize - (width * horizOffset)) < 0)
-                                    || ((toFloat ox - hexSize - (width * horizOffset))
-                                            > widestViewport.viewport.width
-                                       )
-
-                            outsideY =
-                                (((toFloat oy + hexSize) - (height * vertOffset)) < 0)
-                                    || (((toFloat oy - hexSize) - (height * vertOffset))
-                                            > widestViewport.viewport.height
-                                       )
-
-                            solarSystem =
-                                Dict.get idx solarSystemDict
-
-                            hexSVG =
-                                if not (outsideX || outsideY) then
-                                    Just
-                                        (viewHexDetailed solarSystem
-                                            playerHexId
-                                            idx
-                                            ( ox, oy )
-                                            hexSize
-                                        )
-
-                                else
-                                    Nothing
-                        in
-                        ( hexSVG, isEmptyHex solarSystem )
-                    )
+                |> List.indexedMap (viewHex rowIdx)
     in
     List.range 0 numHexRows
         |> List.map viewHexRow
