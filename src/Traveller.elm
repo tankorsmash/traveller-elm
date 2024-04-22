@@ -933,8 +933,8 @@ update msg model =
                                 Just (Err _) ->
                                     Debug.todo "GotHexMapViewport error"
                     in
-                    ( (fox - (vpWidth * 0.5)) / vpWidth
-                    , (foy - (vpHeight * 0.5)) / vpHeight
+                    ( clamp 0 1 <| (fox - (vpWidth * 0.5)) / vpWidth
+                    , clamp 0 1 <| (foy - (vpHeight * 0.5)) / vpHeight
                     )
             in
             ( { model
