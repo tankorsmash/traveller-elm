@@ -37,6 +37,17 @@ view model =
                 , SvgAttrs.fill <| "red"
                 ]
                 []
+
+        drawOrbit ( originX, originY ) radius =
+            Svg.circle
+                [ SvgAttrs.cx <| String.fromFloat <| originX
+                , SvgAttrs.cy <| String.fromFloat <| originY
+                , SvgAttrs.r <| String.fromFloat <| radius
+                , SvgAttrs.fill <| "none"
+                , SvgAttrs.strokeDasharray <| "5"
+                , SvgAttrs.stroke <| "black"
+                ]
+                []
     in
     column [ Font.color <| Element.rgb 0.5 1 0.5 ]
         [ text "Hello StarPage"
@@ -58,6 +69,10 @@ view model =
                             ++ stringHeight
                     ]
                     [ drawStar ( 250, 250 ) 20
+                    , drawOrbit ( 250, 250 ) 60
+                    , drawOrbit ( 250, 250 ) 80
+                    , drawOrbit ( 250, 250 ) 120
+                    , drawOrbit ( 250, 250 ) 200
                     ]
         ]
 
