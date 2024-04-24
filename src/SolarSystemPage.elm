@@ -7,6 +7,7 @@ import Dict
 import Element exposing (column, text)
 import Element.Font as Font
 import Http
+import Math.Vector2 as Vector2
 import RemoteData exposing (RemoteData)
 import Svg.Styled as Svg
 import Svg.Styled.Attributes as SvgAttrs
@@ -37,8 +38,8 @@ init hexId =
     )
 
 
-rotatePoint : ( Float, Float ) -> Angle.Angle -> Float -> ( Float, Float )
-rotatePoint ( x, y ) angle distance =
+rotatePoint : Vector2.Vec2 -> Angle.Angle -> Float -> Vector2.Vec2
+rotatePoint vec2 angle distance =
     let
         rads =
             Angle.inRadians angle
@@ -48,10 +49,13 @@ rotatePoint ( x, y ) angle distance =
 
         sinTheta =
             sin rads
+
+        { x, y } =
+            Vector2.toRecord vec2
     in
-    ( x + (distance * cosTheta) - (0 * sinTheta)
-    , y + (distance * sinTheta) + (0 * cosTheta)
-    )
+    Vector2.vec2
+        (x + (distance * cosTheta) - (0 * sinTheta))
+        (y + (distance * sinTheta) + (0 * cosTheta))
 
 
 viewSystem : SolarSystem -> Svg.Svg msg
@@ -77,7 +81,7 @@ viewSystem system =
             -- view vertical offset
             String.fromFloat (height * vertOffset)
 
-        drawStar ( starX, starY ) radius =
+        drawStar star ( starX, starY ) radius =
             Svg.g []
                 [ Svg.circle
                     [ SvgAttrs.cx <| String.fromFloat <| starX
@@ -94,11 +98,11 @@ viewSystem system =
                     , SvgAttrs.textAnchor <| "middle"
                     , SvgAttrs.dominantBaseline <| "middle"
                     ]
-                    [ Svg.text <| "Star"
+                    [ Svg.text <| "* " ++ star.orbitSequence
                     ]
                 ]
 
-        drawPlanet ( planetX, planetY ) radius =
+        drawStellarObject ( planetX, planetY ) radius =
             Svg.g []
                 [ Svg.circle
                     [ SvgAttrs.cx <| String.fromFloat <| planetX
@@ -153,34 +157,61 @@ viewSystem system =
                     _ =
                         Debug.log "star" <| star
 
+                    ( parentX, parentY ) =
+                        ( 250, 250 )
+
+                    ( starX, starY ) =
+                        rotatePoint
+                            (Vector2.vec2 parentX parentY)
+                            (Angle.degrees (10 * toFloat i))
+                            (star.orbit * 20)
+                            |> Vector2.toRecord
+                            |> (\{ x, y } -> ( x, y ))
+
                     drawnStar =
-                        let
-                            ( starX, starY ) =
-                                rotatePoint
-                                    ( 250, 250 )
-                                    (Angle.degrees 10)
-                                    (star.orbit * 20)
-                        in
-                        drawStar ( starX, starY ) (star.mass * 50)
+                        Svg.g []
+                            [ drawOrbit ( parentX, parentY ) (star.orbit * 20)
+                            , drawStar star ( starX, starY ) (star.mass * 50)
+                            ]
 
                     orbitingBodies =
-                        List.map
-                            (\stellarBody ->
+                        List.indexedMap
+                            (\planetI (Traveller.StellarObject.StellarObject stellarBody) ->
                                 let
-                                    stellarBody_ : StellarObject
-                                    stellarBody_ =
-                                        stellarBody
+                                    planetPos =
+                                        rotatePoint
+                                            (Vector2.vec2 0 0)
+                                            (Angle.degrees (10 * toFloat planetI))
+                                            (case stellarBody.orbit of
+                                                SimpleOrbit orbitVal ->
+                                                    orbitVal * 20
+
+                                                ComplexOrbit { zone, orbit } ->
+                                                    orbit * 20
+                                            )
+                                            |> Vector2.add (Vector2.vec2 starX starY)
                                 in
-                                Svg.g [] []
+                                Svg.g []
+                                    [ drawStellarObject
+                                        (planetPos
+                                            |> Vector2.toRecord
+                                            |> (\{ x, y } -> ( x, y ))
+                                        )
+                                        5
+                                    , drawOrbit
+                                        ( starX, starY )
+                                        (case stellarBody.orbit of
+                                            SimpleOrbit orbitVal ->
+                                                orbitVal * 20
+
+                                            ComplexOrbit { zone, orbit } ->
+                                                orbit * 20
+                                        )
+                                    ]
                             )
                             star.stellarObjects
                 in
                 Svg.g [] (drawnStar :: orbitingBodies)
-             -- case star.orbit of
-             --     SimpleOrbit orbitVal ->
-             --         drawOrbit ( 250, 250 ) orbitVal
-             --     ComplexOrbit { zone, orbit } ->
-             --         drawOrbit ( 250, 250 ) (orbit)
             )
             stars
         )

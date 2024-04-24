@@ -1,4 +1,4 @@
-module Traveller.StellarObject exposing (StellarObject, codecStellarObject, sampleStellarObject)
+module Traveller.StellarObject exposing (StellarObject(..), codecStellarObject, sampleStellarObject)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
