@@ -43,12 +43,8 @@ import Traveller.HexId as HexId exposing (HexId)
 import Traveller.SectorData exposing (SectorData, codecSectorData)
 import Traveller.SolarSystem exposing (SolarSystem)
 import Traveller.Star as Star exposing (starColourRGB)
+import Traveller.HexId exposing (RawHexId)
 
-
-{-| needs to be a plain int for hashing in a Dict, otherwise we'd use full HexIds
--}
-type alias RawHexId =
-    Int
 
 
 type alias Model =
@@ -937,6 +933,15 @@ update msg model =
                     ( clamp 0 1 <| (fox - (vpWidth * 0.5)) / vpWidth
                     , clamp 0 1 <| (foy - (vpHeight * 0.5)) / vpHeight
                     )
+
+                maybeSolarSystem =
+                    case model.sectorData of
+                        RemoteData.Success ( sectorData, solarSystemDict ) ->
+                            Dict.get hexId.value solarSystemDict
+
+                        _ ->
+                            Nothing
+
             in
             ( { model
                 | viewingHexId = Just hexId
