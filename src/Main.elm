@@ -26,6 +26,7 @@ import Random.List
 import RemoteData exposing (RemoteData(..))
 import SolarSystemPage
 import Traveller
+import Traveller.HexId as HexId
 import Url
 import Url.Parser exposing ((</>), Parser, int, map, oneOf, s, string, top)
 
@@ -82,8 +83,8 @@ init flags url key =
         ( travellerModel, travellerCmds ) =
             Traveller.init
 
-        ( solarSystemModel, starPageCmds ) =
-            SolarSystemPage.init
+        ( solarSystemModel, solarSystemCmds ) =
+            SolarSystemPage.init <| HexId.createFromInt 104 -- 104 is a solar system in Deepnight. Will need to get smarter about this
 
         model : Model
         model =
@@ -98,7 +99,7 @@ init flags url key =
     in
     ( model
     , Cmd.batch
-        [ Cmd.map GotTravellerMsg travellerCmds, Cmd.map GotSolarSystemPageMsg starPageCmds]
+        [ Cmd.map GotTravellerMsg travellerCmds, Cmd.map GotSolarSystemPageMsg solarSystemCmds ]
     )
 
 

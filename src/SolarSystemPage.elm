@@ -11,7 +11,7 @@ import Svg.Styled as Svg
 import Svg.Styled.Attributes as SvgAttrs
 import Task
 import Traveller exposing (Msg(..))
-import Traveller.HexId exposing (RawHexId)
+import Traveller.HexId exposing (HexId, RawHexId)
 import Traveller.SectorData exposing (SectorData, codecSectorData)
 import Traveller.SolarSystem exposing (SolarSystem)
 
@@ -19,7 +19,18 @@ import Traveller.SolarSystem exposing (SolarSystem)
 type alias Model =
     { solarSystem : Maybe SolarSystem
     , sectorData : RemoteData Http.Error ( SectorData, Dict.Dict RawHexId SolarSystem )
+    , hexId : HexId
     }
+
+
+init : HexId -> ( Model, Cmd Msg )
+init hexId =
+    ( { solarSystem = Nothing
+      , sectorData = RemoteData.NotAsked
+      , hexId = hexId
+      }
+    , sendSectorRequest
+    )
 
 
 viewSystem : SolarSystem -> Svg.Svg msg
@@ -84,13 +95,17 @@ viewSystem system =
         ]
 
 
-view : { a | solarSystem : Maybe SolarSystem } -> Element.Element msg
+view : Model -> Element.Element msg
 view model =
     case model.solarSystem of
         Just system ->
             column
-                [ Font.size 24 ]
+                [ Font.size 24
+                , Element.centerX
+                , Font.color <| Element.rgb 0.5 0.75 0.0
+                ]
                 [ text "Solar System"
+                , text <| "Coordinate/hexid: " ++ model.hexId.raw
                 , viewSystem system
                     |> Svg.toUnstyled
                     |> Element.html
@@ -100,11 +115,6 @@ view model =
             column
                 [ Font.size 24 ]
                 [ text "No Solar System" ]
-
-
-init : ( Model, Cmd Msg )
-init =
-    ( { solarSystem = Nothing, sectorData = RemoteData.NotAsked }, sendSectorRequest )
 
 
 sendSectorRequest : Cmd Msg
@@ -122,7 +132,7 @@ sendSectorRequest =
         }
 
 
-update : Msg -> Model -> (Model, Cmd Msg)
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         NoOp ->
@@ -145,16 +155,19 @@ update msg model =
 
                 newSectorData =
                     { sectorData | solarSystems = sortedSolarSystems }
+
+                newSolarSystem =
+                    Dict.get model.hexId.value solarSystemDict
             in
             ( { model
                 | sectorData =
                     ( newSectorData, solarSystemDict )
                         |> RemoteData.Success
+                , solarSystem = newSolarSystem
               }
             , Cmd.batch
-                [
-                    --  Browser.Dom.getViewportOf "hexmap"
-                    -- |> Task.attempt GotHexMapViewport
+                [--  Browser.Dom.getViewportOf "hexmap"
+                 -- |> Task.attempt GotHexMapViewport
                 ]
             )
 
