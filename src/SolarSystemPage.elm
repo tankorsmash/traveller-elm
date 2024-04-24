@@ -1,5 +1,6 @@
 module SolarSystemPage exposing (Model, Msg(..), init, update, view)
 
+import Angle
 import Browser.Dom
 import Codec
 import Dict
@@ -12,8 +13,11 @@ import Svg.Styled.Attributes as SvgAttrs
 import Task
 import Traveller exposing (Msg(..))
 import Traveller.HexId exposing (HexId, RawHexId)
+import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.SectorData exposing (SectorData, codecSectorData)
 import Traveller.SolarSystem exposing (SolarSystem)
+import Traveller.Star exposing (Star)
+import Traveller.StellarObject exposing (StellarObject)
 
 
 type alias Model =
@@ -33,9 +37,29 @@ init hexId =
     )
 
 
+rotatePoint : ( Float, Float ) -> Angle.Angle -> Float -> ( Float, Float )
+rotatePoint ( x, y ) angle distance =
+    let
+        rads =
+            Angle.inRadians angle
+
+        cosTheta =
+            cos rads
+
+        sinTheta =
+            sin rads
+    in
+    ( x + (distance * cosTheta) - (0 * sinTheta)
+    , y + (distance * sinTheta) + (0 * cosTheta)
+    )
+
+
 viewSystem : SolarSystem -> Svg.Svg msg
 viewSystem system =
     let
+        { stars } =
+            system
+
         ( width, stringWidth ) =
             500 |> (\x -> ( x, String.fromFloat x ))
 
@@ -54,13 +78,45 @@ viewSystem system =
             String.fromFloat (height * vertOffset)
 
         drawStar ( starX, starY ) radius =
-            Svg.circle
-                [ SvgAttrs.cx <| String.fromFloat <| starX
-                , SvgAttrs.cy <| String.fromFloat <| starY
-                , SvgAttrs.r <| String.fromFloat <| radius
-                , SvgAttrs.fill <| "red"
+            Svg.g []
+                [ Svg.circle
+                    [ SvgAttrs.cx <| String.fromFloat <| starX
+                    , SvgAttrs.cy <| String.fromFloat <| starY
+                    , SvgAttrs.r <| String.fromFloat <| radius
+                    , SvgAttrs.fill <| "red"
+                    , SvgAttrs.stroke <| "green"
+                    ]
+                    []
+                , Svg.text_
+                    [ SvgAttrs.x <| String.fromFloat <| starX
+                    , SvgAttrs.y <| String.fromFloat <| starY
+                    , SvgAttrs.fill <| "black"
+                    , SvgAttrs.textAnchor <| "middle"
+                    , SvgAttrs.dominantBaseline <| "middle"
+                    ]
+                    [ Svg.text <| "Star"
+                    ]
                 ]
-                []
+
+        drawPlanet ( planetX, planetY ) radius =
+            Svg.g []
+                [ Svg.circle
+                    [ SvgAttrs.cx <| String.fromFloat <| planetX
+                    , SvgAttrs.cy <| String.fromFloat <| planetY
+                    , SvgAttrs.r <| String.fromFloat <| radius
+                    , SvgAttrs.fill <| "green"
+                    ]
+                    []
+                , Svg.text_
+                    [ SvgAttrs.x <| String.fromFloat <| planetX
+                    , SvgAttrs.y <| String.fromFloat <| planetY
+                    , SvgAttrs.fill <| "black"
+                    , SvgAttrs.textAnchor <| "middle"
+                    , SvgAttrs.dominantBaseline <| "middle"
+                    ]
+                    [ Svg.text <| "Planet"
+                    ]
+                ]
 
         drawOrbit ( originX, originY ) radius =
             Svg.circle
@@ -87,12 +143,47 @@ viewSystem system =
                 ++ " "
                 ++ stringHeight
         ]
-        [ drawStar ( 250, 250 ) 20
-        , drawOrbit ( 250, 250 ) 60
-        , drawOrbit ( 250, 250 ) 80
-        , drawOrbit ( 250, 250 ) 120
-        , drawOrbit ( 250, 250 ) 200
-        ]
+        (List.indexedMap
+            (\i star ->
+                let
+                    star_ : Star
+                    star_ =
+                        star
+
+                    _ =
+                        Debug.log "star" <| star
+
+                    drawnStar =
+                        let
+                            ( starX, starY ) =
+                                rotatePoint
+                                    ( 250, 250 )
+                                    (Angle.degrees 10)
+                                    (star.orbit * 20)
+                        in
+                        drawStar ( starX, starY ) (star.mass * 50)
+
+                    orbitingBodies =
+                        List.map
+                            (\stellarBody ->
+                                let
+                                    stellarBody_ : StellarObject
+                                    stellarBody_ =
+                                        stellarBody
+                                in
+                                Svg.g [] []
+                            )
+                            star.stellarObjects
+                in
+                Svg.g [] (drawnStar :: orbitingBodies)
+             -- case star.orbit of
+             --     SimpleOrbit orbitVal ->
+             --         drawOrbit ( 250, 250 ) orbitVal
+             --     ComplexOrbit { zone, orbit } ->
+             --         drawOrbit ( 250, 250 ) (orbit)
+            )
+            stars
+        )
 
 
 view : Model -> Element.Element msg
@@ -100,7 +191,8 @@ view model =
     case model.solarSystem of
         Just system ->
             column
-                [ Font.size 24
+                [ Font.size
+                    24
                 , Element.centerX
                 , Font.color <| Element.rgb 0.5 0.75 0.0
                 ]

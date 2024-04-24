@@ -84,7 +84,7 @@ init flags url key =
             Traveller.init
 
         ( solarSystemModel, solarSystemCmds ) =
-            SolarSystemPage.init <| HexId.createFromInt 104 -- 104 is a solar system in Deepnight. Will need to get smarter about this
+            SolarSystemPage.init <| HexId.createFromInt 1014 -- 1014 is a solar system in Deepnight. Will need to get smarter about this
 
         model : Model
         model =
