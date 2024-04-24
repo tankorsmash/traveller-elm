@@ -1,4 +1,4 @@
-module StarPage exposing (Model, Msg(..), init, update, view)
+module SolarSystemPage exposing (Model, Msg(..), init, update, view)
 
 import Browser.Dom
 import Codec

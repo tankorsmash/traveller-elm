@@ -24,7 +24,7 @@ import List.Extra as List
 import Random
 import Random.List
 import RemoteData exposing (RemoteData(..))
-import StarPage
+import SolarSystemPage
 import Traveller
 import Url
 import Url.Parser exposing ((</>), Parser, int, map, oneOf, s, string, top)
@@ -37,7 +37,7 @@ type alias Model =
     , dialogBody : Html Msg
     , isDarkMode : Bool
     , travellerModel : Traveller.Model
-    , starPageModel : StarPage.Model
+    , solarSystemModel : SolarSystemPage.Model
     }
 
 
@@ -48,7 +48,7 @@ type Msg
     | ToggleErrorDialog
     | ToggleDarkMode
     | GotTravellerMsg Traveller.Msg
-    | GotStarPageMsg StarPage.Msg
+    | GotSolarSystemPageMsg SolarSystemPage.Msg
 
 
 type Route
@@ -82,8 +82,8 @@ init flags url key =
         ( travellerModel, travellerCmds ) =
             Traveller.init
 
-        ( starPageModel, starPageCmds ) =
-            StarPage.init
+        ( solarSystemModel, starPageCmds ) =
+            SolarSystemPage.init
 
         model : Model
         model =
@@ -93,12 +93,12 @@ init flags url key =
             , isDarkMode = False
             , dialogBody = text "Error dialog"
             , travellerModel = travellerModel
-            , starPageModel = starPageModel
+            , solarSystemModel = solarSystemModel
             }
     in
     ( model
     , Cmd.batch
-        [ Cmd.map GotTravellerMsg travellerCmds, Cmd.map GotStarPageMsg starPageCmds]
+        [ Cmd.map GotTravellerMsg travellerCmds, Cmd.map GotSolarSystemPageMsg starPageCmds]
     )
 
 
@@ -161,13 +161,13 @@ update msg model =
             , Cmd.map GotTravellerMsg newTravellerCmds
             )
 
-        GotStarPageMsg starPageMsg ->
+        GotSolarSystemPageMsg solarSystemPageMsg ->
             let
                 ( newStarPageModel, newStarPageCmds ) =
-                    StarPage.update starPageMsg model.starPageModel
+                    SolarSystemPage.update solarSystemPageMsg model.solarSystemModel
             in
-            ( { model | starPageModel = newStarPageModel }
-            , Cmd.map GotStarPageMsg newStarPageCmds
+            ( { model | solarSystemModel = newStarPageModel }
+            , Cmd.map GotSolarSystemPageMsg newStarPageCmds
             )
 
 
@@ -186,9 +186,9 @@ view model =
                             Traveller.view model.travellerModel
 
                 Just StarPage ->
-                    Html.map GotStarPageMsg <|
+                    Html.map GotSolarSystemPageMsg <|
                         Element.layout [ Element.centerX ] <|
-                            StarPage.view model.starPageModel
+                            SolarSystemPage.view model.solarSystemModel
 
                 Nothing ->
                     Html.text "404 i guess"
