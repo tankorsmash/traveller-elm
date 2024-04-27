@@ -39,12 +39,10 @@ import Svg.Styled.Attributes as SvgAttrs exposing (fill, points, viewBox)
 import Svg.Styled.Events as SvgEvents
 import Svg.Styled.Lazy
 import Task
-import Traveller.HexId as HexId exposing (HexId)
+import Traveller.HexId as HexId exposing (HexId, RawHexId)
 import Traveller.SectorData exposing (SectorData, codecSectorData)
 import Traveller.SolarSystem exposing (SolarSystem)
 import Traveller.Star as Star exposing (starColourRGB)
-import Traveller.HexId exposing (RawHexId)
-
 
 
 type alias Model =
@@ -941,7 +939,6 @@ update msg model =
 
                         _ ->
                             Nothing
-
             in
             ( { model
                 | viewingHexId = Just hexId

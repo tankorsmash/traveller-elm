@@ -21,6 +21,7 @@ import Json.Decode
 import Json.Encode
 import List
 import List.Extra as List
+import Maybe.Extra as Maybe
 import Random
 import Random.List
 import RemoteData exposing (RemoteData(..))
@@ -29,6 +30,7 @@ import Traveller
 import Traveller.HexId as HexId
 import Url
 import Url.Parser exposing ((</>), Parser, int, map, oneOf, s, string, top)
+import Url.Parser.Query
 
 
 type alias Model =
@@ -83,8 +85,27 @@ init flags url key =
         ( travellerModel, travellerCmds ) =
             Traveller.init
 
+        hexId =
+            let
+                hexIdParser =
+                    Url.Parser.query (Url.Parser.Query.int "hexid")
+                        |> Url.Parser.map (Maybe.map HexId.createFromInt)
+
+                -- if we don't do this we have to parse the actual url, but we just want the query string
+                urlWithoutPath =
+                    { url | path = "" }
+            in
+            Url.Parser.parse hexIdParser urlWithoutPath
+                |> -- the query parser returns a 'Maybe' because the query string might
+                   -- not be present _AND_ a maybe int, because the int we're looking
+                --    for might not be present, so we join them both
+                   Maybe.join
+                |> Maybe.withDefault
+                    -- 1014 is a solar system in Deepnight. Will need to get better about showing that we're using the default, instead of reading from the query string
+                    (HexId.createFromInt 1014)
+
         ( solarSystemModel, solarSystemCmds ) =
-            SolarSystemPage.init <| HexId.createFromInt 1014 -- 1014 is a solar system in Deepnight. Will need to get smarter about this
+            SolarSystemPage.init <| hexId
 
         model : Model
         model =
