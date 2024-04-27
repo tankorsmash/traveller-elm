@@ -29,7 +29,7 @@ type alias StellarData =
     , retrograde : Maybe Bool
     , trojanOffset : Maybe Float
     , axialTilt : Maybe Float
-    , moons : List StellarMoon
+    , moons : Maybe( List StellarMoon)
     , biomassRating : Maybe Int
     , biocomplexityCode : Maybe Int
     , biodiversityRating : Maybe Int
@@ -115,7 +115,7 @@ codecStellarObject =
         |> Codec.maybeField "retrograde" .retrograde Codec.bool
         |> Codec.maybeField "trojanOffset" .trojanOffset Codec.float
         |> Codec.maybeField "axialTilt" .axialTilt Codec.float
-        |> Codec.field "moons" .moons (Codec.list (Codec.lazy (\_ -> codecStellarMoon)))
+        |> Codec.maybeField "moons" .moons (Codec.list (Codec.lazy (\_ -> codecStellarMoon)))
         |> Codec.maybeField "biomassRating" .biomassRating Codec.int
         |> Codec.maybeField "biocomplexityCode" .biocomplexityCode Codec.int
         |> Codec.maybeField "biodiversityRating" .biodiversityRating Codec.int
