@@ -122,14 +122,14 @@ viewSystem system =
                     ]
                 ]
 
-        drawOrbit ( originX, originY ) radius =
+        drawOrbit ( originX, originY ) radius strokeColor =
             Svg.circle
                 [ SvgAttrs.cx <| String.fromFloat <| originX
                 , SvgAttrs.cy <| String.fromFloat <| originY
                 , SvgAttrs.r <| String.fromFloat <| radius
                 , SvgAttrs.fill <| "none"
                 , SvgAttrs.strokeDasharray <| "5"
-                , SvgAttrs.stroke <| "black"
+                , SvgAttrs.stroke strokeColor
                 ]
                 []
     in
@@ -170,7 +170,7 @@ viewSystem system =
 
                     drawnStar =
                         Svg.g []
-                            [ drawOrbit ( parentX, parentY ) (star.orbit * 20)
+                            [ drawOrbit ( parentX, parentY ) (star.orbit * 20) "blue"
                             , drawStar star ( starX, starY ) (star.mass * 50)
                             ]
 
@@ -181,13 +181,13 @@ viewSystem system =
                                     planetPos =
                                         rotatePoint
                                             (Vector2.vec2 0 0)
-                                            (Angle.degrees (10 * toFloat planetI))
+                                            (Angle.degrees (35 * toFloat planetI))
                                             (case stellarBody.orbit of
                                                 SimpleOrbit orbitVal ->
-                                                    orbitVal * 20
+                                                    55 + (toFloat planetI * 5)
 
                                                 ComplexOrbit { zone, orbit } ->
-                                                    orbit * 20
+                                                    55 + (toFloat planetI * 5)
                                             )
                                             |> Vector2.add (Vector2.vec2 starX starY)
                                 in
@@ -202,11 +202,12 @@ viewSystem system =
                                         ( starX, starY )
                                         (case stellarBody.orbit of
                                             SimpleOrbit orbitVal ->
-                                                orbitVal * 20
+                                                55 + (toFloat planetI * 5)
 
                                             ComplexOrbit { zone, orbit } ->
-                                                orbit * 20
+                                                55 + (toFloat planetI * 5)
                                         )
+                                        "gray"
                                     ]
                             )
                             star.stellarObjects
