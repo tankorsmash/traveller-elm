@@ -102,7 +102,7 @@ viewSystem system =
                     ]
                 ]
 
-        drawStellarObject ( planetX, planetY ) radius =
+        drawStellarObject stellarData ( planetX, planetY ) radius =
             Svg.g []
                 [ Svg.circle
                     [ SvgAttrs.cx <| String.fromFloat <| planetX
@@ -118,7 +118,7 @@ viewSystem system =
                     , SvgAttrs.textAnchor <| "middle"
                     , SvgAttrs.dominantBaseline <| "middle"
                     ]
-                    [ Svg.text <| "Planet"
+                    [ Svg.text <| "Planet, " ++ String.fromInt (List.length (Maybe.withDefault [] <| stellarData.moons)) ++ " moons"
                     ]
                 ]
 
@@ -193,6 +193,7 @@ viewSystem system =
                                 in
                                 Svg.g []
                                     [ drawStellarObject
+                                        stellarBody
                                         (planetPos
                                             |> Vector2.toRecord
                                             |> (\{ x, y } -> ( x, y ))

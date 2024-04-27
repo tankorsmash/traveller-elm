@@ -12,44 +12,50 @@ import Traveller.Point exposing (StellarPoint, codecStellarPoint)
 import Traveller.Population exposing (StellarPopulation, codecStellarPopulation)
 
 
+{-| the data structure for a stellar object.
+ It needs to be separate from StellarObject so that it can nest within itself
+ -}
+type alias StellarData =
+    { orbitPosition : StellarPoint
+    , inclination : Float
+    , eccentricity : Float
+    , effectiveHZCODeviation : Maybe Float
+    , size : Maybe String
+    , orbit : StellarOrbit
+    , period : Maybe Float
+    , composition : Maybe String
+    , retrograde : Maybe Bool
+    , trojanOffset : Maybe Float
+    , axialTilt : Maybe Float
+    , moons : Maybe (List StellarObject)
+    , biomassRating : Maybe Int
+    , biocomplexityCode : Maybe Int
+    , biodiversityRating : Maybe Int
+    , compatibilityRating : Maybe Int
+    , resourceRating : Maybe Int
+    , currentNativeSophont : Maybe Bool
+    , extinctNativeSophont : Maybe Bool
+    , hasRing : Maybe Bool
+    , orbitType : Int
+    , atmosphere : Maybe StellarAtmosphere
+    , hydrographics : Maybe StellarHydrographics
+    , population : Maybe StellarPopulation
+    , governmentCode : Maybe Int
+    , lawLevelCode : Maybe Int
+    , starPort : Maybe String
+    , techLevel : Maybe Int
+    , tradeCodes : Maybe (List String)
+    , albedo : Maybe Float
+    , density : Maybe Float
+    , greenhouse : Maybe Int
+    , meanTemperature : Maybe Float
+    , orbitSequence : String
+    }
+
+
 type StellarObject
     = -- needs to be a type instead of an alias, because its recursive
-      StellarObject
-        { orbitPosition : StellarPoint
-        , inclination : Float
-        , eccentricity : Float
-        , effectiveHZCODeviation : Maybe Float
-        , size : Maybe String
-        , orbit : StellarOrbit
-        , period : Maybe Float
-        , composition : Maybe String
-        , retrograde : Maybe Bool
-        , trojanOffset : Maybe Float
-        , axialTilt : Maybe Float
-        , moons : Maybe (List StellarObject)
-        , biomassRating : Maybe Int
-        , biocomplexityCode : Maybe Int
-        , biodiversityRating : Maybe Int
-        , compatibilityRating : Maybe Int
-        , resourceRating : Maybe Int
-        , currentNativeSophont : Maybe Bool
-        , extinctNativeSophont : Maybe Bool
-        , hasRing : Maybe Bool
-        , orbitType : Int
-        , atmosphere : Maybe StellarAtmosphere
-        , hydrographics : Maybe StellarHydrographics
-        , population : Maybe StellarPopulation
-        , governmentCode : Maybe Int
-        , lawLevelCode : Maybe Int
-        , starPort : Maybe String
-        , techLevel : Maybe Int
-        , tradeCodes : Maybe (List String)
-        , albedo : Maybe Float
-        , density : Maybe Float
-        , greenhouse : Maybe Int
-        , meanTemperature : Maybe Float
-        , orbitSequence : String
-        }
+      StellarObject StellarData
 
 
 buildStellarObject =
