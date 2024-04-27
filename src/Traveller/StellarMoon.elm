@@ -1,4 +1,4 @@
-module Traveller.StellarObject exposing (StellarObject(..), codecStellarObject, sampleStellarObject)
+module Traveller.StellarMoon exposing (StellarMoon(..), codecStellarMoon, sampleStellarMoon)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -10,14 +10,60 @@ import Traveller.Hydrographics exposing (StellarHydrographics, codecStellarHydro
 import Traveller.Orbit exposing (StellarOrbit, codecStellarOrbit)
 import Traveller.Point exposing (StellarPoint, codecStellarPoint)
 import Traveller.Population exposing (StellarPopulation, codecStellarPopulation)
-import Traveller.StellarMoon exposing (StellarMoon(..))
-import Traveller.StellarMoon exposing (codecStellarMoon)
+
+
+sampleStellarMoon : String
+sampleStellarMoon =
+    """
+{
+                  "orbitPosition": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "inclination": 0,
+                  "eccentricity": 0.0612665390566092,
+                  "effectiveHZCODeviation": 0,
+                  "orbit": {
+                    "zone": "middle",
+                    "orbit": 14.302082608154684
+                  },
+                  "size": "S",
+                  "period": null,
+                  "atmosphere": {
+                    "code": 0,
+                    "irritant": false,
+                    "taint": {
+                      "subtype": "",
+                      "code": "",
+                      "severity": 0,
+                      "persistence": 0
+                    },
+                    "characteristic": "",
+                    "bar": 0,
+                    "gasType": null,
+                    "density": "None",
+                    "hazardCode": null
+                  },
+                  "hydrographics": {
+                    "code": 0,
+                    "distribution": null
+                  },
+                  "governmentCode": 0,
+                  "population": {
+                    "code": 0,
+                    "concentrationRating": null
+                  },
+                  "lawLevelCode": 0,
+                  "biomassRating": 0,
+                  "axialTilt": 33.06570464524518
+                }
+                """
 
 
 {-| the data structure for a stellar object.
 It needs to be separate from StellarObject so that it can nest within itself
 -}
-type alias StellarData =
+type alias StellarMoonData =
     { orbitPosition : StellarPoint
     , inclination : Float
     , eccentricity : Float
@@ -29,7 +75,6 @@ type alias StellarData =
     , retrograde : Maybe Bool
     , trojanOffset : Maybe Float
     , axialTilt : Maybe Float
-    , moons : List StellarMoon
     , biomassRating : Maybe Int
     , biocomplexityCode : Maybe Int
     , biodiversityRating : Maybe Int
@@ -38,7 +83,7 @@ type alias StellarData =
     , currentNativeSophont : Maybe Bool
     , extinctNativeSophont : Maybe Bool
     , hasRing : Maybe Bool
-    , orbitType : Int
+    -- , orbitType : Int
     , atmosphere : Maybe StellarAtmosphere
     , hydrographics : Maybe StellarHydrographics
     , population : Maybe StellarPopulation
@@ -51,18 +96,18 @@ type alias StellarData =
     , density : Maybe Float
     , greenhouse : Maybe Int
     , meanTemperature : Maybe Float
-    , orbitSequence : String
+
     }
 
 
-type StellarObject
+type StellarMoon
     = -- needs to be a type instead of an alias, because its recursive
-      StellarObject StellarData
+      StellarMoon StellarMoonData
 
 
-buildStellarObject =
-    \orbPos incl ecc effHZCODev size orbit period comp retro troj axTilt moons biomass bioComplex bioDiversity compat resource currentNative extinctNative hasRing orbitType atm hydro pop gov law starPort tech tradeCodes albedo dens green meanTemp orbitSeq ->
-        -- StellarObject
+buildStellarMoon =
+    \orbPos incl ecc effHZCODev size orbit period comp retro troj axTilt  biomass bioComplex bioDiversity compat resource currentNative extinctNative hasRing  atm hydro pop gov law starPort tech tradeCodes albedo dens green meanTemp ->
+        -- StellarMoonData
         { orbitPosition = orbPos
         , inclination = incl
         , eccentricity = ecc
@@ -74,7 +119,6 @@ buildStellarObject =
         , retrograde = retro
         , trojanOffset = troj
         , axialTilt = axTilt
-        , moons = moons
         , biomassRating = biomass
         , biocomplexityCode = bioComplex
         , biodiversityRating = bioDiversity
@@ -83,7 +127,7 @@ buildStellarObject =
         , currentNativeSophont = currentNative
         , extinctNativeSophont = extinctNative
         , hasRing = hasRing
-        , orbitType = orbitType
+        -- , orbitType = orbitType
         , atmosphere = atm
         , hydrographics = hydro
         , population = pop
@@ -96,14 +140,14 @@ buildStellarObject =
         , density = dens
         , greenhouse = green
         , meanTemperature = meanTemp
-        , orbitSequence = orbitSeq
+
         }
 
 
-codecStellarObject : Codec StellarObject
-codecStellarObject =
+codecStellarMoon : Codec StellarMoon
+codecStellarMoon =
     Codec.object
-        buildStellarObject
+        buildStellarMoon
         |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
@@ -115,7 +159,6 @@ codecStellarObject =
         |> Codec.maybeField "retrograde" .retrograde Codec.bool
         |> Codec.maybeField "trojanOffset" .trojanOffset Codec.float
         |> Codec.maybeField "axialTilt" .axialTilt Codec.float
-        |> Codec.field "moons" .moons (Codec.list (Codec.lazy (\_ -> codecStellarMoon)))
         |> Codec.maybeField "biomassRating" .biomassRating Codec.int
         |> Codec.maybeField "biocomplexityCode" .biocomplexityCode Codec.int
         |> Codec.maybeField "biodiversityRating" .biodiversityRating Codec.int
@@ -124,7 +167,7 @@ codecStellarObject =
         |> Codec.maybeField "currentNativeSophont" .currentNativeSophont Codec.bool
         |> Codec.maybeField "extinctNativeSophont" .extinctNativeSophont Codec.bool
         |> Codec.maybeField "hasRing" .hasRing Codec.bool
-        |> Codec.field "orbitType" .orbitType Codec.int
+        -- |> Codec.field "orbitType" .orbitType Codec.int
         |> Codec.maybeField "atmosphere" .atmosphere codecStellarAtmosphere
         |> Codec.maybeField "hydrographics" .hydrographics codecStellarHydrographics
         |> Codec.maybeField "population" .population codecStellarPopulation
@@ -137,72 +180,6 @@ codecStellarObject =
         |> Codec.maybeField "density" .density Codec.float
         |> Codec.maybeField "greenhouse" .greenhouse Codec.int
         |> Codec.maybeField "meanTemperature" .meanTemperature Codec.float
-        |> Codec.field "orbitSequence" .orbitSequence Codec.string
         |> Codec.buildObject
         |> -- Codec.map needs a way to go from object, and a way to go back to object
-           Codec.map StellarObject (\(StellarObject data) -> data)
-
-
-sampleStellarObject : String
-sampleStellarObject =
-    """
-   {
-      "orbitPosition": {
-        "x": 6402486.238018146,
-        "y": 18065208.668342955
-      },
-      "inclination": 6,
-      "eccentricity": 0.2138419510306176,
-      "effectiveHZCODeviation": 9.347833368041591,
-      "size": "S",
-      "orbit": 0.32029549592764617,
-      "period": 0.04372400061536713,
-      "composition": "Exotic Ice",
-      "retrograde": false,
-      "trojanOffset": null,
-      "axialTilt": 55.26778554821404,
-      "moons": [],
-      "biomassRating": 0,
-      "biocomplexityCode": 0,
-      "biodiversityRating": 0,
-      "compatibilityRating": 0,
-      "resourceRating": 2,
-      "currentNativeSophont": false,
-      "extinctNativeSophont": false,
-      "hasRing": false,
-      "orbitType": 13,
-      "atmosphere": {
-        "code": 0,
-        "irritant": false,
-        "taint": {
-          "subtype": "",
-          "code": "",
-          "severity": 0,
-          "persistence": 0
-        },
-        "characteristic": "",
-        "bar": 0.9165077659702823,
-        "gasType": null,
-        "density": "Standard",
-        "hazardCode": null
-      },
-      "hydrographics": {
-        "code": 0,
-        "distribution": 0
-      },
-      "population": {
-        "code": 0,
-        "concentrationRating": null
-      },
-      "governmentCode": 0,
-      "lawLevelCode": 0,
-      "starPort": "X",
-      "techLevel": 0,
-      "tradeCodes": [],
-      "albedo": 0.67,
-      "density": 0.01944642549312882,
-      "greenhouse": 0,
-      "meanTemperature": 644.0929526494541,
-      "orbitSequence": "A V"
-    }
-    """
+           Codec.map StellarMoon (\(StellarMoon data) -> data)
