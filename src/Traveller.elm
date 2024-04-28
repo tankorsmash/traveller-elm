@@ -141,31 +141,6 @@ hexagonPoints ( xOrigin, yOrigin ) size =
 viewHexDetailed : Maybe SolarSystem -> HexId -> Int -> HexOrigin -> Float -> Svg Msg
 viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
     let
-        systemName =
-            maybeSolarSystem
-                |> Maybe.map (.coordinates >> .raw)
-                |> Maybe.withDefault "Unknown"
-
-        hexBg =
-            "#ffffff"
-
-        travelZoneColor =
-            defaultHexBg
-
-        militaryBaseColor =
-            if modBy 4 hexIdx == 0 then
-                "red"
-
-            else
-                defaultHexBg
-
-        navalBaseColor =
-            if modBy 5 hexIdx == 0 then
-                "white"
-
-            else
-                defaultHexBg
-
         hasStar =
             case maybeSolarSystem of
                 Just solarSystem ->
@@ -290,37 +265,7 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                 Html.text ""
         , ifStarOrNot
             (Svg.g []
-                [ --   -- travel zone ring
-                  -- Svg.circle
-                  --   [ SvgAttrs.cx <| String.fromInt <| x
-                  --   , SvgAttrs.cy <| String.fromInt <| y
-                  --   , SvgAttrs.r <| String.fromInt <| floor <| size * 0.7
-                  --   , SvgAttrs.fill "none"
-                  --   , SvgAttrs.stroke travelZoneColor
-                  --   , SvgAttrs.strokeWidth "1"
-                  --
-                  --   -- hack dashes to get the circle. hope you can find a better combo of numbers
-                  --   , SvgAttrs.strokeDasharray "170"
-                  --   , SvgAttrs.strokeDashoffset "210"
-                  --   ]
-                  --   []
-                  --, -- miliary base red star in the top left
-                  --  Svg.circle
-                  --    [ SvgAttrs.cx <| String.fromInt <| x - (floor <| size * 0.3)
-                  --    , SvgAttrs.cy <| String.fromInt <| y - (floor <| size * 0.3)
-                  --    , SvgAttrs.r "5"
-                  --    , SvgAttrs.fill militaryBaseColor
-                  --    ]
-                  --    []
-                  --, -- naval base  in the bottom left
-                  --  Svg.circle
-                  --    [ SvgAttrs.cx <| String.fromInt <| x - (floor <| size * 0.4)
-                  --    , SvgAttrs.cy <| String.fromInt <| y + (floor <| size * 0.2)
-                  --    , SvgAttrs.r "5"
-                  --    , SvgAttrs.fill navalBaseColor
-                  --    ]
-                  --    []
-                  -- hex index
+                [ -- hex index
                   Svg.text_
                     [ SvgAttrs.x <| String.fromInt <| x
                     , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
@@ -331,38 +276,6 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                         |> String.pad 4 '0'
                         |> Svg.text
                     ]
-
-                -- , -- starport
-                --   Svg.text_
-                --     [ SvgAttrs.x <| String.fromInt <| x
-                --     , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.35)
-                --     , SvgAttrs.textAnchor "middle"
-                --     ]
-                --     [ Svg.text "A" ]
-                -- , -- allegiance
-                --   Svg.text_
-                --     [ SvgAttrs.x <| String.fromInt <| x + (floor <| size * 0.55)
-                --     , SvgAttrs.y <| String.fromInt <| y + (floor <| size * 0.15)
-                --     , SvgAttrs.textAnchor "middle"
-                --     , SvgAttrs.fontSize "14"
-                --     ]
-                --     [ Svg.text allegiance ]
-                -- , -- UWP
-                --   Svg.text_
-                --     [ SvgAttrs.x <| String.fromInt <| x
-                --     , SvgAttrs.y <| String.fromInt <| y + (floor <| size * 0.5)
-                --     , SvgAttrs.fontFamily "Courier New"
-                --     , SvgAttrs.fontSize "14"
-                --     , SvgAttrs.textAnchor "middle"
-                --     ]
-                --     [ Svg.text "A7889C9–C" ]
-                -- , -- system name
-                --   Svg.text_
-                --     [ SvgAttrs.x <| String.fromInt <| x
-                --     , SvgAttrs.y <| String.fromInt <| y + (floor <| size * 0.75)
-                --     , SvgAttrs.textAnchor "middle"
-                --     ]
-                --     [ Svg.text systemName ]
                 ]
             )
             (Svg.text "")
@@ -751,15 +664,12 @@ view model =
                                 model.viewingHexOrigin
                                 (case model.hexmapViewport of
                                     Nothing ->
-                                        Debug.log "using fullscreen"
-                                            { screenVp = viewport, hexmapVp = Nothing }
+                                        { screenVp = viewport, hexmapVp = Nothing }
 
                                     Just (Ok hexmapViewport) ->
-                                        -- Debug.log "using hexmap" hexmapViewport
-                                        Debug.log "using fullscreen anyway"
-                                            { screenVp = viewport
-                                            , hexmapVp = Just hexmapViewport
-                                            }
+                                        { screenVp = viewport
+                                        , hexmapVp = Just hexmapViewport
+                                        }
 
                                     Just (Err domError) ->
                                         let
