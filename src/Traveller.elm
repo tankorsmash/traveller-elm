@@ -47,7 +47,8 @@ import Traveller.Star as Star exposing (starColourRGB)
 
 
 type alias Model =
-    { hexScale : Float
+    { key : Browser.Navigation.Key
+    , hexScale : Float
     , sectorData : RemoteData Http.Error ( SectorData, Dict.Dict RawHexId SolarSystem )
     , offset : ( Float, Float )
     , playerHex : HexId
@@ -87,8 +88,8 @@ subscriptions model =
     Browser.Events.onResize GotResize
 
 
-init : ( Model, Cmd Msg )
-init =
+init : Browser.Navigation.Key -> ( Model, Cmd Msg )
+init key =
     ( { hexScale = defaultHexSize
       , sectorData = RemoteData.NotAsked
       , offset = ( 0.0, 0.0 )
@@ -98,6 +99,7 @@ init =
       , viewingHexOrigin = Nothing
       , viewport = Nothing
       , hexmapViewport = Nothing
+      , key = key
       }
     , Cmd.batch
         [ sendSectorRequest
@@ -893,6 +895,6 @@ update msg model =
 
         GoToSolarSystemPage hexId ->
             ( model
-            ,-- full page load for this URL. we can stay on the same page if we emit some sort of event that the parent Main.elm update can listen to
-            Browser.Navigation.load <| "/view_star?hexid=" ++ hexId.raw
+            ,
+              Browser.Navigation.pushUrl model.key <| "/view_star?hexid=" ++ hexId.raw
             )

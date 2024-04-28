@@ -83,7 +83,7 @@ init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
         ( travellerModel, travellerCmds ) =
-            Traveller.init
+            Traveller.init key
 
         hexId =
             let
