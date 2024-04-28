@@ -4,6 +4,7 @@ module Traveller exposing (Model, Msg(..), init, subscriptions, update, view)
 
 import Browser.Dom
 import Browser.Events
+import Browser.Navigation
 import Codec
 import Css
 import Dict
@@ -74,6 +75,7 @@ type Msg
     | GotViewport Browser.Dom.Viewport
     | GotHexMapViewport (Result Browser.Dom.Error Browser.Dom.Viewport)
     | GotResize Int Int
+    | GoToSolarSystemPage HexId
 
 
 type alias HexOrigin =
@@ -504,18 +506,20 @@ hexToCoords hexId =
     ( row, col )
 
 
-viewSystemDetailsSidebar : Maybe HexId -> Maybe HexOrigin -> Dict.Dict RawHexId SolarSystem -> Element msg
-viewSystemDetailsSidebar viewingHexId viewingHexOrigin solarSystemDict =
+viewSystemDetailsSidebar : Maybe HexId -> Maybe HexOrigin -> Dict.Dict RawHexId SolarSystem -> Element Msg
+viewSystemDetailsSidebar maybeViewingHexId maybeViewingHexOrigin solarSystemDict =
     column
         []
         [ case
-            viewingHexId
+            ( maybeViewingHexId
+            , maybeViewingHexId
                 |> Maybe.andThen
                     (\hid ->
                         Dict.get hid.value solarSystemDict
                     )
+            )
           of
-            Just solarSystem ->
+            ( Just viewingHexId, Just solarSystem ) ->
                 let
                     renderStar star =
                         star.stellarType
@@ -529,7 +533,7 @@ viewSystemDetailsSidebar viewingHexId viewingHexOrigin solarSystemDict =
                             ++ " "
                             ++ star.stellarClass
                             ++ " origin: "
-                            ++ (case viewingHexOrigin of
+                            ++ (case maybeViewingHexOrigin of
                                     Just ( ox, oy ) ->
                                         String.fromInt ox ++ ", " ++ String.fromInt oy
 
@@ -537,23 +541,39 @@ viewSystemDetailsSidebar viewingHexId viewingHexOrigin solarSystemDict =
                                         "None"
                                )
                 in
-                solarSystem.stars
-                    |> List.map
-                        (\star ->
-                            renderStar star
-                                ++ (star.companion
-                                        |> Maybe.map
-                                            (\compStar ->
-                                                "\n  └── " ++ renderStar compStar
-                                            )
-                                        |> Maybe.withDefault ""
-                                   )
-                        )
-                    |> List.map text
-                    |> column []
+                column [ Element.spacing 10 ] <|
+                    (solarSystem.stars
+                        |> List.map
+                            (\star ->
+                                renderStar star
+                                    ++ (star.companion
+                                            |> Maybe.map
+                                                (\compStar ->
+                                                    "\n  └── " ++ renderStar compStar
+                                                )
+                                            |> Maybe.withDefault ""
+                                       )
+                            )
+                        |> List.map text
+                    )
+                        ++ [ Input.button
+                                [ Background.color <| rgb 0.5 1.5 0.5
+                                , Border.rounded 5
+                                , Border.width 10
+                                , Border.color <| rgb 0.5 1.5 0.5
+                                , Font.size 14
+                                , Font.color <| rgb 0 0 0
+                                , Element.spacing 10
+                                , -- limited styling for mouse over
+                                  Element.mouseOver [ Border.color <| rgb 0.9 0.9 0.9, Background.color <| rgb 0.9 0.9 0.9 ]
+                                ]
+                                { onPress = Just <| GoToSolarSystemPage viewingHexId
+                                , label = text <| "Visualize Solar System: " ++ viewingHexId.raw
+                                }
+                           ]
 
-            Nothing ->
-                text "No solar system data yet"
+            _ ->
+                text "No solar system data found in dict"
         ]
 
 
@@ -869,4 +889,10 @@ update msg model =
                 , offset = Debug.log "new offset" newOffsetPct
               }
             , Cmd.none
+            )
+
+        GoToSolarSystemPage hexId ->
+            ( model
+            ,-- full page load for this URL. we can stay on the same page if we emit some sort of event that the parent Main.elm update can listen to
+            Browser.Navigation.load <| "/view_star?hexid=" ++ hexId.raw
             )
