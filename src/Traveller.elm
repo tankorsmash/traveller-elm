@@ -32,7 +32,7 @@ import Html.Styled.Events
 import Http
 import Json.Decode as JsDecode
 import Maybe.Extra as Maybe
-import RemoteData exposing (RemoteData)
+import RemoteData exposing (RemoteData(..))
 import Svg.Attributes exposing (width)
 import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (fill, points, viewBox)
@@ -504,6 +504,59 @@ hexToCoords hexId =
     ( row, col )
 
 
+viewSystemDetailsSidebar : Maybe HexId -> Maybe HexOrigin -> Dict.Dict RawHexId SolarSystem -> Element msg
+viewSystemDetailsSidebar viewingHexId viewingHexOrigin solarSystemDict =
+    column
+        []
+        [ case
+            viewingHexId
+                |> Maybe.andThen
+                    (\hid ->
+                        Dict.get hid.value solarSystemDict
+                    )
+          of
+            Just solarSystem ->
+                let
+                    renderStar star =
+                        star.stellarType
+                            ++ (case star.subtype of
+                                    Just num ->
+                                        "" ++ String.fromInt num
+
+                                    Nothing ->
+                                        ""
+                               )
+                            ++ " "
+                            ++ star.stellarClass
+                            ++ " origin: "
+                            ++ (case viewingHexOrigin of
+                                    Just ( ox, oy ) ->
+                                        String.fromInt ox ++ ", " ++ String.fromInt oy
+
+                                    Nothing ->
+                                        "None"
+                               )
+                in
+                solarSystem.stars
+                    |> List.map
+                        (\star ->
+                            renderStar star
+                                ++ (star.companion
+                                        |> Maybe.map
+                                            (\compStar ->
+                                                "\n  └── " ++ renderStar compStar
+                                            )
+                                        |> Maybe.withDefault ""
+                                   )
+                        )
+                    |> List.map text
+                    |> column []
+
+            Nothing ->
+                text "No solar system data yet"
+        ]
+
+
 calcDistance : HexId -> HexId -> Int
 calcDistance hex1 hex2 =
     let
@@ -580,8 +633,7 @@ view model =
                     , max = 1.0
                     , step = Just 0.025
                     , value = vertOffset
-                    , thumb =
-                        Input.defaultThumb
+                    , thumb = Input.defaultThumb
                     }
                 , column
                     [ Font.size 14
@@ -604,60 +656,15 @@ view model =
                                 text <| "None yet"
                         ]
                     ]
-                , column
-                    []
-                    [ case model.sectorData of
-                        RemoteData.Success ( sectorData, solarSystemDict ) ->
-                            case
-                                model.viewingHexId
-                                    |> Maybe.andThen
-                                        (\hid ->
-                                            Dict.get hid.value solarSystemDict
-                                        )
-                            of
-                                Just solarSystem ->
-                                    let
-                                        renderStar star =
-                                            star.stellarType
-                                                ++ (case star.subtype of
-                                                        Just num ->
-                                                            "" ++ String.fromInt num
+                , case model.sectorData of
+                    Success ( sectorData, solarSystemDict ) ->
+                        viewSystemDetailsSidebar
+                            model.viewingHexId
+                            model.viewingHexOrigin
+                            solarSystemDict
 
-                                                        Nothing ->
-                                                            ""
-                                                   )
-                                                ++ " "
-                                                ++ star.stellarClass
-                                                ++ " origin: "
-                                                ++ (case model.viewingHexOrigin of
-                                                        Just ( ox, oy ) ->
-                                                            String.fromInt ox ++ ", " ++ String.fromInt oy
-
-                                                        Nothing ->
-                                                            "None"
-                                                   )
-                                    in
-                                    solarSystem.stars
-                                        |> List.map
-                                            (\star ->
-                                                renderStar star
-                                                    ++ (star.companion
-                                                            |> Maybe.map
-                                                                (\compStar ->
-                                                                    "\n  └── " ++ renderStar compStar
-                                                                )
-                                                            |> Maybe.withDefault ""
-                                                       )
-                                            )
-                                        |> List.map text
-                                        |> column []
-
-                                Nothing ->
-                                    text "No solar system data yet"
-
-                        _ ->
-                            text "No sector data yet"
-                    ]
+                    _ ->
+                        text "No loaded sector data yet"
                 ]
 
         hexesColumn =
