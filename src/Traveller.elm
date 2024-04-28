@@ -644,7 +644,7 @@ view model =
                                                     ++ (star.companion
                                                             |> Maybe.map
                                                                 (\compStar ->
-                                                                    "\n  \\----> " ++ renderStar compStar
+                                                                    "\n  └── " ++ renderStar compStar
                                                                 )
                                                             |> Maybe.withDefault ""
                                                        )
