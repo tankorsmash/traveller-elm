@@ -75,7 +75,7 @@ routeParser : Parser (Route -> a) a
 routeParser =
     oneOf
         [ map TravellerPage top
-        , map StarPage (s "view_star")
+        , map StarPage (s "view_system")
         ]
 
 

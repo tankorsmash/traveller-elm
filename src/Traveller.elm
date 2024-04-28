@@ -895,6 +895,5 @@ update msg model =
 
         GoToSolarSystemPage hexId ->
             ( model
-            ,
-              Browser.Navigation.pushUrl model.key <| "/view_star?hexid=" ++ hexId.raw
+            , Browser.Navigation.pushUrl model.key <| "/view_system?hexid=" ++ hexId.raw
             )
