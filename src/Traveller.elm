@@ -629,7 +629,13 @@ view model =
                                                 ++ " "
                                                 ++ star.stellarClass
                                                 ++ " origin: "
-                                                ++ Debug.toString model.viewingHexOrigin
+                                                ++ (case model.viewingHexOrigin of
+                                                        Just ( ox, oy ) ->
+                                                            String.fromInt ox ++ ", " ++ String.fromInt oy
+
+                                                        Nothing ->
+                                                            "None"
+                                                   )
                                     in
                                     solarSystem.stars
                                         |> List.map
