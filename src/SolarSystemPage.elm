@@ -4,13 +4,14 @@ import Angle
 import Browser.Dom
 import Codec
 import Dict
-import Element exposing (column, text)
+import Element exposing (Element, column, row, text)
 import Element.Font as Font
 import Http
 import Math.Vector2 as Vector2
 import RemoteData exposing (RemoteData)
 import Svg.Styled as Svg
 import Svg.Styled.Attributes as SvgAttrs
+import Svg.Styled.Events
 import Task
 import Traveller exposing (Msg(..))
 import Traveller.HexId exposing (HexId, RawHexId)
@@ -18,20 +19,30 @@ import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.SectorData exposing (SectorData, codecSectorData)
 import Traveller.SolarSystem exposing (SolarSystem)
 import Traveller.Star exposing (Star)
-import Traveller.StellarObject exposing (StellarObject)
+import Traveller.StellarMoon exposing (StellarMoon)
+import Traveller.StellarObject exposing (StellarObject(..))
 
 
 type alias Model =
     { solarSystem : Maybe SolarSystem
     , sectorData : RemoteData Http.Error ( SectorData, Dict.Dict RawHexId SolarSystem )
     , hexId : HexId
+    , hoveredBody : HoveredBody
     }
+
+
+type HoveredBody
+    = HoveredPlanet StellarObject
+    | HoveredStar Star
+    | HoveredMoon StellarMoon
+    | NoHoveredBody
 
 
 type Msg
     = NoOp
     | DownloadSectorJson
     | DownloadedSectorJson (Result Http.Error SectorData)
+    | HoveredBody HoveredBody
 
 
 init : HexId -> ( Model, Cmd Msg )
@@ -39,6 +50,7 @@ init hexId =
     ( { solarSystem = Nothing
       , sectorData = RemoteData.NotAsked
       , hexId = hexId
+      , hoveredBody = NoHoveredBody
       }
     , sendSectorRequest
     )
@@ -64,7 +76,7 @@ rotatePoint vec2 angle distance =
         (y + (distance * sinTheta) + (0 * cosTheta))
 
 
-viewSystem : SolarSystem -> Svg.Svg msg
+viewSystem : SolarSystem -> Svg.Svg Msg
 viewSystem system =
     let
         { stars } =
@@ -95,6 +107,7 @@ viewSystem system =
                     , SvgAttrs.r <| String.fromFloat <| radius
                     , SvgAttrs.fill <| "red"
                     , SvgAttrs.stroke <| "green"
+                    , Svg.Styled.Events.onMouseOver <| HoveredBody <| HoveredStar star
                     ]
                     []
                 , Svg.text_
@@ -103,6 +116,7 @@ viewSystem system =
                     , SvgAttrs.fill <| "black"
                     , SvgAttrs.textAnchor <| "middle"
                     , SvgAttrs.dominantBaseline <| "middle"
+                    , SvgAttrs.pointerEvents "none"
                     ]
                     [ Svg.text <| "* " ++ star.orbitSequence
                     ]
@@ -115,6 +129,7 @@ viewSystem system =
                     , SvgAttrs.cy <| String.fromFloat <| planetY
                     , SvgAttrs.r <| String.fromFloat <| radius
                     , SvgAttrs.fill <| "green"
+                    , Svg.Styled.Events.onMouseOver <| HoveredBody <| HoveredPlanet (StellarObject stellarData)
                     ]
                     []
                 , Svg.text_
@@ -123,6 +138,7 @@ viewSystem system =
                     , SvgAttrs.fill <| "black"
                     , SvgAttrs.textAnchor <| "middle"
                     , SvgAttrs.dominantBaseline <| "middle"
+                    , SvgAttrs.pointerEvents "none"
                     ]
                     [ Svg.text <| "Planet, " ++ String.fromInt (List.length (Maybe.withDefault [] <| stellarData.moons)) ++ " moons"
 
@@ -227,21 +243,49 @@ viewSystem system =
         )
 
 
-view : Model -> Element.Element msg
+sidebarPlanet : StellarObject -> Element Msg
+sidebarPlanet stellarObject =
+    text "Hovering planet"
+
+
+sidebarStar : Star -> Element Msg
+sidebarStar star =
+    text "Hovering star"
+
+
+sidebarMoon : StellarMoon -> Element Msg
+sidebarMoon stellarMoon =
+    text "Hovering moon"
+
+
+view : Model -> Element.Element Msg
 view model =
     case model.solarSystem of
         Just system ->
             column
-                [ Font.size
-                    24
+                [ Font.size 24
                 , Element.centerX
                 , Font.color <| Element.rgb 0.5 0.75 0.0
                 ]
                 [ text "Solar System"
                 , text <| "Coordinate/hexid: " ++ model.hexId.raw
-                , viewSystem system
-                    |> Svg.toUnstyled
-                    |> Element.html
+                , row []
+                    [ case model.hoveredBody of
+                        NoHoveredBody ->
+                            text "Hover body to see details"
+
+                        HoveredPlanet hoveredPlanet ->
+                            sidebarPlanet hoveredPlanet
+
+                        HoveredStar hoveredStar ->
+                            sidebarStar hoveredStar
+
+                        HoveredMoon hoveredMoon ->
+                            sidebarMoon hoveredMoon
+                    , viewSystem system
+                        |> Svg.toUnstyled
+                        |> Element.html
+                    ]
                 ]
 
         Nothing ->
@@ -324,3 +368,15 @@ update msg model =
                             Debug.log bodyErr ""
                     in
                     Debug.todo "branch 'DownloadedSectorJson BadBody' not implemented"
+
+        HoveredBody ((HoveredPlanet hoveredPlanet) as hoveredBody) ->
+            ( { model | hoveredBody = hoveredBody }, Cmd.none )
+
+        HoveredBody ((HoveredStar hoveredStar) as hoveredBody) ->
+            ( { model | hoveredBody = hoveredBody }, Cmd.none )
+
+        HoveredBody ((HoveredMoon hoveredMoon) as hoveredBody) ->
+            ( { model | hoveredBody = hoveredBody }, Cmd.none )
+
+        HoveredBody NoHoveredBody ->
+            ( { model | hoveredBody = NoHoveredBody }, Cmd.none )
