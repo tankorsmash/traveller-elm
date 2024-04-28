@@ -28,6 +28,12 @@ type alias Model =
     }
 
 
+type Msg
+    = NoOp
+    | DownloadSectorJson
+    | DownloadedSectorJson (Result Http.Error SectorData)
+
+
 init : HexId -> ( Model, Cmd Msg )
 init hexId =
     ( { solarSystem = Nothing
@@ -119,6 +125,7 @@ viewSystem system =
                     , SvgAttrs.dominantBaseline <| "middle"
                     ]
                     [ Svg.text <| "Planet, " ++ String.fromInt (List.length (Maybe.withDefault [] <| stellarData.moons)) ++ " moons"
+
                     -- [ Svg.text <| "Planet, " ++ String.fromInt (List.length stellarData.moons) ++ " moons"
                     ]
                 ]
@@ -317,9 +324,3 @@ update msg model =
                             Debug.log bodyErr ""
                     in
                     Debug.todo "branch 'DownloadedSectorJson BadBody' not implemented"
-
-
-type Msg
-    = NoOp
-    | DownloadSectorJson
-    | DownloadedSectorJson (Result Http.Error SectorData)
