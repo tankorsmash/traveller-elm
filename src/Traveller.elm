@@ -41,7 +41,7 @@ import Svg.Styled.Events as SvgEvents
 import Svg.Styled.Lazy
 import Task
 import Traveller.HexId as HexId exposing (HexId, RawHexId)
-import Traveller.SectorData exposing (SectorData, codecSectorData)
+import Traveller.SectorData exposing (SectorData, SurveyIndexData, codecSectorData, codecSurveyIndexData)
 import Traveller.SolarSystem exposing (SolarSystem)
 import Traveller.Star as Star exposing (starColourRGB)
 
@@ -57,6 +57,7 @@ type alias Model =
     , viewingHexOrigin : Maybe ( Int, Int )
     , viewport : Maybe Browser.Dom.Viewport
     , hexmapViewport : Maybe (Result Browser.Dom.Error Browser.Dom.Viewport)
+    , surveyIndexData : RemoteData Http.Error SurveyIndexData
     }
 
 
@@ -68,6 +69,8 @@ type OffsetDirection
 type Msg
     = NoOpMsg
     | ZoomScaleChanged Float
+    | DownloadSurveyIndexJson
+    | DownloadedSurveyIndexJson (Result Http.Error SurveyIndexData)
     | DownloadSectorJson
     | DownloadedSectorJson (Result Http.Error SectorData)
     | OffsetChanged OffsetDirection Float
@@ -92,6 +95,7 @@ init : Browser.Navigation.Key -> ( Model, Cmd Msg )
 init key =
     ( { hexScale = defaultHexSize
       , sectorData = RemoteData.NotAsked
+      , surveyIndexData = RemoteData.NotAsked
       , offset = ( 0.0, 0.0 )
       , playerHex = HexId.createFromInt 135
       , hoveringHex = Nothing
@@ -103,6 +107,7 @@ init key =
       }
     , Cmd.batch
         [ sendSectorRequest
+        , sendSurveyIndexRequest
         , Browser.Dom.getViewport
             |> Task.perform GotViewport
         ]
@@ -762,6 +767,19 @@ sendSectorRequest =
         }
 
 
+sendSurveyIndexRequest : Cmd Msg
+sendSurveyIndexRequest =
+    let
+        surveyIndexParser =
+            codecSurveyIndexData
+                |> Codec.decoder
+    in
+    Http.get
+        { url = "/public/surveyIndex.json"
+        , expect = Http.expectJson DownloadedSurveyIndexJson surveyIndexParser
+        }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -820,6 +838,41 @@ update msg model =
                             Debug.log bodyErr ""
                     in
                     Debug.todo "branch 'DownloadedSectorJson BadBody' not implemented"
+
+        DownloadSurveyIndexJson ->
+            ( model
+            , sendSurveyIndexRequest
+            )
+
+        DownloadedSurveyIndexJson (Ok surveyIndexData) ->
+            ( { model
+                | surveyIndexData =
+                    surveyIndexData
+                        |> RemoteData.Success
+              }
+            , Cmd.none
+            )
+
+        DownloadedSurveyIndexJson (Err err) ->
+            case err of
+                Http.BadUrl _ ->
+                    Debug.todo "branch 'DownloadedSurveyIndexJson bad url' not implemented"
+
+                Http.Timeout ->
+                    Debug.todo "branch 'DownloadedSurveyIndexJson timeout' not implemented"
+
+                Http.NetworkError ->
+                    Debug.todo "branch 'DownloadedSurveyIndexJson NetworkError' not implemented"
+
+                Http.BadStatus _ ->
+                    Debug.todo "branch 'DownloadedSurveyIndexJson BadStatus' not implemented"
+
+                Http.BadBody bodyErr ->
+                    let
+                        _ =
+                            Debug.log bodyErr ""
+                    in
+                    Debug.todo "branch 'DownloadedSurveyIndexJson BadBody' not implemented"
 
         OffsetChanged Horizontal horizOffset ->
             ( { model | offset = Tuple.mapFirst (always horizOffset) model.offset }, Cmd.none )

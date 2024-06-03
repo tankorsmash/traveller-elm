@@ -1,0 +1,29 @@
+[
+  {
+    "x": -12,
+    "y": -2,
+    "hexes":
+    [
+      {
+        "coordinate": "0808",
+        "SI": 7
+      },
+      {
+        "coordinate": "1009",
+        "SI": 3
+      },
+      {
+        "coordinate": "1010",
+        "SI": 5
+      },
+      {
+        "coordinate": "1011",
+        "SI": 0
+      },
+      {
+        "coordinate": "1014",
+        "SI": 4
+      }
+    ]
+  }
+]
