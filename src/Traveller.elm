@@ -287,11 +287,17 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                         , SvgAttrs.fontSize "12"
                         , SvgAttrs.textAnchor "middle"
                         ]
-                        [ let
-                            stellarObjectCounts =
-                                String.fromInt solarSystem.gasGiants ++ " / " ++ String.fromInt solarSystem.terrestrialPlanets ++ " / " ++ String.fromInt solarSystem.planetoidBelts
-                          in
-                          stellarObjectCounts |> Svg.text
+                        [ Svg.tspan
+                            [ SvgAttrs.fill "#109076" ]
+                            [ String.fromInt solarSystem.gasGiants |> Svg.text ]
+                        , Svg.text " / "
+                        , Svg.tspan
+                            [ SvgAttrs.fill "#809076" ]
+                            [ String.fromInt solarSystem.terrestrialPlanets |> Svg.text ]
+                        , Svg.text " / "
+                        , Svg.tspan
+                            [ SvgAttrs.fill "#68B976" ]
+                            [ String.fromInt solarSystem.planetoidBelts |> Svg.text ]
                         ]
                     ]
 
