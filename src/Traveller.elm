@@ -1,7 +1,6 @@
 module Traveller exposing (Model, Msg(..), init, subscriptions, update, view)
 
--- import Svg exposing (..)
-
+import Round
 import Browser.Dom
 import Browser.Events
 import Browser.Navigation
@@ -659,7 +658,7 @@ view model =
                     { onChange = OffsetChanged Horizontal
                     , label =
                         Input.labelAbove []
-                            (text <| "Horiz: " ++ (String.fromFloat <| horizOffset))
+                            (text <| "Horiz: " ++ (Round.round 3 <| horizOffset))
                     , min = 0
                     , max = 1.0
                     , step = Just 0.025
@@ -675,7 +674,7 @@ view model =
                     { onChange = OffsetChanged Vertical
                     , label =
                         Input.labelAbove []
-                            (text <| "Vert: " ++ (String.fromFloat <| vertOffset))
+                            (text <| "Vert: " ++ (Round.round 3 <| vertOffset))
                     , min = 0
                     , max = 1.0
                     , step = Just 0.025

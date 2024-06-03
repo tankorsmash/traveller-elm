@@ -139,8 +139,9 @@ viewSystem system =
                     , SvgAttrs.textAnchor <| "middle"
                     , SvgAttrs.dominantBaseline <| "middle"
                     , SvgAttrs.pointerEvents "none"
+                    , SvgAttrs.fontSize "8"
                     ]
-                    [ Svg.text <| "Planet, " ++ String.fromInt (List.length (Maybe.withDefault [] <| stellarData.moons)) ++ " moons"
+                    [ Svg.text <| "Planet: " ++ String.fromInt (List.length (Maybe.withDefault [] <| stellarData.moons)) ++ " m"
 
                     -- [ Svg.text <| "Planet, " ++ String.fromInt (List.length stellarData.moons) ++ " moons"
                     ]
