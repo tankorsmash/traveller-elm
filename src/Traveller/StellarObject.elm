@@ -10,8 +10,7 @@ import Traveller.Hydrographics exposing (StellarHydrographics, codecStellarHydro
 import Traveller.Orbit exposing (StellarOrbit, codecStellarOrbit)
 import Traveller.Point exposing (StellarPoint, codecStellarPoint)
 import Traveller.Population exposing (StellarPopulation, codecStellarPopulation)
-import Traveller.StellarMoon exposing (StellarMoon(..))
-import Traveller.StellarMoon exposing (codecStellarMoon)
+import Traveller.StellarMoon exposing (StellarMoon(..), codecStellarMoon)
 
 
 {-| the data structure for a stellar object.
@@ -29,7 +28,7 @@ type alias StellarData =
     , retrograde : Maybe Bool
     , trojanOffset : Maybe Float
     , axialTilt : Maybe Float
-    , moons : Maybe( List StellarMoon)
+    , moons : Maybe (List StellarMoon)
     , biomassRating : Maybe Int
     , biocomplexityCode : Maybe Int
     , biodiversityRating : Maybe Int

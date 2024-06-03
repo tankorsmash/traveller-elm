@@ -83,6 +83,7 @@ type alias StellarMoonData =
     , currentNativeSophont : Maybe Bool
     , extinctNativeSophont : Maybe Bool
     , hasRing : Maybe Bool
+
     -- , orbitType : Int
     , atmosphere : Maybe StellarAtmosphere
     , hydrographics : Maybe StellarHydrographics
@@ -96,7 +97,6 @@ type alias StellarMoonData =
     , density : Maybe Float
     , greenhouse : Maybe Int
     , meanTemperature : Maybe Float
-
     }
 
 
@@ -106,7 +106,7 @@ type StellarMoon
 
 
 buildStellarMoon =
-    \orbPos incl ecc effHZCODev size orbit period comp retro troj axTilt  biomass bioComplex bioDiversity compat resource currentNative extinctNative hasRing  atm hydro pop gov law starPort tech tradeCodes albedo dens green meanTemp ->
+    \orbPos incl ecc effHZCODev size orbit period comp retro troj axTilt biomass bioComplex bioDiversity compat resource currentNative extinctNative hasRing atm hydro pop gov law starPort tech tradeCodes albedo dens green meanTemp ->
         -- StellarMoonData
         { orbitPosition = orbPos
         , inclination = incl
@@ -127,6 +127,7 @@ buildStellarMoon =
         , currentNativeSophont = currentNative
         , extinctNativeSophont = extinctNative
         , hasRing = hasRing
+
         -- , orbitType = orbitType
         , atmosphere = atm
         , hydrographics = hydro
@@ -140,7 +141,6 @@ buildStellarMoon =
         , density = dens
         , greenhouse = green
         , meanTemperature = meanTemp
-
         }
 
 

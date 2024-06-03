@@ -267,22 +267,36 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
 
             Nothing ->
                 Html.text ""
-        , ifStarOrNot
-            (Svg.g []
-                [ -- hex index
-                  Svg.text_
-                    [ SvgAttrs.x <| String.fromInt <| x
-                    , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
-                    , SvgAttrs.fontSize "12"
-                    , SvgAttrs.textAnchor "middle"
+        , case maybeSolarSystem of
+            Just solarSystem ->
+                Svg.g []
+                    [ -- hex index
+                      Svg.text_
+                        [ SvgAttrs.x <| String.fromInt <| x
+                        , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
+                        , SvgAttrs.fontSize "10"
+                        , SvgAttrs.textAnchor "middle"
+                        ]
+                        [ String.fromInt hexIdx
+                            |> String.pad 4 '0'
+                            |> Svg.text
+                        ]
+                    , Svg.text_
+                        [ SvgAttrs.x <| String.fromInt <| x
+                        , SvgAttrs.y <| String.fromInt <| y + (floor <| size * 0.85)
+                        , SvgAttrs.fontSize "12"
+                        , SvgAttrs.textAnchor "middle"
+                        ]
+                        [ let
+                            stellarObjectCounts =
+                                String.fromInt solarSystem.gasGiants ++ " / " ++ String.fromInt solarSystem.terrestrialPlanets ++ " / " ++ String.fromInt solarSystem.planetoidBelts
+                          in
+                          stellarObjectCounts |> Svg.text
+                        ]
                     ]
-                    [ String.fromInt hexIdx
-                        |> String.pad 4 '0'
-                        |> Svg.text
-                    ]
-                ]
-            )
-            (Svg.text "")
+
+            Nothing ->
+                Svg.text ""
         ]
 
 

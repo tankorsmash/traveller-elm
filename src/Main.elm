@@ -98,7 +98,7 @@ init flags url key =
             Url.Parser.parse hexIdParser urlWithoutPath
                 |> -- the query parser returns a 'Maybe' because the query string might
                    -- not be present _AND_ a maybe int, because the int we're looking
-                --    for might not be present, so we join them both
+                   --    for might not be present, so we join them both
                    Maybe.join
                 |> Maybe.withDefault
                     -- 1014 is a solar system in Deepnight. Will need to get better about showing that we're using the default, instead of reading from the query string
