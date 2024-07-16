@@ -14,7 +14,12 @@ import Traveller.SolarSystem exposing (SolarSystem)
 
 
 type alias RenderConfig =
-    { width : Float, height : Float, centerX : Float, centerY : Float }
+    { width : Float
+    , height : Float
+    , centerX : Float
+    , centerY : Float
+    , hexScale : Float
+    }
 
 
 defaultHexBg =
@@ -88,7 +93,7 @@ indexToCoords index =
 
 
 renderHex : RenderConfig -> Int -> SolarSystem -> Canvas.Renderable
-renderHex { width, height, centerX, centerY } index solarSystem =
+renderHex { width, height, centerX, centerY, hexScale } index solarSystem =
     let
         iSize =
             floor size
@@ -106,7 +111,7 @@ renderHex { width, height, centerX, centerY } index solarSystem =
             centerY + toFloat row * 20
 
         size =
-            10
+            10 * hexScale
 
         halfSize =
             size / 2
@@ -126,11 +131,41 @@ renderHex { width, height, centerX, centerY } index solarSystem =
         -- , fill (Color.rgb 255 0 0)
         , fill (Color.hsl hue 0.3 0.7)
         ]
-        [ rect ( -halfSize, -halfSize ) size size ]
+        -- [ rect ( -halfSize, -halfSize ) size size
+        [ case hexagonPoints ( floor 0, floor 0 ) size of
+            p1 :: ps ->
+                Canvas.path p1 (List.map Canvas.lineTo ps)
+
+            _ ->
+                rect ( x, y ) 10 10
+        ]
 
 
-view : ( SectorData, Dict.Dict Int SolarSystem ) -> Html.Html msg
-view ( sectorData, solarSystemDict ) =
+hexagonPoints : ( Int, Int ) -> Float -> List ( Float, Float )
+hexagonPoints ( xOrigin, yOrigin ) size =
+    let
+        a =
+            2 * pi / 6
+
+        -- angle deg =
+        --     (deg + 90) * pi / 180
+        x n =
+            toFloat xOrigin
+                + (size * cos (a * n))
+
+        y n =
+            toFloat yOrigin
+                + (size * sin (a * n))
+
+        buildPoint n =
+            ( x n, y n )
+    in
+    List.range 0 5
+        |> List.map (toFloat >> buildPoint)
+
+
+view : ( SectorData, Dict.Dict Int SolarSystem ) -> Float -> Html.Html msg
+view ( sectorData, solarSystemDict ) hexScale =
     div
         [ style "display" "flex"
         , style "justify-content" "center"
@@ -150,7 +185,12 @@ view ( sectorData, solarSystemDict ) =
                 shapes [ fill Color.white ] [ rect ( 0, 0 ) width height ]
 
             renderConfig =
-                { width = width, height = height, centerX = centerX, centerY = centerY }
+                { width = width
+                , height = height
+                , centerX = centerX
+                , centerY = centerY
+                , hexScale = hexScale
+                }
           in
           Canvas.toHtml
             ( width, height )

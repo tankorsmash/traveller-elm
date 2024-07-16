@@ -1,6 +1,5 @@
 module Traveller exposing (Model, Msg(..), init, subscriptions, update, view)
 
-import Round
 import Browser.Dom
 import Browser.Events
 import Browser.Navigation
@@ -33,6 +32,7 @@ import Http
 import Json.Decode as JsDecode
 import Maybe.Extra as Maybe
 import RemoteData exposing (RemoteData(..))
+import Round
 import Svg.Attributes exposing (width)
 import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (fill, points, viewBox)
@@ -748,7 +748,10 @@ view model =
                 ]
     in
     row [ Font.size 20, centerX, centerY, Font.color <| Element.rgb 0.5 1.5 0.5 ]
-        [ controlsColumn, hexesColumn ]
+        [ controlsColumn
+
+        -- , hexesColumn
+        ]
 
 
 sendSectorRequest : Cmd Msg
