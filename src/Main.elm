@@ -2,38 +2,21 @@ port module Main exposing (main)
 
 import Browser
 import Browser.Navigation as Nav
-import Canvas exposing (rect, shapes)
-import Canvas.Settings exposing (fill)
-import Canvas.Settings.Advanced exposing (rotate, transform, translate)
-import Chart.Item as CI
-import Codec
-import Color
+import CanvasMap
 import Dialog
-import Dict exposing (Dict)
-import Element exposing (Element)
-import Element.Background as Background
-import Element.Border as Border
-import Element.Events as Events
-import Element.Input as Input
-import Element.Lazy
-import Element.Region exposing (description)
-import Html exposing (Html, a, b, button, div, h1, hr, li, span, text, ul)
-import Html.Attributes exposing (class, href, style)
-import Html.Events exposing (onClick)
+import Element
+import Html exposing (Html, a, div, text)
+import Html.Attributes exposing (class, href)
+import Html.Events
 import Http exposing (Error(..))
-import Json.Decode
 import Json.Encode
-import List
-import List.Extra as List
 import Maybe.Extra as Maybe
-import Random
-import Random.List
 import RemoteData exposing (RemoteData(..))
 import SolarSystemPage
 import Traveller
 import Traveller.HexId as HexId
 import Url
-import Url.Parser exposing ((</>), Parser, int, map, oneOf, s, string, top)
+import Url.Parser exposing ((</>), Parser, map, oneOf, s, top)
 import Url.Parser.Query
 
 
@@ -84,7 +67,7 @@ routeParser =
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
-init flags url key =
+init _ url key =
     let
         ( travellerModel, travellerCmds ) =
             Traveller.init key
@@ -212,57 +195,7 @@ view model =
                     , Html.li [ class "nav-item" ] [ a [ class "nav-link", href "/view_system?hexid=307" ] [ text "System" ] ]
                     ]
                 ]
-            , div
-                [ style "display" "flex"
-                , style "justify-content" "center"
-                , style "align-items" "center"
-                ]
-                [ let
-                    width =
-                        200
-
-                    height =
-                        200
-
-                    ( centerX, centerY ) =
-                        ( width / 2, height / 2 )
-
-                    clearScreen =
-                        shapes [ fill Color.white ] [ rect ( 0, 0 ) width height ]
-
-                    render count =
-                        let
-                            size =
-                                width / 3
-
-                            x =
-                                -(size / 2)
-
-                            y =
-                                -(size / 2)
-
-                            rotation =
-                                degrees (count * 3)
-
-                            hue =
-                                toFloat (count / 4 |> floor |> modBy 100) / 100
-                        in
-                        shapes
-                            [ transform
-                                [ translate centerX centerY
-                                , rotate rotation
-                                ]
-                            , fill (Color.hsl hue 0.3 0.7)
-                            ]
-                            [ rect ( x, y ) size size ]
-                  in
-                  Canvas.toHtml
-                    ( width, height )
-                    [ style "border" "10px solid rgba(0,0,0,0.1)" ]
-                    [ clearScreen
-                    , render 100
-                    ]
-                ]
+            , CanvasMap.view
             , case model.route of
                 Just TravellerPage ->
                     Html.map GotTravellerMsg <|
