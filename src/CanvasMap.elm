@@ -3,6 +3,7 @@ module CanvasMap exposing (view)
 import Canvas exposing (rect, shapes)
 import Canvas.Settings exposing (fill)
 import Canvas.Settings.Advanced exposing (rotate, transform, translate)
+import Canvas.Settings.Text exposing (TextAlign(..))
 import Color
 import Dict
 import Html exposing (div)
@@ -11,6 +12,7 @@ import Http exposing (Error(..))
 import RemoteData exposing (RemoteData(..))
 import Traveller.SectorData exposing (SectorData)
 import Traveller.SolarSystem exposing (SolarSystem)
+import Canvas.Settings.Text exposing (TextBaseLine(..))
 
 
 type alias RenderConfig =
@@ -155,7 +157,7 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } index 
         hue =
             toFloat (toFloat index / 2 |> floor |> modBy 100) / 100
     in
-    shapes
+    Canvas.group
         [ transform
             [ translate x y
 
@@ -165,14 +167,23 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } index 
         -- , fill (Color.rgb 255 0 0)
         , fill (Color.hsl hue 0.3 0.7)
         ]
-        -- [ rect ( -halfSize, -halfSize ) size size
-        -- [ case hexagonPoints ( floor x, floor y ) size of
-        [ case hexagonPoints ( 0, 0 ) size of
-            p1 :: ps ->
-                Canvas.path p1 (List.map Canvas.lineTo ps)
+        [ shapes
+            [ fill (Color.hsl hue 0.3 0.7)
+            ]
+            [ case hexagonPoints ( 0, 0 ) size of
+                p1 :: ps ->
+                    Canvas.path p1 (List.map Canvas.lineTo ps)
 
-            _ ->
-                rect ( x, y ) 10 10
+                _ ->
+                    rect ( x, y ) 10 10
+            ]
+        , Canvas.text
+            [ fill Color.white
+            , Canvas.Settings.Text.align Center
+            , Canvas.Settings.Text.baseLine Middle
+            ]
+            ( 0, 0 )
+            (String.fromInt (List.length solarSystem.stars))
         ]
 
 
