@@ -157,16 +157,17 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } index 
     in
     shapes
         [ transform
-            -- [ translate (x + halfSize) (y + halfSize)
+            [ translate x y
+
             -- , rotate rotation
-            []
+            ]
 
         -- , fill (Color.rgb 255 0 0)
         , fill (Color.hsl hue 0.3 0.7)
         ]
         -- [ rect ( -halfSize, -halfSize ) size size
         -- [ case hexagonPoints ( floor x, floor y ) size of
-        [ case hexagonPoints ( x, y ) size of
+        [ case hexagonPoints ( 0, 0 ) size of
             p1 :: ps ->
                 Canvas.path p1 (List.map Canvas.lineTo ps)
 
