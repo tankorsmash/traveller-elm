@@ -201,6 +201,13 @@ view model =
         , div
             []
             [ Html.button [ Html.Events.onClick ToggleDarkMode ] [ text "Light/Dark" ]
+            , Html.nav [ class "navbar navbar-expand m-3" ]
+                [ a [ href "/", class "navbar-brand" ] [ text "Traveller" ]
+                , Html.ul [ class "navbar-nav" ]
+                    [ Html.li [ class "nav-item" ] [ a [ class "nav-link", href "/" ] [ text "Map" ] ]
+                    , Html.li [ class "nav-item" ] [ a [ class "nav-link", href "/view_system?hexid=307" ] [ text "System" ] ]
+                    ]
+                ]
             , case model.route of
                 Just TravellerPage ->
                     Html.map GotTravellerMsg <|
