@@ -195,12 +195,19 @@ view model =
                     , Html.li [ class "nav-item" ] [ a [ class "nav-link", href "/view_system?hexid=307" ] [ text "System" ] ]
                     ]
                 ]
-            , CanvasMap.view
             , case model.route of
                 Just TravellerPage ->
-                    Html.map GotTravellerMsg <|
-                        Element.layout [ Element.centerX ] <|
-                            Traveller.view model.travellerModel
+                    div []
+                        [ case model.travellerModel.sectorData of
+                            Success sectorData ->
+                                CanvasMap.view sectorData
+
+                            _ ->
+                                text "TODO: Loading"
+                        , Html.map GotTravellerMsg <|
+                            Element.layout [ Element.centerX ] <|
+                                Traveller.view model.travellerModel
+                        ]
 
                 Just StarPage ->
                     Html.map GotSolarSystemPageMsg <|
