@@ -200,7 +200,10 @@ view model =
                     div []
                         [ case model.travellerModel.sectorData of
                             Success sectorData ->
-                                CanvasMap.view sectorData model.travellerModel.hexScale
+                                CanvasMap.view
+                                    sectorData
+                                    model.travellerModel.hexScale
+                                    model.travellerModel.offset
 
                             _ ->
                                 text "TODO: Loading"

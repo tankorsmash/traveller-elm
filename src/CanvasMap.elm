@@ -19,6 +19,8 @@ type alias RenderConfig =
     , centerX : Float
     , centerY : Float
     , hexScale : Float
+    , xOffset : Float
+    , yOffset : Float
     }
 
 
@@ -116,7 +118,7 @@ calcOrigin hexSize row col =
 
 
 renderHex : RenderConfig -> Int -> SolarSystem -> Canvas.Renderable
-renderHex { width, height, centerX, centerY, hexScale } index solarSystem =
+renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } index solarSystem =
     let
         iSize =
             floor size
@@ -129,6 +131,8 @@ renderHex { width, height, centerX, centerY, hexScale } index solarSystem =
 
         ( x, y ) =
             calcOrigin hexScale row col
+                |> Tuple.mapBoth toFloat toFloat
+                |> Tuple.mapBoth ((+) xOffset) ((+) yOffset)
 
         scaleAttr : Int -> Float
         scaleAttr default =
@@ -167,11 +171,11 @@ renderHex { width, height, centerX, centerY, hexScale } index solarSystem =
                 Canvas.path p1 (List.map Canvas.lineTo ps)
 
             _ ->
-                rect ( toFloat x, toFloat y ) 10 10
+                rect ( x, y ) 10 10
         ]
 
 
-hexagonPoints : ( Int, Int ) -> Float -> List ( Float, Float )
+hexagonPoints : ( Float, Float ) -> Float -> List ( Float, Float )
 hexagonPoints ( xOrigin, yOrigin ) size =
     let
         a =
@@ -180,11 +184,11 @@ hexagonPoints ( xOrigin, yOrigin ) size =
         -- angle deg =
         --     (deg + 90) * pi / 180
         x n =
-            toFloat xOrigin
+            xOrigin
                 + (size * cos (a * n))
 
         y n =
-            toFloat yOrigin
+            yOrigin
                 + (size * sin (a * n))
 
         buildPoint n =
@@ -194,8 +198,8 @@ hexagonPoints ( xOrigin, yOrigin ) size =
         |> List.map (toFloat >> buildPoint)
 
 
-view : ( SectorData, Dict.Dict Int SolarSystem ) -> Float -> Html.Html msg
-view ( sectorData, solarSystemDict ) hexScale =
+view : ( SectorData, Dict.Dict Int SolarSystem ) -> Float -> ( Float, Float ) -> Html.Html msg
+view ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOffset ) =
     div
         [ style "display" "flex"
         , style "justify-content" "center"
@@ -220,7 +224,23 @@ view ( sectorData, solarSystemDict ) hexScale =
                 , centerX = centerX
                 , centerY = centerY
                 , hexScale = hexScale
+                , xOffset = xOffset
+                , yOffset = yOffset
                 }
+
+            -- width =
+            --     min (screenVp.viewport.width * 0.9)
+            --         (screenVp.viewport.width - 500.0)
+            --
+            -- height =
+            --     screenVp.viewport.height * 0.9
+            xOffset =
+                -- view horizontal offset
+                width * horizOffset
+
+            yOffset =
+                -- view vertical offset
+                height * vertOffset
           in
           Canvas.toHtml
             ( width, height )
