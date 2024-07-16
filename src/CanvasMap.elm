@@ -92,6 +92,29 @@ indexToCoords index =
     ( row, col )
 
 
+hexColOffset row =
+    if remainderBy 2 row == 0 then
+        0
+
+    else
+        1
+
+
+calcOrigin : Float -> Int -> Int -> ( Int, Int )
+calcOrigin hexSize row col =
+    let
+        a =
+            2 * pi / 6
+
+        x =
+            hexSize + toFloat col * (hexSize + hexSize * cos a)
+
+        y =
+            hexSize + toFloat row * 2 * hexSize * sin a + hexSize * hexColOffset col * sin a
+    in
+    ( floor x, floor y )
+
+
 renderHex : RenderConfig -> Int -> SolarSystem -> Canvas.Renderable
 renderHex { width, height, centerX, centerY, hexScale } index solarSystem =
     let
@@ -104,14 +127,20 @@ renderHex { width, height, centerX, centerY, hexScale } index solarSystem =
         fIndex =
             toFloat index
 
-        x =
-            centerX + toFloat col * 10
+        ( x, y ) =
+            calcOrigin hexScale row col
 
-        y =
-            centerY + toFloat row * 20
+        scaleAttr : Int -> Float
+        scaleAttr default =
+            toFloat default * min 1 (size / defaultHexSize)
 
+        -- x =
+        --     centerX + toFloat col * 10
+        --
+        -- y =
+        --     centerY + toFloat row * 20
         size =
-            10 * hexScale
+            hexScale
 
         halfSize =
             size / 2
@@ -124,20 +153,21 @@ renderHex { width, height, centerX, centerY, hexScale } index solarSystem =
     in
     shapes
         [ transform
-            [ translate (x + halfSize) (y + halfSize)
-            , rotate rotation
-            ]
+            -- [ translate (x + halfSize) (y + halfSize)
+            -- , rotate rotation
+            []
 
         -- , fill (Color.rgb 255 0 0)
         , fill (Color.hsl hue 0.3 0.7)
         ]
         -- [ rect ( -halfSize, -halfSize ) size size
-        [ case hexagonPoints ( floor 0, floor 0 ) size of
+        -- [ case hexagonPoints ( floor x, floor y ) size of
+        [ case hexagonPoints ( x, y ) size of
             p1 :: ps ->
                 Canvas.path p1 (List.map Canvas.lineTo ps)
 
             _ ->
-                rect ( x, y ) 10 10
+                rect ( toFloat x, toFloat y ) 10 10
         ]
 
 
