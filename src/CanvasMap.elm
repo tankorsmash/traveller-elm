@@ -127,16 +127,8 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
         ( row, col ) =
             indexToCoords index
 
-        -- hexOrigin
-        -- fIndex =
-        --     toFloat index
         ( x, y ) =
-            calcOrigin hexScale row col
-            -- let
-            --     ( r, c ) =
-            --         hexOrigin
-            -- in
-            -- calcOrigin hexScale r c
+            hexOrigin
                 |> Tuple.mapBoth toFloat toFloat
                 |> Tuple.mapBoth ((+) xOffset) ((+) yOffset)
 
