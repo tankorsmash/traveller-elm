@@ -171,7 +171,7 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
         , fill (Color.hsl hue 0.3 0.7)
         ]
         [ shapes [ fill (Color.hsl hue 0.3 0.7) ]
-            [ case hexagonPoints ( 0, 0 ) (size * 2) of
+            [ case hexagonPoints ( 0, 0 ) (size * 1) of
                 p1 :: ps ->
                     Canvas.path p1 (List.map Canvas.lineTo ps)
 
