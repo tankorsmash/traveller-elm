@@ -1,5 +1,6 @@
 module CanvasMap exposing (view)
 
+import Browser.Dom
 import Canvas exposing (rect, shapes)
 import Canvas.Settings exposing (fill)
 import Canvas.Settings.Advanced exposing (rotate, transform, translate)
@@ -118,48 +119,27 @@ calcOrigin hexSize row col =
     ( floor x, floor y )
 
 
-renderHex : RenderConfig -> ( Int, Int ) -> Int -> Maybe SolarSystem -> Canvas.Renderable
-renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOrigin index maybeSolarSystem =
+renderHex : RenderConfig -> ( Int, Int ) -> Int -> Int -> Maybe SolarSystem -> Canvas.Renderable
+renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOrigin hexIndex index maybeSolarSystem =
     let
-        iSize =
-            floor size
-
-        ( row, col ) =
-            indexToCoords index
-
         ( x, y ) =
             hexOrigin
                 |> Tuple.mapBoth toFloat toFloat
                 |> Tuple.mapBoth ((+) xOffset) ((+) yOffset)
 
-        scaleAttr : Int -> Float
-        scaleAttr default =
-            toFloat default * min 1 (size / defaultHexSize)
-
-        -- x =
-        --     centerX + toFloat col * 10
-        --
-        -- y =
-        --     centerY + toFloat row * 20
         size =
             hexScale
 
         halfSize =
             size / 2
 
-        -- rotation =
-        --     degrees (toFloat index * 10)
         hue =
             toFloat (toFloat index / 2 |> floor |> modBy 100) / 100
     in
     Canvas.group
         [ transform
             [ translate x y
-
-            -- , rotate rotation
             ]
-
-        -- , fill (Color.rgb 255 0 0)
         , fill (Color.hsl hue 0.3 0.7)
         ]
         [ shapes [ fill (Color.hsl hue 0.3 0.7) ]
@@ -179,7 +159,7 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
             (case maybeSolarSystem of
                 Just solarSystem ->
                     -- String.fromInt (List.length solarSystem.stars)
-                    solarSystem.coordinates.raw ++ " " ++ String.fromInt index
+                    solarSystem.coordinates.raw
 
                 Nothing ->
                     ""
@@ -218,12 +198,6 @@ view ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOffset ) =
         , style "align-items" "center"
         ]
         [ let
-            width =
-                800
-
-            height =
-                400
-
             ( centerX, centerY ) =
                 ( width / 2, height / 2 )
 
@@ -240,12 +214,18 @@ view ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOffset ) =
                 , yOffset = yOffset
                 }
 
+            width =
+                800
+
+            height =
+                400
             -- width =
             --     min (screenVp.viewport.width * 0.9)
             --         (screenVp.viewport.width - 500.0)
             --
             -- height =
             --     screenVp.viewport.height * 0.9
+
             xOffset =
                 -- view horizontal offset
                 width * horizOffset
@@ -259,28 +239,63 @@ view ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOffset ) =
                 List.range 0 numHexCols
                     |> List.map (calcOrigin hexScale rowIdx)
                     |> List.indexedMap
-                        (\colIdx hexOrigin ->
+                        (\colIdx (( ox, oy ) as hexOrigin) ->
                             let
-                                idx =
+                                -- hexIdx is the '0145' for the x 1, y 45 position
+                                hexIdx =
                                     (rowIdx + 1) + (colIdx + 1) * 100
+
+                                index =
+                                    rowIdx * numHexCols + colIdx
+
+                                ( fox, foy ) =
+                                    ( toFloat ox, toFloat oy )
+
+                                widestViewport =
+                                    { viewport = { width = width, height = height } }
+
+                                -- case hexmapVp of
+                                --     Nothing ->
+                                --         screenVp
+                                --
+                                --     Just hexmapViewport ->
+                                --         hexmapViewport
+                                outsideX =
+                                    let
+                                        plus =
+                                            fox + hexScale - (width * horizOffset)
+
+                                        minus =
+                                            fox - hexScale - (width * horizOffset)
+                                    in
+                                    (plus < 0) || (minus > widestViewport.viewport.width)
+
+                                outsideY =
+                                    let
+                                        plus =
+                                            foy + hexScale - (height * vertOffset)
+
+                                        minus =
+                                            foy - hexScale - (height * vertOffset)
+                                    in
+                                    (plus < 0) || (minus > widestViewport.viewport.height)
                             in
-                            renderHex renderConfig hexOrigin idx (Dict.get idx solarSystemDict)
+                            if outsideX || outsideY then
+                                Nothing
+
+                            else
+                                Just <|
+                                    renderHex renderConfig hexOrigin hexIdx index (Dict.get hexIdx solarSystemDict)
                         )
 
             renderedHexes =
                 List.range 0 numHexRows
                     |> List.map viewHexRow
                     |> List.concat
-
-            -- hexes =
-            --     List.indexedMap
-            --         (\index solarSystem ->
-            --             renderHex renderConfig index solarSystem
-            --         )
-            --         (Dict.values solarSystemDict)
+                    |> List.filterMap identity
           in
           Canvas.toHtml
-            ( width, height )
+            ( floor width, floor height )
             [ style "border" "10px solid rgba(0,0,0,0.1)" ]
             ([ clearScreen
              , render renderConfig 106
