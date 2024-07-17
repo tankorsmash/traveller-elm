@@ -3,7 +3,7 @@ module CanvasMap exposing (view)
 import Canvas exposing (rect, shapes)
 import Canvas.Settings exposing (fill)
 import Canvas.Settings.Advanced exposing (rotate, transform, translate)
-import Canvas.Settings.Text exposing (TextAlign(..))
+import Canvas.Settings.Text exposing (TextAlign(..), TextBaseLine(..))
 import Color
 import Dict
 import Html exposing (div)
@@ -12,7 +12,6 @@ import Http exposing (Error(..))
 import RemoteData exposing (RemoteData(..))
 import Traveller.SectorData exposing (SectorData)
 import Traveller.SolarSystem exposing (SolarSystem)
-import Canvas.Settings.Text exposing (TextBaseLine(..))
 
 
 type alias RenderConfig =
@@ -119,20 +118,25 @@ calcOrigin hexSize row col =
     ( floor x, floor y )
 
 
-renderHex : RenderConfig -> Int -> SolarSystem -> Canvas.Renderable
-renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } index solarSystem =
+renderHex : RenderConfig -> (Int, Int) -> Int -> Maybe SolarSystem -> Canvas.Renderable
+renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOrigin index maybeSolarSystem =
     let
         iSize =
             floor size
 
         ( row, col ) =
             indexToCoords index
+            -- hexOrigin
 
-        fIndex =
-            toFloat index
+        -- fIndex =
+        --     toFloat index
 
         ( x, y ) =
             calcOrigin hexScale row col
+            -- let
+            --     (r, c) = hexOrigin
+            -- in
+            -- calcOrigin hexScale r c
                 |> Tuple.mapBoth toFloat toFloat
                 |> Tuple.mapBoth ((+) xOffset) ((+) yOffset)
 
@@ -151,8 +155,8 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } index 
         halfSize =
             size / 2
 
-        rotation =
-            degrees (toFloat index * 10)
+        -- rotation =
+        --     degrees (toFloat index * 10)
 
         hue =
             toFloat (toFloat index / 2 |> floor |> modBy 100) / 100
@@ -183,7 +187,14 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } index 
             , Canvas.Settings.Text.baseLine Middle
             ]
             ( 0, 0 )
-            (String.fromInt (List.length solarSystem.stars))
+            (case maybeSolarSystem of
+                Just solarSystem ->
+                    -- String.fromInt (List.length solarSystem.stars)
+                    (solarSystem.coordinates.raw)
+
+                Nothing ->
+                    ""
+            )
         ]
 
 
@@ -253,6 +264,33 @@ view ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOffset ) =
             yOffset =
                 -- view vertical offset
                 height * vertOffset
+
+            -- viewHexRow : Int -> List ( Maybe (Svg Msg), Int )
+            viewHexRow rowIdx =
+                List.range 0 numHexCols
+                    |> List.map (calcOrigin hexScale rowIdx)
+                    |> List.indexedMap
+                        (\colIdx hexOrigin ->
+                            let
+                                idx =
+                                    -- this is wrong but I'm not sure why
+                                    (rowIdx + 1) + (colIdx + 1) * 100
+                                    -- rowIdx * numHexCols + colIdx
+                            in
+                            renderHex renderConfig hexOrigin idx (Dict.get idx solarSystemDict)
+                        )
+
+            renderedHexes =
+                List.range 0 numHexRows
+                    |> List.map viewHexRow
+                    |> List.concat
+
+            -- hexes =
+            --     List.indexedMap
+            --         (\index solarSystem ->
+            --             renderHex renderConfig index solarSystem
+            --         )
+            --         (Dict.values solarSystemDict)
           in
           Canvas.toHtml
             ( width, height )
@@ -260,10 +298,6 @@ view ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOffset ) =
             ([ clearScreen
              , render renderConfig 106
              ]
-                ++ List.indexedMap
-                    (\index solarSystem ->
-                        renderHex renderConfig index solarSystem
-                    )
-                    (Dict.values solarSystemDict)
+                ++ renderedHexes
             )
         ]

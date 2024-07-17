@@ -731,10 +731,10 @@ view model =
                                         }
 
                                     Just (Err domError) ->
-                                        let
-                                            _ =
-                                                Debug.log "cant use, domError" domError
-                                        in
+                                        -- let
+                                        --     _ =
+                                        --         Debug.log "cant use, domError" domError
+                                        -- in
                                         { screenVp = viewport, hexmapVp = Nothing }
                                 )
                                 sectorData
