@@ -118,7 +118,7 @@ calcOrigin hexSize row col =
     ( floor x, floor y )
 
 
-renderHex : RenderConfig -> (Int, Int) -> Int -> Maybe SolarSystem -> Canvas.Renderable
+renderHex : RenderConfig -> ( Int, Int ) -> Int -> Maybe SolarSystem -> Canvas.Renderable
 renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOrigin index maybeSolarSystem =
     let
         iSize =
@@ -126,15 +126,15 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
 
         ( row, col ) =
             indexToCoords index
-            -- hexOrigin
 
+        -- hexOrigin
         -- fIndex =
         --     toFloat index
-
         ( x, y ) =
             calcOrigin hexScale row col
             -- let
-            --     (r, c) = hexOrigin
+            --     ( r, c ) =
+            --         hexOrigin
             -- in
             -- calcOrigin hexScale r c
                 |> Tuple.mapBoth toFloat toFloat
@@ -157,7 +157,6 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
 
         -- rotation =
         --     degrees (toFloat index * 10)
-
         hue =
             toFloat (toFloat index / 2 |> floor |> modBy 100) / 100
     in
@@ -171,18 +170,16 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
         -- , fill (Color.rgb 255 0 0)
         , fill (Color.hsl hue 0.3 0.7)
         ]
-        [ shapes
-            [ fill (Color.hsl hue 0.3 0.7)
-            ]
-            [ case hexagonPoints ( 0, 0 ) size of
+        [ shapes [ fill (Color.hsl hue 0.3 0.7) ]
+            [ case hexagonPoints ( 0, 0 ) (size * 2) of
                 p1 :: ps ->
                     Canvas.path p1 (List.map Canvas.lineTo ps)
 
                 _ ->
-                    rect ( x, y ) 10 10
+                    rect ( 0, 0 ) 10 10
             ]
         , Canvas.text
-            [ fill Color.white
+            [ fill Color.red
             , Canvas.Settings.Text.align Center
             , Canvas.Settings.Text.baseLine Middle
             ]
@@ -190,7 +187,7 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
             (case maybeSolarSystem of
                 Just solarSystem ->
                     -- String.fromInt (List.length solarSystem.stars)
-                    (solarSystem.coordinates.raw)
+                    solarSystem.coordinates.raw ++ " " ++ String.fromInt index
 
                 Nothing ->
                     ""
@@ -273,9 +270,7 @@ view ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOffset ) =
                         (\colIdx hexOrigin ->
                             let
                                 idx =
-                                    -- this is wrong but I'm not sure why
                                     (rowIdx + 1) + (colIdx + 1) * 100
-                                    -- rowIdx * numHexCols + colIdx
                             in
                             renderHex renderConfig hexOrigin idx (Dict.get idx solarSystemDict)
                         )
