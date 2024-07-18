@@ -6,6 +6,7 @@ import Canvas.Settings exposing (fill)
 import Canvas.Settings.Advanced exposing (rotate, transform, translate)
 import Canvas.Settings.Text exposing (TextAlign(..), TextBaseLine(..))
 import Color
+import Color.Convert exposing (hexToColor)
 import Dict
 import Html exposing (div)
 import Html.Attributes exposing (style)
@@ -13,6 +14,7 @@ import Http exposing (Error(..))
 import RemoteData exposing (RemoteData(..))
 import Traveller.SectorData exposing (SectorData)
 import Traveller.SolarSystem exposing (SolarSystem)
+import Traveller.Star as Star exposing (Star, StarColour(..))
 
 
 type alias RenderConfig =
@@ -119,6 +121,63 @@ calcOrigin hexSize row col =
     ( floor x, floor y )
 
 
+starColourRGB : Star.StarColour -> Color.Color
+starColourRGB colour =
+    let
+        colorString : String
+        colorString =
+            case colour of
+                Blue ->
+                    "#000077"
+
+                BlueWhite ->
+                    "#87cefa"
+
+                White ->
+                    "#FFFFFF"
+
+                YellowWhite ->
+                    "#ffffe0"
+
+                Yellow ->
+                    "#ffff00"
+
+                LightOrange ->
+                    "#ffbf00"
+
+                OrangeRed ->
+                    "#ff4500"
+
+                Red ->
+                    "#ff0000"
+
+                Brown ->
+                    "#f4a460"
+
+                DeepDimRed ->
+                    "#800000"
+    in
+    hexToColor colorString |> Result.withDefault (Color.rgb 255 0 255)
+
+
+drawStar : ( Float, Float ) -> Float -> { a | colour : Maybe StarColour } -> Canvas.Renderable
+drawStar ( starX, starY ) radius star =
+    shapes
+        [ fill <|
+            case star.colour of
+                Just starColor ->
+                    starColourRGB starColor
+
+                Nothing ->
+                    Color.rgb 255 0 255
+        ]
+        [ Canvas.circle ( starX, starY ) radius ]
+
+
+
+-- [ Canvas.circle ( 0, 0 ) radius ]
+
+
 renderHex : RenderConfig -> ( Int, Int ) -> Int -> Int -> Maybe SolarSystem -> Canvas.Renderable
 renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOrigin hexIndex index maybeSolarSystem =
     let
@@ -134,12 +193,26 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
             size / 2
 
         hue =
-            toFloat (toFloat index / 2 |> floor |> modBy 100) / 100
+            toFloat (toFloat index / 2 |> floor |> modBy 100)
+                / 100
+                |> (\h ->
+                        if hasStar then
+                            255
+
+                        else
+                            h
+                   )
+
+        hasStar =
+            case maybeSolarSystem of
+                Just solarSystem ->
+                    True
+
+                Nothing ->
+                    False
     in
     Canvas.group
-        [ transform
-            [ translate x y
-            ]
+        [ transform [ translate x y ]
         , fill (Color.hsl hue 0.3 0.7)
         ]
         [ shapes [ fill (Color.hsl hue 0.3 0.7) ]
@@ -150,6 +223,59 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
                 _ ->
                     rect ( 0, 0 ) 10 10
             ]
+        , case maybeSolarSystem of
+            Just solarSystem ->
+                case solarSystem.stars of
+                    [] ->
+                        shapes [] []
+
+                    primaryStar :: stars ->
+                        let
+                            primaryPos =
+                                ( x / 100, y / 100 )
+                        in
+                        Canvas.group
+                            []
+                            ((case primaryStar.companion of
+                                Just companionStar ->
+                                    let
+                                        companionStarPos =
+                                            Tuple.mapFirst (\x_ -> x_ - 5) primaryPos
+                                    in
+                                    Canvas.group []
+                                        [ drawStar primaryPos 5 primaryStar
+                                        , drawStar companionStarPos 2 companionStar
+                                        ]
+
+                                Nothing ->
+                                    drawStar primaryPos 5 primaryStar
+                             )
+                                :: List.indexedMap
+                                    (\idx secondaryStar ->
+                                        let
+                                            secondaryStarPos =
+                                                -- rotatePoint idx primaryPos 60 20
+                                                ( 60, 20 )
+                                        in
+                                        case secondaryStar.companion of
+                                            Just companionStar ->
+                                                let
+                                                    companionStarPos =
+                                                        Tuple.mapFirst (\x_ -> x_ - 5) secondaryStarPos
+                                                in
+                                                Canvas.group []
+                                                    [ drawStar secondaryStarPos 7 secondaryStar
+                                                    , drawStar companionStarPos 3 companionStar
+                                                    ]
+
+                                            Nothing ->
+                                                drawStar secondaryStarPos 7 secondaryStar
+                                    )
+                                    stars
+                            )
+
+            Nothing ->
+                shapes [] []
         , Canvas.text
             [ fill Color.red
             , Canvas.Settings.Text.align Center
