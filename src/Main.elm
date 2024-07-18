@@ -198,9 +198,10 @@ view model =
             , case model.route of
                 Just TravellerPage ->
                     div []
-                        [ case model.travellerModel.sectorData of
-                            Success sectorData ->
+                        [ case ( model.travellerModel.sectorData, model.travellerModel.viewport ) of
+                            ( Success sectorData, Just viewport ) ->
                                 CanvasMap.view
+                                    { screenVp = viewport }
                                     sectorData
                                     model.travellerModel.hexScale
                                     model.travellerModel.offset

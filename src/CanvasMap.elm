@@ -190,8 +190,8 @@ hexagonPoints ( xOrigin, yOrigin ) size =
         |> List.map (toFloat >> buildPoint)
 
 
-view : ( SectorData, Dict.Dict Int SolarSystem ) -> Float -> ( Float, Float ) -> Html.Html msg
-view ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOffset ) =
+view : { screenVp : Browser.Dom.Viewport } -> ( SectorData, Dict.Dict Int SolarSystem ) -> Float -> ( Float, Float ) -> Html.Html msg
+view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOffset ) =
     div
         [ style "display" "flex"
         , style "justify-content" "center"
@@ -214,25 +214,25 @@ view ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOffset ) =
                 , yOffset = yOffset
                 }
 
-            width =
-                800
-
-            height =
-                400
             -- width =
-            --     min (screenVp.viewport.width * 0.9)
-            --         (screenVp.viewport.width - 500.0)
+            --     800
             --
             -- height =
-            --     screenVp.viewport.height * 0.9
+            --     400
+            width =
+                min (screenVp.viewport.width * 0.9)
+                    (screenVp.viewport.width - 500.0)
+
+            height =
+                screenVp.viewport.height * 0.9
 
             xOffset =
                 -- view horizontal offset
-                width * horizOffset
+                -1 * width * horizOffset
 
             yOffset =
                 -- view vertical offset
-                height * vertOffset
+                -1 * height * vertOffset
 
             -- viewHexRow : Int -> List ( Maybe (Svg Msg), Int )
             viewHexRow rowIdx =
@@ -252,14 +252,8 @@ view ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOffset ) =
                                     ( toFloat ox, toFloat oy )
 
                                 widestViewport =
-                                    { viewport = { width = width, height = height } }
+                                    screenVp
 
-                                -- case hexmapVp of
-                                --     Nothing ->
-                                --         screenVp
-                                --
-                                --     Just hexmapViewport ->
-                                --         hexmapViewport
                                 outsideX =
                                     let
                                         plus =
