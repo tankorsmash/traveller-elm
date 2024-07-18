@@ -157,6 +157,16 @@ starColourRGB colour =
                 DeepDimRed ->
                     "#800000"
     in
+    forceHexToColor colorString
+
+
+{-| returns mageenta if the hex string is invalid
+
+if we are worried about invalid colors, we can use `hexToColor` directly
+
+-}
+forceHexToColor : String -> Color.Color
+forceHexToColor colorString =
     hexToColor colorString |> Result.withDefault (Color.rgb 255 0 255)
 
 
@@ -189,9 +199,6 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
         size =
             hexScale
 
-        halfSize =
-            size / 2
-
         hue =
             toFloat (toFloat index / 2 |> floor |> modBy 100)
                 / 100
@@ -205,16 +212,13 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
 
         hasStar =
             case maybeSolarSystem of
-                Just solarSystem ->
+                Just _ ->
                     True
 
                 Nothing ->
                     False
     in
-    Canvas.group
-        [ transform [ translate x y ]
-        , fill (Color.hsl hue 0.3 0.7)
-        ]
+    Canvas.group [ transform [ translate x y ] ]
         [ shapes [ fill (Color.hsl hue 0.3 0.7) ]
             [ case hexagonPoints ( 0, 0 ) (size * 1) of
                 p1 :: ps ->
@@ -240,7 +244,8 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
                                 Just companionStar ->
                                     let
                                         companionStarPos =
-                                            Tuple.mapFirst (\x_ -> x_ - 5) primaryPos
+                                            primaryPos
+                                                |> Tuple.mapFirst (\x_ -> x_ - 5)
                                     in
                                     Canvas.group []
                                         [ drawStar primaryPos 5 primaryStar
@@ -251,17 +256,17 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
                                     drawStar primaryPos 5 primaryStar
                              )
                                 :: List.indexedMap
-                                    (\idx secondaryStar ->
+                                    (\_ secondaryStar ->
                                         let
                                             secondaryStarPos =
                                                 -- rotatePoint idx primaryPos 60 20
-                                                ( 60, 20 )
+                                                ( 10, 10 )
                                         in
                                         case secondaryStar.companion of
                                             Just companionStar ->
                                                 let
                                                     companionStarPos =
-                                                        Tuple.mapFirst (\x_ -> x_ - 5) secondaryStarPos
+                                                        secondaryStarPos |> Tuple.mapFirst (\x_ -> x_ - 5)
                                                 in
                                                 Canvas.group []
                                                     [ drawStar secondaryStarPos 7 secondaryStar
@@ -276,20 +281,44 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
 
             Nothing ->
                 shapes [] []
-        , Canvas.text
+        , -- Hex ID display
+          Canvas.text
             [ fill Color.red
             , Canvas.Settings.Text.align Center
             , Canvas.Settings.Text.baseLine Middle
             ]
-            ( 0, 0 )
+            ( 0, -hexScale * 0.65 )
             (case maybeSolarSystem of
                 Just solarSystem ->
-                    -- String.fromInt (List.length solarSystem.stars)
                     solarSystem.coordinates.raw
 
                 Nothing ->
                     ""
             )
+        , -- giants/planets/belts display
+          case maybeSolarSystem of
+            Just solarSystem ->
+                Canvas.group
+                    [ Canvas.Settings.Text.align Center
+                    , Canvas.Settings.Text.baseLine Middle
+                    , Canvas.Settings.Text.font { size = 14, family = "Arial" }
+                    ]
+                    [ Canvas.text
+                        [ fill <| forceHexToColor "#109076" ]
+                        ( hexScale * -0.3, hexScale * 0.65 )
+                        (solarSystem.gasGiants |> String.fromInt)
+                    , Canvas.text
+                        [ fill <| forceHexToColor "#809076" ]
+                        ( 0, hexScale * 0.65 )
+                        (solarSystem.terrestrialPlanets |> String.fromInt)
+                    , Canvas.text
+                        [ fill <| forceHexToColor "#68B976" ]
+                        ( hexScale * 0.3, hexScale * 0.65 )
+                        (solarSystem.planetoidBelts |> String.fromInt)
+                    ]
+
+            Nothing ->
+                Canvas.group [] []
         ]
 
 
