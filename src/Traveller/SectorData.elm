@@ -1,6 +1,7 @@
 module Traveller.SectorData exposing (SIHex, SISector, SectorData, SurveyIndexData, codecSIHex, codecSISector, codecSectorData, codecSurveyIndexData)
 
 import Codec exposing (Codec)
+import Dict exposing (Dict)
 import Json.Decode as JsDecode
 import Json.Encode as JsEncode
 import Parser exposing ((|.), (|=), Parser)
@@ -45,7 +46,7 @@ codecSIHex =
 type alias SISector =
     { x : Int
     , y : Int
-    , hexes : List SIHex
+    , hexes : Dict String Int
     }
 
 
@@ -54,7 +55,7 @@ codecSISector =
     Codec.object SISector
         |> Codec.field "x" .x Codec.int
         |> Codec.field "y" .y Codec.int
-        |> Codec.field "hexes" .hexes (Codec.list codecSIHex)
+        |> Codec.field "hexes" .hexes (Codec.dict Codec.int)
         |> Codec.buildObject
 
 
