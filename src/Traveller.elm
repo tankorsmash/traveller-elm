@@ -45,6 +45,18 @@ import Traveller.SolarSystem exposing (SolarSystem)
 import Traveller.Star as Star exposing (starColourRGB)
 
 
+gasGiantSI =
+    5
+
+
+terrestrialSI =
+    6
+
+
+planetoidSI =
+    6
+
+
 type alias Model =
     { key : Browser.Navigation.Key
     , hexScale : Float
@@ -146,8 +158,8 @@ hexagonPoints ( xOrigin, yOrigin ) size =
         |> String.join " "
 
 
-viewHexDetailed : Maybe SolarSystem -> HexId -> Int -> HexOrigin -> Float -> Svg Msg
-viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
+viewHexDetailed : Maybe SolarSystem -> Int -> HexId -> Int -> HexOrigin -> Float -> Svg Msg
+viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size =
     let
         hasStar =
             case maybeSolarSystem of
@@ -291,18 +303,41 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                         , SvgAttrs.fontSize "12"
                         , SvgAttrs.textAnchor "middle"
                         ]
-                        [ Svg.tspan
+                        (let
+                            showGasGiants =
+                                if si >= gasGiantSI then
+                                    String.fromInt <| solarSystem.gasGiants
+
+                                else
+                                    "?"
+
+                            showTerrestrialPlanets =
+                                if si >= terrestrialSI then
+                                    String.fromInt <| solarSystem.terrestrialPlanets
+
+                                else
+                                    "?"
+
+                            showplanetoidBelts =
+                                if si >= planetoidSI then
+                                    String.fromInt <| solarSystem.planetoidBelts
+
+                                else
+                                    "?"
+                         in
+                         [ Svg.tspan
                             [ SvgAttrs.fill "#109076" ]
-                            [ String.fromInt solarSystem.gasGiants |> Svg.text ]
-                        , Svg.text " / "
-                        , Svg.tspan
+                            [ showGasGiants |> Svg.text ]
+                         , Svg.text " / "
+                         , Svg.tspan
                             [ SvgAttrs.fill "#809076" ]
-                            [ String.fromInt solarSystem.terrestrialPlanets |> Svg.text ]
-                        , Svg.text " / "
-                        , Svg.tspan
+                            [ showTerrestrialPlanets |> Svg.text ]
+                         , Svg.text " / "
+                         , Svg.tspan
                             [ SvgAttrs.fill "#68B976" ]
-                            [ String.fromInt solarSystem.planetoidBelts |> Svg.text ]
-                        ]
+                            [ showplanetoidBelts |> Svg.text ]
+                         ]
+                        )
                     ]
 
             Nothing ->
@@ -375,8 +410,8 @@ calcOrigin hexSize row col =
 
 {-| View all the hexes in the system
 -}
-viewHexes : Maybe ( Int, Int ) -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport } -> ( SectorData, Dict.Dict Int SolarSystem ) -> ( Float, Float ) -> HexId -> Float -> Html Msg
-viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexId hexSize =
+viewHexes : Maybe ( Int, Int ) -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport } -> ( SectorData, Dict.Dict Int SolarSystem ) -> SurveyIndexData -> ( Float, Float ) -> HexId -> Float -> Html Msg
+viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict ) surveyIndexData ( horizOffset, vertOffset ) playerHexId hexSize =
     let
         width =
             min (screenVp.viewport.width * 0.9)
@@ -392,6 +427,9 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
         yOffset =
             -- view vertical offset
             String.fromFloat (height * vertOffset)
+
+        maybeSISector =
+            List.filter (\sector -> sector.x == sectorData.x && sector.y == sectorData.y) surveyIndexData |> List.head
 
         viewHex : Int -> Int -> HexOrigin -> ( Maybe (Svg Msg), Int )
         viewHex rowIdx colIdx ( ox, oy ) =
@@ -437,6 +475,18 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
                     if not (outsideX || outsideY) then
                         Just
                             (viewHexDetailed solarSystem
+                                (case maybeSISector of
+                                    Just siSector ->
+                                        case Dict.get (String.padLeft 4 '0' <| String.fromInt idx) siSector.hexes of
+                                            Just si2 ->
+                                                si2
+
+                                            Nothing ->
+                                                0
+
+                                    Nothing ->
+                                        0
+                                )
                                 playerHexId
                                 idx
                                 ( ox, oy )
@@ -717,9 +767,9 @@ view model =
             column []
                 [ Element.html <|
                     -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
-                    case ( model.sectorData, model.viewport ) of
-                        ( RemoteData.Success sectorData, Just viewport ) ->
-                            Svg.Styled.Lazy.lazy6 viewHexes
+                    case ( model.sectorData, model.viewport, model.surveyIndexData ) of
+                        ( RemoteData.Success sectorData, Just viewport, RemoteData.Success surveyIndexData ) ->
+                            viewHexes
                                 model.viewingHexOrigin
                                 (case model.hexmapViewport of
                                     Nothing ->
@@ -738,6 +788,7 @@ view model =
                                         { screenVp = viewport, hexmapVp = Nothing }
                                 )
                                 sectorData
+                                surveyIndexData
                                 model.offset
                                 model.playerHex
                                 model.hexScale

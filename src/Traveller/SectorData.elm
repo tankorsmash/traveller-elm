@@ -60,10 +60,9 @@ codecSISector =
 
 
 type alias SurveyIndexData =
-    { sectors : List SISector
-    }
+    List SISector
 
 
 codecSurveyIndexData : Codec.Codec SurveyIndexData
 codecSurveyIndexData =
-    Codec.map SurveyIndexData .sectors (Codec.list codecSISector)
+    Codec.list codecSISector
