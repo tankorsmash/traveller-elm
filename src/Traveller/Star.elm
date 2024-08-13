@@ -1,4 +1,4 @@
-module Traveller.Star exposing (Star, codecStar, sampleSystemText, starColourRGB)
+module Traveller.Star exposing (CompanionStar, Star, StarColour, codecStar, sampleSystemText, starColourRGB)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
