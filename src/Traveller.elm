@@ -64,7 +64,7 @@ type alias Model =
     , offset : ( Float, Float )
     , playerHex : HexId
     , hoveringHex : Maybe HexId
-    , viewingHexId : Maybe HexId
+    , viewingHexId : Maybe ( HexId, Int )
     , viewingHexOrigin : Maybe ( Int, Int )
     , viewport : Maybe Browser.Dom.Viewport
     , hexmapViewport : Maybe (Result Browser.Dom.Error Browser.Dom.Viewport)
@@ -86,7 +86,7 @@ type Msg
     | DownloadedSectorJson (Result Http.Error SectorData)
     | OffsetChanged OffsetDirection Float
     | HoveringHex HexId
-    | ViewingHex HexId
+    | ViewingHex ( HexId, Int )
     | GotViewport Browser.Dom.Viewport
     | GotHexMapViewport (Result Browser.Dom.Error Browser.Dom.Viewport)
     | GotResize Int Int
@@ -199,7 +199,7 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
     in
     Svg.g
         [ SvgEvents.onMouseOver (HoveringHex (HexId.createFromInt hexIdx))
-        , SvgEvents.onClick (ViewingHex (HexId.createFromInt hexIdx))
+        , SvgEvents.onClick (ViewingHex ( HexId.createFromInt hexIdx, si ))
         ]
         [ -- background hex
           Svg.polygon
@@ -582,7 +582,7 @@ hexToCoords hexId =
     ( row, col )
 
 
-viewSystemDetailsSidebar : Maybe HexId -> Maybe HexOrigin -> Dict.Dict RawHexId SolarSystem -> Element Msg
+viewSystemDetailsSidebar : Maybe ( HexId, Int ) -> Maybe HexOrigin -> Dict.Dict RawHexId SolarSystem -> Element Msg
 viewSystemDetailsSidebar maybeViewingHexId maybeViewingHexOrigin solarSystemDict =
     column
         []
@@ -590,12 +590,12 @@ viewSystemDetailsSidebar maybeViewingHexId maybeViewingHexOrigin solarSystemDict
             ( maybeViewingHexId
             , maybeViewingHexId
                 |> Maybe.andThen
-                    (\hid ->
+                    (\( hid, _ ) ->
                         Dict.get hid.value solarSystemDict
                     )
             )
           of
-            ( Just viewingHexId, Just solarSystem ) ->
+            ( Just ( viewingHexId, si ), Just solarSystem ) ->
                 let
                     renderStar star =
                         star.stellarType
@@ -608,14 +608,6 @@ viewSystemDetailsSidebar maybeViewingHexId maybeViewingHexOrigin solarSystemDict
                                )
                             ++ " "
                             ++ star.stellarClass
-                            ++ " origin: "
-                            ++ (case maybeViewingHexOrigin of
-                                    Just ( ox, oy ) ->
-                                        String.fromInt ox ++ ", " ++ String.fromInt oy
-
-                                    Nothing ->
-                                        "None"
-                               )
                 in
                 column [ Element.spacing 10 ] <|
                     (solarSystem.stars
@@ -957,7 +949,7 @@ update msg model =
                 ]
             )
 
-        ViewingHex hexId ->
+        ViewingHex ( hexId, si ) ->
             let
                 goodValX =
                     (hexId.value // 100) - 1
@@ -1009,7 +1001,7 @@ update msg model =
                             Nothing
             in
             ( { model
-                | viewingHexId = Just hexId
+                | viewingHexId = Just ( hexId, si )
                 , viewingHexOrigin = Just ( ox, oy )
                 , offset = Debug.log "new offset" newOffsetPct
               }
