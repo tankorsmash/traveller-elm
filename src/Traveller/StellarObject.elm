@@ -333,29 +333,32 @@ type alias PlanetoidData =
     }
 
 
+type alias StarDataConfig =
+    { orbitPosition : StellarPoint
+    , inclination : Int
+    , eccentricity : Float
+    , effectiveHZCODeviation : Float
+    , stellarClass : String
+    , stellarType : String
+    , subtype : Maybe Int
+    , orbitType : Int
+    , mass : Float
+    , diameter : Float
+    , temperature : Int
+    , age : Float
+    , colour : StarColour
+    , companion : Maybe StarData
+    , orbit : Float
+    , period : Float
+    , baseline : Int
+    , stellarObjects : List StellarObject
+    , orbitSequence : String
+    , jump : Float
+    }
+
+
 type StarData
-    = StarData
-        { orbitPosition : StellarPoint
-        , inclination : Int
-        , eccentricity : Float
-        , effectiveHZCODeviation : Float
-        , stellarClass : String
-        , stellarType : String
-        , subtype : Maybe Int
-        , orbitType : Int
-        , mass : Float
-        , diameter : Float
-        , temperature : Int
-        , age : Float
-        , colour : StarColour
-        , companion : Maybe StarData
-        , orbit : Float
-        , period : Float
-        , baseline : Int
-        , stellarObjects : List StellarObject
-        , orbitSequence : String
-        , jump : Float
-        }
+    = StarData StarDataConfig
 
 
 type StellarObjectX
@@ -437,36 +440,10 @@ codecTerrestrialData =
         |> Codec.buildObject
 
 
-buildStarData =
-    \oPos inc ecc effH sClass sType subtype oType mass diameter temperature age colour companion orbit period baseline stellarObjects orbitSequence jump ->
-        -- StellarObject
-        { orbitPosition = oPos
-        , inclination = inc
-        , eccentricity = ecc
-        , effectiveHZCODeviation = effH
-        , stellarClass = sClass
-        , stellarType = sType
-        , subtype = subtype
-        , orbitType = oType
-        , mass = mass
-        , diameter = diameter
-        , temperature = temperature
-        , age = age
-        , colour = colour
-        , companion = companion
-        , orbit = orbit
-        , period = period
-        , baseline = baseline
-        , stellarObjects = stellarObjects
-        , orbitSequence = orbitSequence
-        , jump = jump
-        }
-
-
 codecStarData : Codec StarData
 codecStarData =
     Codec.object
-        buildStarData
+        StarDataConfig
         |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
         |> Codec.field "inclination" .inclination Codec.int
         |> Codec.field "eccentricity" .eccentricity Codec.float
