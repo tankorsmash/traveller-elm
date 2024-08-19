@@ -13,6 +13,69 @@ import Traveller.Population exposing (StellarPopulation, codecStellarPopulation)
 import Traveller.StellarMoon exposing (StellarMoon(..), codecStellarMoon)
 
 
+type StarColour
+    = Blue
+    | BlueWhite
+    | White
+    | YellowWhite
+    | Yellow
+    | LightOrange
+    | OrangeRed
+    | Red
+    | Brown
+    | DeepDimRed
+
+
+codecStarColour : Codec StarColour
+codecStarColour =
+    Codec.enum Codec.string
+        [ ( "Blue", Blue )
+        , ( "Blue White", BlueWhite )
+        , ( "White", White )
+        , ( "Yellow White", YellowWhite )
+        , ( "Yellow", Yellow )
+        , ( "Light Orange", LightOrange )
+        , ( "Orange Red", OrangeRed )
+        , ( "Red", Red )
+        , ( "Brown", Brown )
+        , ( "Deep Dim Red", DeepDimRed )
+        ]
+
+
+starColourRGB : StarColour -> String
+starColourRGB colour =
+    case colour of
+        Blue ->
+            "#000077"
+
+        BlueWhite ->
+            "#87cefa"
+
+        White ->
+            "#FFFFFF"
+
+        YellowWhite ->
+            "#ffffe0"
+
+        Yellow ->
+            "#ffff00"
+
+        LightOrange ->
+            "#ffbf00"
+
+        OrangeRed ->
+            "#ff4500"
+
+        Red ->
+            "#ff0000"
+
+        Brown ->
+            "#f4a460"
+
+        DeepDimRed ->
+            "#800000"
+
+
 {-| the data structure for a stellar object.
 It needs to be separate from StellarObject so that it can nest within itself
 -}
@@ -205,3 +268,201 @@ sampleStellarObject =
       "orbitSequence": "A V"
     }
     """
+
+
+type alias TerrestrialData =
+    { orbitPosition : StellarPoint
+    , inclination : Float
+    , eccentricity : Float
+    , effectiveHZCODeviation : Maybe Float
+    , size : String
+    , orbit : StellarOrbit
+    , period : Float
+    , composition : String
+    , retrograde : Bool
+    , trojanOffset : Float
+    , axialTilt : Float
+    , moons : List StellarMoon
+    , biomassRating : Int
+    , biocomplexityCode : Int
+    , biodiversityRating : Int
+    , compatibilityRating : Int
+    , resourceRating : Int
+    , currentNativeSophont : Bool
+    , extinctNativeSophont : Bool
+    , hasRing : Bool
+    , orbitType : Int
+    , atmosphere : StellarAtmosphere
+    , hydrographics : StellarHydrographics
+    , population : StellarPopulation
+    , governmentCode : Int
+    , lawLevelCode : Int
+    , starPort : String
+    , techLevel : Int
+    , tradeCodes : List String
+    , albedo : Float
+    , density : Float
+    , greenhouse : Int
+    , meanTemperature : Float
+    , orbitSequence : String
+    }
+
+
+type alias GasGiantData =
+    { orbitPosition : StellarPoint
+    , inclination : Float
+    , eccentricity : Float
+    , effectiveHZCODeviation : Maybe Float
+    , orbitType : Int
+    , orbit : StellarOrbit
+    , code : String
+    , moons : List StellarMoon
+    , hasRing : Bool
+    , orbitSequence : String
+    }
+
+
+type alias PlanetoidData =
+    { orbitPosition : StellarPoint
+    , inclination : Float
+    , eccentricity : Float
+    , effectiveHZCODeviation : Maybe Float
+    , orbitType : Int
+    , orbit : StellarOrbit
+    , orbitSequence : String
+    }
+
+
+type alias StarDataConfig =
+    { orbitPosition : StellarPoint
+    , inclination : Int
+    , eccentricity : Float
+    , effectiveHZCODeviation : Float
+    , stellarClass : String
+    , stellarType : String
+    , subtype : Maybe Int
+    , orbitType : Int
+    , mass : Float
+    , diameter : Float
+    , temperature : Int
+    , age : Float
+    , colour : StarColour
+    , companion : Maybe StarData
+    , orbit : Float
+    , period : Float
+    , baseline : Int
+    , stellarObjects : List StellarObject
+    , orbitSequence : String
+    , jump : Float
+    }
+
+
+type StarData
+    = StarData StarDataConfig
+
+
+type StellarObjectX
+    = GasGiant GasGiantData
+    | TerrestrialPlanet TerrestrialData
+    | Planetoid PlanetoidData
+    | Star StarData
+
+
+codecPlanetoidData : Codec PlanetoidData
+codecPlanetoidData =
+    Codec.object
+        PlanetoidData
+        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+        |> Codec.field "inclination" .inclination Codec.float
+        |> Codec.field "eccentricity" .eccentricity Codec.float
+        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
+        |> Codec.field "orbitType" .orbitType Codec.int
+        |> Codec.field "orbit" .orbit codecStellarOrbit
+        |> Codec.field "orbitSequence" .orbitSequence Codec.string
+        |> Codec.buildObject
+
+
+codecGasGiantData : Codec GasGiantData
+codecGasGiantData =
+    Codec.object
+        GasGiantData
+        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+        |> Codec.field "inclination" .inclination Codec.float
+        |> Codec.field "eccentricity" .eccentricity Codec.float
+        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
+        |> Codec.field "orbitType" .orbitType Codec.int
+        |> Codec.field "orbit" .orbit codecStellarOrbit
+        |> Codec.field "code" .code Codec.string
+        |> Codec.field "moons" .moons (Codec.list (Codec.lazy (\_ -> codecStellarMoon)))
+        |> Codec.field "hasRing" .hasRing Codec.bool
+        |> Codec.field "orbitSequence" .orbitSequence Codec.string
+        |> Codec.buildObject
+
+
+codecTerrestrialData : Codec TerrestrialData
+codecTerrestrialData =
+    Codec.object
+        TerrestrialData
+        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+        |> Codec.field "inclination" .inclination Codec.float
+        |> Codec.field "eccentricity" .eccentricity Codec.float
+        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
+        |> Codec.field "size" .size Codec.string
+        |> Codec.field "orbit" .orbit codecStellarOrbit
+        |> Codec.field "period" .period Codec.float
+        |> Codec.field "composition" .composition Codec.string
+        |> Codec.field "retrograde" .retrograde Codec.bool
+        |> Codec.field "trojanOffset" .trojanOffset Codec.float
+        |> Codec.field "axialTilt" .axialTilt Codec.float
+        |> Codec.field "moons" .moons (Codec.list (Codec.lazy (\_ -> codecStellarMoon)))
+        |> Codec.field "biomassRating" .biomassRating Codec.int
+        |> Codec.field "biocomplexityCode" .biocomplexityCode Codec.int
+        |> Codec.field "biodiversityRating" .biodiversityRating Codec.int
+        |> Codec.field "compatibilityRating" .compatibilityRating Codec.int
+        |> Codec.field "resourceRating" .resourceRating Codec.int
+        |> Codec.field "currentNativeSophont" .currentNativeSophont Codec.bool
+        |> Codec.field "extinctNativeSophont" .extinctNativeSophont Codec.bool
+        |> Codec.field "hasRing" .hasRing Codec.bool
+        |> Codec.field "orbitType" .orbitType Codec.int
+        |> Codec.field "atmosphere" .atmosphere codecStellarAtmosphere
+        |> Codec.field "hydrographics" .hydrographics codecStellarHydrographics
+        |> Codec.field "population" .population codecStellarPopulation
+        |> Codec.field "governmentCode" .governmentCode Codec.int
+        |> Codec.field "lawLevelCode" .lawLevelCode Codec.int
+        |> Codec.field "starPort" .starPort Codec.string
+        |> Codec.field "techLevel" .techLevel Codec.int
+        |> Codec.field "tradeCodes" .tradeCodes (Codec.list Codec.string)
+        |> Codec.field "albedo" .albedo Codec.float
+        |> Codec.field "density" .density Codec.float
+        |> Codec.field "greenhouse" .greenhouse Codec.int
+        |> Codec.field "meanTemperature" .meanTemperature Codec.float
+        |> Codec.field "orbitSequence" .orbitSequence Codec.string
+        |> Codec.buildObject
+
+
+codecStarData : Codec StarData
+codecStarData =
+    Codec.object
+        StarDataConfig
+        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+        |> Codec.field "inclination" .inclination Codec.int
+        |> Codec.field "eccentricity" .eccentricity Codec.float
+        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
+        |> Codec.field "stellarClass" .stellarClass Codec.string
+        |> Codec.field "stellarType" .stellarType Codec.string
+        |> Codec.field "subtype" .subtype (Codec.nullable Codec.int)
+        |> Codec.field "orbitType" .orbitType Codec.int
+        |> Codec.field "mass" .mass Codec.float
+        |> Codec.field "diameter" .diameter Codec.float
+        |> Codec.field "temperature" .temperature Codec.int
+        |> Codec.field "age" .age Codec.float
+        |> Codec.field "colour" .colour codecStarColour
+        |> Codec.nullableField "companion" .companion (Codec.lazy (\_ -> codecStarData))
+        |> Codec.field "orbit" .orbit Codec.float
+        |> Codec.field "period" .period Codec.float
+        |> Codec.field "baseline" .baseline Codec.int
+        |> Codec.field "stellarObjects" .stellarObjects (Codec.list codecStellarObject)
+        |> Codec.field "orbitSequence" .orbitSequence Codec.string
+        |> Codec.field "jump" .jump Codec.float
+        |> Codec.buildObject
+        |> Codec.map StarData (\(StarData data) -> data)

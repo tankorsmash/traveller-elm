@@ -45,6 +45,18 @@ import Traveller.SolarSystem exposing (SolarSystem)
 import Traveller.Star as Star exposing (starColourRGB)
 
 
+gasGiantSI =
+    5
+
+
+terrestrialSI =
+    6
+
+
+planetoidSI =
+    6
+
+
 type alias Model =
     { key : Browser.Navigation.Key
     , hexScale : Float
@@ -52,7 +64,7 @@ type alias Model =
     , offset : ( Float, Float )
     , playerHex : HexId
     , hoveringHex : Maybe HexId
-    , viewingHexId : Maybe HexId
+    , viewingHexId : Maybe ( HexId, Int )
     , viewingHexOrigin : Maybe ( Int, Int )
     , viewport : Maybe Browser.Dom.Viewport
     , hexmapViewport : Maybe (Result Browser.Dom.Error Browser.Dom.Viewport)
@@ -74,7 +86,7 @@ type Msg
     | DownloadedSectorJson (Result Http.Error SectorData)
     | OffsetChanged OffsetDirection Float
     | HoveringHex HexId
-    | ViewingHex HexId
+    | ViewingHex ( HexId, Int )
     | GotViewport Browser.Dom.Viewport
     | GotHexMapViewport (Result Browser.Dom.Error Browser.Dom.Viewport)
     | GotResize Int Int
@@ -146,8 +158,8 @@ hexagonPoints ( xOrigin, yOrigin ) size =
         |> String.join " "
 
 
-viewHexDetailed : Maybe SolarSystem -> HexId -> Int -> HexOrigin -> Float -> Svg Msg
-viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
+viewHexDetailed : Maybe SolarSystem -> Int -> HexId -> Int -> HexOrigin -> Float -> Svg Msg
+viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size =
     let
         hasStar =
             case maybeSolarSystem of
@@ -187,7 +199,7 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
     in
     Svg.g
         [ SvgEvents.onMouseOver (HoveringHex (HexId.createFromInt hexIdx))
-        , SvgEvents.onClick (ViewingHex (HexId.createFromInt hexIdx))
+        , SvgEvents.onClick (ViewingHex ( HexId.createFromInt hexIdx, si ))
         ]
         [ -- background hex
           Svg.polygon
@@ -292,18 +304,41 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                         , SvgAttrs.fontSize "12"
                         , SvgAttrs.textAnchor "middle"
                         ]
-                        [ Svg.tspan
+                        (let
+                            showGasGiants =
+                                if si >= gasGiantSI then
+                                    String.fromInt <| solarSystem.gasGiants
+
+                                else
+                                    "?"
+
+                            showTerrestrialPlanets =
+                                if si >= terrestrialSI then
+                                    String.fromInt <| solarSystem.terrestrialPlanets
+
+                                else
+                                    "?"
+
+                            showplanetoidBelts =
+                                if si >= planetoidSI then
+                                    String.fromInt <| solarSystem.planetoidBelts
+
+                                else
+                                    "?"
+                         in
+                         [ Svg.tspan
                             [ SvgAttrs.fill "#109076" ]
-                            [ String.fromInt solarSystem.gasGiants |> Svg.text ]
-                        , Svg.text " / "
-                        , Svg.tspan
+                            [ showGasGiants |> Svg.text ]
+                         , Svg.text " / "
+                         , Svg.tspan
                             [ SvgAttrs.fill "#809076" ]
-                            [ String.fromInt solarSystem.terrestrialPlanets |> Svg.text ]
-                        , Svg.text " / "
-                        , Svg.tspan
+                            [ showTerrestrialPlanets |> Svg.text ]
+                         , Svg.text " / "
+                         , Svg.tspan
                             [ SvgAttrs.fill "#68B976" ]
-                            [ String.fromInt solarSystem.planetoidBelts |> Svg.text ]
-                        ]
+                            [ showplanetoidBelts |> Svg.text ]
+                         ]
+                        )
                     ]
 
             Nothing ->
@@ -376,8 +411,8 @@ calcOrigin hexSize row col =
 
 {-| View all the hexes in the system
 -}
-viewHexes : Maybe ( Int, Int ) -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport } -> ( SectorData, Dict.Dict Int SolarSystem ) -> ( Float, Float ) -> HexId -> Float -> Html Msg
-viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict ) ( horizOffset, vertOffset ) playerHexId hexSize =
+viewHexes : Maybe ( Int, Int ) -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport } -> ( SectorData, Dict.Dict Int SolarSystem ) -> SurveyIndexData -> ( Float, Float ) -> HexId -> Float -> Html Msg
+viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict ) surveyIndexData ( horizOffset, vertOffset ) playerHexId hexSize =
     let
         width =
             min (screenVp.viewport.width * 0.9)
@@ -393,6 +428,9 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
         yOffset =
             -- view vertical offset
             String.fromFloat (height * vertOffset)
+
+        maybeSISector =
+            List.filter (\sector -> sector.x == sectorData.x && sector.y == sectorData.y) surveyIndexData |> List.head
 
         viewHex : Int -> Int -> HexOrigin -> ( Maybe (Svg Msg), Int )
         viewHex rowIdx colIdx ( ox, oy ) =
@@ -438,6 +476,18 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
                     if not (outsideX || outsideY) then
                         Just
                             (viewHexDetailed solarSystem
+                                (case maybeSISector of
+                                    Just siSector ->
+                                        case Dict.get (String.padLeft 4 '0' <| String.fromInt idx) siSector.hexes of
+                                            Just si2 ->
+                                                si2
+
+                                            Nothing ->
+                                                0
+
+                                    Nothing ->
+                                        0
+                                )
                                 playerHexId
                                 idx
                                 ( ox, oy )
@@ -533,7 +583,7 @@ hexToCoords hexId =
     ( row, col )
 
 
-viewSystemDetailsSidebar : Maybe HexId -> Maybe HexOrigin -> Dict.Dict RawHexId SolarSystem -> Element Msg
+viewSystemDetailsSidebar : Maybe ( HexId, Int ) -> Maybe HexOrigin -> Dict.Dict RawHexId SolarSystem -> Element Msg
 viewSystemDetailsSidebar maybeViewingHexId maybeViewingHexOrigin solarSystemDict =
     column
         []
@@ -541,12 +591,12 @@ viewSystemDetailsSidebar maybeViewingHexId maybeViewingHexOrigin solarSystemDict
             ( maybeViewingHexId
             , maybeViewingHexId
                 |> Maybe.andThen
-                    (\hid ->
+                    (\( hid, _ ) ->
                         Dict.get hid.value solarSystemDict
                     )
             )
           of
-            ( Just viewingHexId, Just solarSystem ) ->
+            ( Just ( viewingHexId, si ), Just solarSystem ) ->
                 let
                     renderStar star =
                         star.stellarType
@@ -559,14 +609,6 @@ viewSystemDetailsSidebar maybeViewingHexId maybeViewingHexOrigin solarSystemDict
                                )
                             ++ " "
                             ++ star.stellarClass
-                            ++ " origin: "
-                            ++ (case maybeViewingHexOrigin of
-                                    Just ( ox, oy ) ->
-                                        String.fromInt ox ++ ", " ++ String.fromInt oy
-
-                                    Nothing ->
-                                        "None"
-                               )
                 in
                 column [ Element.spacing 10 ] <|
                     (solarSystem.stars
@@ -714,39 +756,40 @@ view model =
                         text "No loaded sector data yet"
                 ]
 
-        -- hexesColumn =
-        --     column []
-        --         [ Element.html <|
-        --             -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
-        --             case ( model.sectorData, model.viewport ) of
-        --                 ( RemoteData.Success sectorData, Just viewport ) ->
-        --                     Svg.Styled.Lazy.lazy6 viewHexes
-        --                         model.viewingHexOrigin
-        --                         (case model.hexmapViewport of
-        --                             Nothing ->
-        --                                 { screenVp = viewport, hexmapVp = Nothing }
-        --
-        --                             Just (Ok hexmapViewport) ->
-        --                                 { screenVp = viewport
-        --                                 , hexmapVp = Just hexmapViewport
-        --                                 }
-        --
-        --                             Just (Err domError) ->
-        --                                 -- let
-        --                                 --     _ =
-        --                                 --         Debug.log "cant use, domError" domError
-        --                                 -- in
-        --                                 { screenVp = viewport, hexmapVp = Nothing }
-        --                         )
-        --                         sectorData
-        --                         model.offset
-        --                         model.playerHex
-        --                         model.hexScale
-        --                         |> Html.toUnstyled
-        --
-        --                 _ ->
-        --                     Html.toUnstyled <| Html.text "Loading..."
-        --         ]
+        hexesColumn =
+            column []
+                [ Element.html <|
+                    -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
+                    case ( model.sectorData, model.viewport, model.surveyIndexData ) of
+                        ( RemoteData.Success sectorData, Just viewport, RemoteData.Success surveyIndexData ) ->
+                            viewHexes
+                                model.viewingHexOrigin
+                                (case model.hexmapViewport of
+                                    Nothing ->
+                                        { screenVp = viewport, hexmapVp = Nothing }
+
+                                    Just (Ok hexmapViewport) ->
+                                        { screenVp = viewport
+                                        , hexmapVp = Just hexmapViewport
+                                        }
+
+                                    Just (Err domError) ->
+                                        let
+                                            _ =
+                                                Debug.log "cant use, domError" domError
+                                        in
+                                        { screenVp = viewport, hexmapVp = Nothing }
+                                )
+                                sectorData
+                                surveyIndexData
+                                model.offset
+                                model.playerHex
+                                model.hexScale
+                                |> Html.toUnstyled
+
+                        _ ->
+                            Html.toUnstyled <| Html.text "Loading..."
+                ]
     in
     row [ Font.size 20, centerX, centerY, Font.color <| Element.rgb 0.5 1.5 0.5 ]
         [ controlsColumn
@@ -778,7 +821,7 @@ sendSurveyIndexRequest =
                 |> Codec.decoder
     in
     Http.get
-        { url = "/public/surveyIndex.json"
+        { url = "https://radiofreewaba.net/deepnight/surveyIndexes.json"
         , expect = Http.expectJson DownloadedSurveyIndexJson surveyIndexParser
         }
 
@@ -910,7 +953,7 @@ update msg model =
                 ]
             )
 
-        ViewingHex hexId ->
+        ViewingHex ( hexId, si ) ->
             let
                 goodValX =
                     (hexId.value // 100) - 1
@@ -962,7 +1005,7 @@ update msg model =
                             Nothing
             in
             ( { model
-                | viewingHexId = Just hexId
+                | viewingHexId = Just ( hexId, si )
                 , viewingHexOrigin = Just ( ox, oy )
                 , offset = Debug.log "new offset" newOffsetPct
               }
