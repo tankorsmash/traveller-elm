@@ -424,7 +424,6 @@ viewHex widestViewport hexSize ( sectorData, solarSystemDict, maybeSISector ) ( 
         idx =
             (rowIdx + 1) + (colIdx + 1) * 100
 
-
         ( fox, foy ) =
             ( toFloat ox, toFloat oy )
 
@@ -504,6 +503,7 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
         yOffset =
             -- view vertical offset
             String.fromFloat (height * vertOffset)
+
         widestViewport =
             case hexmapVp of
                 Nothing ->
@@ -711,7 +711,7 @@ view model =
                   Input.slider []
                     { onChange = ZoomScaleChanged
                     , label = Input.labelAbove [] (text <| "Zoom: " ++ String.fromFloat model.hexScale)
-                    , min = 0
+                    , min = 1
                     , max = 75
                     , step = Just 5
                     , value = model.hexScale
@@ -722,7 +722,7 @@ view model =
                     horizOffset =
                         Tuple.first model.offset
                   in
-                  Input.slider []
+                  Input.slider [ height <| px 50 ]
                     { onChange = OffsetChanged Horizontal
                     , label =
                         Input.labelAbove []
@@ -738,7 +738,7 @@ view model =
                     vertOffset =
                         Tuple.second model.offset
                   in
-                  Input.slider []
+                  Input.slider [ height <| px 50 ]
                     { onChange = OffsetChanged Vertical
                     , label =
                         Input.labelAbove []
