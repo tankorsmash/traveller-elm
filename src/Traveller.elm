@@ -40,7 +40,7 @@ import Svg.Styled.Events as SvgEvents
 import Svg.Styled.Lazy
 import Task
 import Traveller.HexId as HexId exposing (HexId, RawHexId)
-import Traveller.SectorData exposing (SectorData, SurveyIndexData, codecSectorData, codecSurveyIndexData)
+import Traveller.SectorData exposing (SISector, SectorData, SurveyIndexData, codecSectorData, codecSurveyIndexData)
 import Traveller.SolarSystem exposing (SolarSystem)
 import Traveller.Star as Star exposing (starColourRGB)
 
@@ -410,9 +410,8 @@ calcOrigin hexSize row col =
 
 viewHex :
     Browser.Dom.Viewport
-    -> Maybe Browser.Dom.Viewport
     -> Float
-    -> ( SectorData, Dict.Dict Int SolarSystem, SurveyIndexData )
+    -> ( SectorData, Dict.Dict Int SolarSystem, Maybe SISector )
     -> ( Float, Float )
     -> ( Float, Float )
     -> Int
@@ -420,21 +419,11 @@ viewHex :
     -> HexOrigin
     -> HexId
     -> ( Maybe (Svg Msg), Int )
-viewHex screenVp hexmapVp hexSize ( sectorData, solarSystemDict, surveyIndexData ) ( horizOffset, vertOffset ) ( width, height ) rowIdx colIdx ( ox, oy ) playerHexId =
+viewHex widestViewport hexSize ( sectorData, solarSystemDict, maybeSISector ) ( horizOffset, vertOffset ) ( width, height ) rowIdx colIdx ( ox, oy ) playerHexId =
     let
-        maybeSISector =
-            List.filter (\sector -> sector.x == sectorData.x && sector.y == sectorData.y) surveyIndexData |> List.head
-
         idx =
             (rowIdx + 1) + (colIdx + 1) * 100
 
-        widestViewport =
-            case hexmapVp of
-                Nothing ->
-                    screenVp
-
-                Just hexmapViewport ->
-                    hexmapViewport
 
         ( fox, foy ) =
             ( toFloat ox, toFloat oy )
@@ -498,6 +487,12 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
         height =
             screenVp.viewport.height * 0.9
 
+        maybeSISector : Maybe SISector
+        maybeSISector =
+            surveyIndexData
+                |> List.filter (\sector -> sector.x == sectorData.x && sector.y == sectorData.y)
+                |> List.head
+
         width =
             min (screenVp.viewport.width * 0.9)
                 (screenVp.viewport.width - 500.0)
@@ -509,6 +504,13 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
         yOffset =
             -- view vertical offset
             String.fromFloat (height * vertOffset)
+        widestViewport =
+            case hexmapVp of
+                Nothing ->
+                    screenVp
+
+                Just hexmapViewport ->
+                    hexmapViewport
 
         viewHexRow : Int -> List ( Maybe (Svg Msg), Int )
         viewHexRow rowIdx =
@@ -517,10 +519,9 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
                 |> List.indexedMap
                     (\colIdx hexOrigin ->
                         viewHex
-                            screenVp
-                            hexmapVp
+                            widestViewport
                             hexSize
-                            ( sectorData, solarSystemDict, surveyIndexData )
+                            ( sectorData, solarSystemDict, maybeSISector )
                             ( horizOffset, vertOffset )
                             ( width, height )
                             rowIdx
