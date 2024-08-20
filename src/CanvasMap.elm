@@ -354,14 +354,14 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
         ]
         [ let
             ( centerX, centerY ) =
-                ( width / 2, height / 2 )
+                ( canvasWidthish / 2, canvasHeightish / 2 )
 
             clearScreen =
-                shapes [ fill Color.white ] [ rect ( 0, 0 ) width height ]
+                shapes [ fill Color.white ] [ rect ( 0, 0 ) canvasWidthish canvasHeightish ]
 
             renderConfig =
-                { width = width
-                , height = height
+                { width = canvasWidthish
+                , height = canvasHeightish
                 , centerX = centerX
                 , centerY = centerY
                 , hexScale = hexScale
@@ -369,25 +369,20 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
                 , yOffset = yOffset
                 }
 
-            -- width =
-            --     800
-            --
-            -- height =
-            --     400
-            width =
+            canvasWidthish =
                 min (screenVp.viewport.width * 0.9)
                     (screenVp.viewport.width - 500.0)
 
-            height =
+            canvasHeightish =
                 screenVp.viewport.height * 0.9
 
             xOffset =
                 -- view horizontal offset
-                -1 * width * horizOffset
+                (canvasWidthish - (numHexCols * hexScale * 1.6)) * horizOffset
 
             yOffset =
                 -- view vertical offset
-                -1 * height * vertOffset
+                (canvasHeightish - (numHexRows * hexScale * 1.6)) * vertOffset
 
             -- viewHexRow : Int -> List ( Maybe (Svg Msg), Int )
             viewHexRow rowIdx =
@@ -412,20 +407,20 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
                                 outsideX =
                                     let
                                         plus =
-                                            fox + hexScale - (width * horizOffset)
+                                            fox + hexScale - horizOffset
 
                                         minus =
-                                            fox - hexScale - (width * horizOffset)
+                                            fox - hexScale - horizOffset
                                     in
                                     (plus < 0) || (minus > widestViewport.viewport.width)
 
                                 outsideY =
                                     let
                                         plus =
-                                            foy + hexScale - (height * vertOffset)
+                                            foy + hexScale - (canvasHeightish * vertOffset)
 
                                         minus =
-                                            foy - hexScale - (height * vertOffset)
+                                            foy - hexScale - (canvasHeightish * vertOffset)
                                     in
                                     (plus < 0) || (minus > widestViewport.viewport.height)
                             in
@@ -444,7 +439,7 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
                     |> List.filterMap identity
           in
           Canvas.toHtml
-            ( floor width, floor height )
+            ( floor canvasWidthish, floor canvasHeightish )
             [ style "border" "10px solid rgba(0,0,0,0.1)" ]
             ([ clearScreen
              , render renderConfig 106

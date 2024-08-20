@@ -784,40 +784,40 @@ view model =
                         text "No loaded sector data yet"
                 ]
 
-        hexesColumn =
-            column []
-                [ Element.html <|
-                    -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
-                    case ( model.sectorData, model.viewport, model.surveyIndexData ) of
-                        ( RemoteData.Success sectorData, Just viewport, RemoteData.Success surveyIndexData ) ->
-                            viewHexes
-                                model.viewingHexOrigin
-                                (case model.hexmapViewport of
-                                    Nothing ->
-                                        { screenVp = viewport, hexmapVp = Nothing }
-
-                                    Just (Ok hexmapViewport) ->
-                                        { screenVp = viewport
-                                        , hexmapVp = Just hexmapViewport
-                                        }
-
-                                    Just (Err domError) ->
-                                        let
-                                            _ =
-                                                Debug.log "cant use, domError" domError
-                                        in
-                                        { screenVp = viewport, hexmapVp = Nothing }
-                                )
-                                sectorData
-                                surveyIndexData
-                                model.offset
-                                model.playerHex
-                                model.hexScale
-                                |> Html.toUnstyled
-
-                        _ ->
-                            Html.toUnstyled <| Html.text "Loading..."
-                ]
+        -- hexesColumn =
+        --     column []
+        --         [ Element.html <|
+        --             -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
+        --             case ( model.sectorData, model.viewport, model.surveyIndexData ) of
+        --                 ( RemoteData.Success sectorData, Just viewport, RemoteData.Success surveyIndexData ) ->
+        --                     viewHexes
+        --                         model.viewingHexOrigin
+        --                         (case model.hexmapViewport of
+        --                             Nothing ->
+        --                                 { screenVp = viewport, hexmapVp = Nothing }
+        --
+        --                             Just (Ok hexmapViewport) ->
+        --                                 { screenVp = viewport
+        --                                 , hexmapVp = Just hexmapViewport
+        --                                 }
+        --
+        --                             Just (Err domError) ->
+        --                                 -- let
+        --                                 --     _ =
+        --                                 --         Debug.log "cant use, domError" domError
+        --                                 -- in
+        --                                 { screenVp = viewport, hexmapVp = Nothing }
+        --                         )
+        --                         sectorData
+        --                         surveyIndexData
+        --                         model.offset
+        --                         model.playerHex
+        --                         model.hexScale
+        --                         |> Html.toUnstyled
+        --
+        --                 _ ->
+        --                     Html.toUnstyled <| Html.text "Loading..."
+        --         ]
     in
     row [ Font.size 20, centerX, centerY, Font.color <| Element.rgb 0.5 1.5 0.5 ]
         [ controlsColumn
