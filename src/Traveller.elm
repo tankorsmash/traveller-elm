@@ -414,12 +414,11 @@ viewHex :
     -> ( SectorData, Dict.Dict Int SolarSystem, Maybe SISector )
     -> ( Float, Float )
     -> ( Float, Float )
-    -> Int
-    -> Int
+    -> ( Int, Int )
     -> HexOrigin
     -> HexId
     -> ( Maybe (Svg Msg), Int )
-viewHex widestViewport hexSize ( sectorData, solarSystemDict, maybeSISector ) ( horizOffset, vertOffset ) ( width, height ) rowIdx colIdx ( ox, oy ) playerHexId =
+viewHex widestViewport hexSize ( sectorData, solarSystemDict, maybeSISector ) ( horizOffsetPct, vertOffsetPct ) ( viewportWidth, viewportHeight ) ( colIdx, rowIdx ) ( ox, oy ) playerHexId =
     let
         idx =
             (rowIdx + 1) + (colIdx + 1) * 100
@@ -430,20 +429,20 @@ viewHex widestViewport hexSize ( sectorData, solarSystemDict, maybeSISector ) ( 
         outsideX =
             let
                 plus =
-                    fox + hexSize - (width * horizOffset)
+                    fox + hexSize - (viewportWidth * horizOffsetPct)
 
                 minus =
-                    fox - hexSize - (width * horizOffset)
+                    fox - hexSize - (viewportWidth * horizOffsetPct)
             in
             (plus < 0) || (minus > widestViewport.viewport.width)
 
         outsideY =
             let
                 plus =
-                    foy + hexSize - (height * vertOffset)
+                    foy + hexSize - (viewportHeight * vertOffsetPct)
 
                 minus =
-                    foy - hexSize - (height * vertOffset)
+                    foy - hexSize - (viewportHeight * vertOffsetPct)
             in
             (plus < 0) || (minus > widestViewport.viewport.height)
 
@@ -483,26 +482,26 @@ viewHex widestViewport hexSize ( sectorData, solarSystemDict, maybeSISector ) ( 
 viewHexes : Maybe ( Int, Int ) -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport } -> ( SectorData, Dict.Dict Int SolarSystem ) -> SurveyIndexData -> ( Float, Float ) -> HexId -> Float -> Html Msg
 viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict ) surveyIndexData ( horizOffset, vertOffset ) playerHexId hexSize =
     let
-        height =
-            screenVp.viewport.height * 0.9
-
         maybeSISector : Maybe SISector
         maybeSISector =
             surveyIndexData
                 |> List.filter (\sector -> sector.x == sectorData.x && sector.y == sectorData.y)
                 |> List.head
 
-        width =
+        viewportHeightIsh =
+            screenVp.viewport.height * 0.9
+
+        viewportWidthIsh =
             min (screenVp.viewport.width * 0.9)
                 (screenVp.viewport.width - 500.0)
 
         xOffset =
             -- view horizontal offset
-            String.fromFloat (width * horizOffset)
+            String.fromFloat (viewportWidthIsh * horizOffset)
 
         yOffset =
             -- view vertical offset
-            String.fromFloat (height * vertOffset)
+            String.fromFloat (viewportHeightIsh * vertOffset)
 
         widestViewport =
             case hexmapVp of
@@ -523,9 +522,8 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
                             hexSize
                             ( sectorData, solarSystemDict, maybeSISector )
                             ( horizOffset, vertOffset )
-                            ( width, height )
-                            rowIdx
-                            colIdx
+                            ( viewportWidthIsh, viewportHeightIsh )
+                            ( colIdx, rowIdx )
                             hexOrigin
                             playerHexId
                     )
@@ -546,10 +544,10 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
         |> List.map Tuple.first
         |> (let
                 stringWidth =
-                    String.fromFloat <| width
+                    String.fromFloat <| viewportWidthIsh
 
                 stringHeight =
-                    String.fromFloat <| height
+                    String.fromFloat <| viewportHeightIsh
 
                 bootstrapDark =
                     "#212529"
@@ -561,6 +559,10 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
                 [ SvgAttrs.width <| stringWidth
                 , SvgAttrs.height <| stringHeight
                 , SvgAttrs.style <|
+                    -- "background-color: "
+                    --     ++ "blue"
+                    --     ++ ";"
+                    --
                     "background-image: radial-gradient("
                         ++ midColor
                         ++ ", "
