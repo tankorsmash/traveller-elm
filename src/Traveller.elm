@@ -40,7 +40,7 @@ import Svg.Styled.Events as SvgEvents
 import Svg.Styled.Lazy
 import Task
 import Traveller.HexId as HexId exposing (HexId, RawHexId)
-import Traveller.SectorData exposing (SectorData, SurveyIndexData, codecSectorData, codecSurveyIndexData)
+import Traveller.SectorData exposing (SISector, SectorData, SurveyIndexData, codecSectorData, codecSurveyIndexData)
 import Traveller.SolarSystem exposing (SolarSystem)
 import Traveller.Star as Star exposing (starColourRGB)
 
@@ -409,101 +409,125 @@ calcOrigin hexSize row col =
     ( floor x, floor y )
 
 
+viewHex :
+    Browser.Dom.Viewport
+    -> Float
+    -> ( SectorData, Dict.Dict Int SolarSystem, Maybe SISector )
+    -> ( Float, Float )
+    -> ( Float, Float )
+    -> ( Int, Int )
+    -> HexOrigin
+    -> HexId
+    -> ( Maybe (Svg Msg), Int )
+viewHex widestViewport hexSize ( sectorData, solarSystemDict, maybeSISector ) ( horizOffsetPct, vertOffsetPct ) ( viewportWidth, viewportHeight ) ( colIdx, rowIdx ) ( ox, oy ) playerHexId =
+    let
+        idx =
+            (rowIdx + 1) + (colIdx + 1) * 100
+
+        ( fox, foy ) =
+            ( toFloat ox, toFloat oy )
+
+        outsideX =
+            let
+                plus =
+                    fox + hexSize - (viewportWidth * horizOffsetPct)
+
+                minus =
+                    fox - hexSize - (viewportWidth * horizOffsetPct)
+            in
+            (plus < 0) || (minus > widestViewport.viewport.width)
+
+        outsideY =
+            let
+                plus =
+                    foy + hexSize - (viewportHeight * vertOffsetPct)
+
+                minus =
+                    foy - hexSize - (viewportHeight * vertOffsetPct)
+            in
+            (plus < 0) || (minus > widestViewport.viewport.height)
+
+        solarSystem =
+            Dict.get idx solarSystemDict
+
+        hexSVG =
+            if not (outsideX || outsideY) then
+                Just
+                    (viewHexDetailed solarSystem
+                        (case maybeSISector of
+                            Just siSector ->
+                                case Dict.get (String.padLeft 4 '0' <| String.fromInt idx) siSector.hexes of
+                                    Just si2 ->
+                                        si2
+
+                                    Nothing ->
+                                        0
+
+                            Nothing ->
+                                0
+                        )
+                        playerHexId
+                        idx
+                        ( ox, oy )
+                        hexSize
+                    )
+
+            else
+                Nothing
+    in
+    ( hexSVG, isEmptyHex solarSystem )
+
+
 {-| View all the hexes in the system
 -}
 viewHexes : Maybe ( Int, Int ) -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport } -> ( SectorData, Dict.Dict Int SolarSystem ) -> SurveyIndexData -> ( Float, Float ) -> HexId -> Float -> Html Msg
 viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict ) surveyIndexData ( horizOffset, vertOffset ) playerHexId hexSize =
     let
-        width =
+        maybeSISector : Maybe SISector
+        maybeSISector =
+            surveyIndexData
+                |> List.filter (\sector -> sector.x == sectorData.x && sector.y == sectorData.y)
+                |> List.head
+
+        viewportHeightIsh =
+            screenVp.viewport.height * 0.9
+
+        viewportWidthIsh =
             min (screenVp.viewport.width * 0.9)
                 (screenVp.viewport.width - 500.0)
 
-        height =
-            screenVp.viewport.height * 0.9
-
         xOffset =
             -- view horizontal offset
-            String.fromFloat (width * horizOffset)
+            String.fromFloat (viewportWidthIsh * horizOffset)
 
         yOffset =
             -- view vertical offset
-            String.fromFloat (height * vertOffset)
+            String.fromFloat (viewportHeightIsh * vertOffset)
 
-        maybeSISector =
-            List.filter (\sector -> sector.x == sectorData.x && sector.y == sectorData.y) surveyIndexData |> List.head
+        widestViewport =
+            case hexmapVp of
+                Nothing ->
+                    screenVp
 
-        viewHex : Int -> Int -> HexOrigin -> ( Maybe (Svg Msg), Int )
-        viewHex rowIdx colIdx ( ox, oy ) =
-            let
-                idx =
-                    (rowIdx + 1) + (colIdx + 1) * 100
-
-                widestViewport =
-                    case hexmapVp of
-                        Nothing ->
-                            screenVp
-
-                        Just hexmapViewport ->
-                            hexmapViewport
-
-                ( fox, foy ) =
-                    ( toFloat ox, toFloat oy )
-
-                outsideX =
-                    let
-                        plus =
-                            fox + hexSize - (width * horizOffset)
-
-                        minus =
-                            fox - hexSize - (width * horizOffset)
-                    in
-                    (plus < 0) || (minus > widestViewport.viewport.width)
-
-                outsideY =
-                    let
-                        plus =
-                            foy + hexSize - (height * vertOffset)
-
-                        minus =
-                            foy - hexSize - (height * vertOffset)
-                    in
-                    (plus < 0) || (minus > widestViewport.viewport.height)
-
-                solarSystem =
-                    Dict.get idx solarSystemDict
-
-                hexSVG =
-                    if not (outsideX || outsideY) then
-                        Just
-                            (viewHexDetailed solarSystem
-                                (case maybeSISector of
-                                    Just siSector ->
-                                        case Dict.get (String.padLeft 4 '0' <| String.fromInt idx) siSector.hexes of
-                                            Just si2 ->
-                                                si2
-
-                                            Nothing ->
-                                                0
-
-                                    Nothing ->
-                                        0
-                                )
-                                playerHexId
-                                idx
-                                ( ox, oy )
-                                hexSize
-                            )
-
-                    else
-                        Nothing
-            in
-            ( hexSVG, isEmptyHex solarSystem )
+                Just hexmapViewport ->
+                    hexmapViewport
 
         viewHexRow : Int -> List ( Maybe (Svg Msg), Int )
         viewHexRow rowIdx =
             List.range 0 numHexCols
                 |> List.map (calcOrigin hexSize rowIdx)
-                |> List.indexedMap (viewHex rowIdx)
+                |> List.indexedMap
+                    (\colIdx hexOrigin ->
+                        viewHex
+                            widestViewport
+                            hexSize
+                            ( sectorData, solarSystemDict, maybeSISector )
+                            ( horizOffset, vertOffset )
+                            ( viewportWidthIsh, viewportHeightIsh )
+                            ( colIdx, rowIdx )
+                            hexOrigin
+                            playerHexId
+                    )
     in
     List.range 0 numHexRows
         |> List.map viewHexRow
@@ -521,10 +545,10 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
         |> List.map Tuple.first
         |> (let
                 stringWidth =
-                    String.fromFloat <| width
+                    String.fromFloat <| viewportWidthIsh
 
                 stringHeight =
-                    String.fromFloat <| height
+                    String.fromFloat <| viewportHeightIsh
 
                 bootstrapDark =
                     "#212529"
@@ -536,6 +560,10 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
                 [ SvgAttrs.width <| stringWidth
                 , SvgAttrs.height <| stringHeight
                 , SvgAttrs.style <|
+                    -- "background-color: "
+                    --     ++ "blue"
+                    --     ++ ";"
+                    --
                     "background-image: radial-gradient("
                         ++ midColor
                         ++ ", "
@@ -697,7 +725,7 @@ view model =
                     horizOffset =
                         Tuple.first model.offset
                   in
-                  Input.slider []
+                  Input.slider [ height <| px 50 ]
                     { onChange = OffsetChanged Horizontal
                     , label =
                         Input.labelAbove []
@@ -713,7 +741,7 @@ view model =
                     vertOffset =
                         Tuple.second model.offset
                   in
-                  Input.slider []
+                  Input.slider [ height <| px 50 ]
                     { onChange = OffsetChanged Vertical
                     , label =
                         Input.labelAbove []
