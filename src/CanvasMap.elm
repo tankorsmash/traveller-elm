@@ -1,5 +1,6 @@
 module CanvasMap exposing (view)
 
+import AssocList as Dict exposing (Dict)
 import Browser.Dom
 import Canvas exposing (path, rect, shapes)
 import Canvas.Settings exposing (fill)
@@ -8,7 +9,7 @@ import Canvas.Settings.Line exposing (LineJoin, lineWidth)
 import Canvas.Settings.Text exposing (TextAlign(..), TextBaseLine(..))
 import Color
 import Color.Convert exposing (hexToColor)
-import Dict
+import Dict as ElmDict
 import Html exposing (div)
 import Html.Attributes exposing (style)
 import Http exposing (Error(..))
@@ -122,43 +123,27 @@ calcOrigin hexSize row col =
     ( floor x, floor y )
 
 
+starColourDict : Dict Star.StarColour Color.Color
+starColourDict =
+    [ ( Star.Blue, "#000077" )
+    , ( Star.BlueWhite, "#87cefa" )
+    , ( Star.White, "#FFFFFF" )
+    , ( Star.YellowWhite, "#ffffe0" )
+    , ( Star.Yellow, "#ffff00" )
+    , ( Star.LightOrange, "#ffbf00" )
+    , ( Star.OrangeRed, "#ff4500" )
+    , ( Star.Red, "#ff0000" )
+    , ( Star.Brown, "#f4a460" )
+    , ( Star.DeepDimRed, "#800000" )
+    ]
+        |> List.map (\( k, v ) -> ( k, forceHexToColor v ))
+        |> Dict.fromList
+
+
 starColourRGB : Star.StarColour -> Color.Color
 starColourRGB colour =
-    let
-        colorString : String
-        colorString =
-            case colour of
-                Blue ->
-                    "#000077"
-
-                BlueWhite ->
-                    "#87cefa"
-
-                White ->
-                    "#FFFFFF"
-
-                YellowWhite ->
-                    "#ffffe0"
-
-                Yellow ->
-                    "#ffff00"
-
-                LightOrange ->
-                    "#ffbf00"
-
-                OrangeRed ->
-                    "#ff4500"
-
-                Red ->
-                    "#ff0000"
-
-                Brown ->
-                    "#f4a460"
-
-                DeepDimRed ->
-                    "#800000"
-    in
-    forceHexToColor colorString
+    Dict.get colour starColourDict
+        |> Maybe.withDefault (Color.rgb 255 0 255)
 
 
 {-| returns mageenta if the hex string is invalid
@@ -187,6 +172,22 @@ drawStar ( starX, starY ) radius star =
 
 
 -- [ Canvas.circle ( 0, 0 ) radius ]
+
+
+gasGiantColor =
+    forceHexToColor "#109076"
+
+
+terrestialPlanetColor =
+    forceHexToColor "#809076"
+
+
+planetoidBeltColor =
+    forceHexToColor "#68B976"
+
+
+colorGrey =
+    forceHexToColor "#CCCCCC"
 
 
 renderHex : RenderConfig -> ( Int, Int ) -> Int -> Int -> Maybe SolarSystem -> Canvas.Renderable
@@ -231,7 +232,7 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
                 _ ->
                     rect ( 0, 0 ) 10 10
             ]
-        , shapes [ Canvas.Settings.stroke <| forceHexToColor "#CCCCCC", lineWidth 1.0 ]
+        , shapes [ Canvas.Settings.stroke <| colorGrey, lineWidth 1.0 ]
             [ case hexPoints of
                 p1 :: ps ->
                     Canvas.path p1 (List.map Canvas.lineTo ps)
@@ -316,15 +317,15 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
                     , Canvas.Settings.Text.font { size = 14, family = "Arial" }
                     ]
                     [ Canvas.text
-                        [ fill <| forceHexToColor "#109076" ]
+                        [ fill <| gasGiantColor ]
                         ( hexScale * -0.3, hexScale * 0.65 )
                         (solarSystem.gasGiants |> String.fromInt)
                     , Canvas.text
-                        [ fill <| forceHexToColor "#809076" ]
+                        [ fill <| terrestialPlanetColor ]
                         ( 0, hexScale * 0.65 )
                         (solarSystem.terrestrialPlanets |> String.fromInt)
                     , Canvas.text
-                        [ fill <| forceHexToColor "#68B976" ]
+                        [ fill <| planetoidBeltColor ]
                         ( hexScale * 0.3, hexScale * 0.65 )
                         (solarSystem.planetoidBelts |> String.fromInt)
                     ]
@@ -357,7 +358,7 @@ hexagonPoints ( xOrigin, yOrigin ) size =
         |> List.map (toFloat >> buildPoint)
 
 
-view : { screenVp : Browser.Dom.Viewport } -> ( SectorData, Dict.Dict Int SolarSystem ) -> Float -> ( Float, Float ) -> Html.Html msg
+view : { screenVp : Browser.Dom.Viewport } -> ( SectorData, ElmDict.Dict Int SolarSystem ) -> Float -> ( Float, Float ) -> Html.Html msg
 view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOffset ) =
     div
         [ style "display" "flex"
@@ -441,7 +442,12 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
 
                             else
                                 Just <|
-                                    renderHex renderConfig hexOrigin hexIdx index (Dict.get hexIdx solarSystemDict)
+                                    renderHex
+                                        renderConfig
+                                        hexOrigin
+                                        hexIdx
+                                        index
+                                        (ElmDict.get hexIdx solarSystemDict)
                         )
 
             renderedHexes =
