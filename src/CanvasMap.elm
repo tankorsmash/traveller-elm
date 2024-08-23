@@ -1,9 +1,10 @@
 module CanvasMap exposing (view)
 
 import Browser.Dom
-import Canvas exposing (rect, shapes)
+import Canvas exposing (path, rect, shapes)
 import Canvas.Settings exposing (fill)
 import Canvas.Settings.Advanced exposing (rotate, transform, translate)
+import Canvas.Settings.Line exposing (LineJoin, lineWidth)
 import Canvas.Settings.Text exposing (TextAlign(..), TextBaseLine(..))
 import Color
 import Color.Convert exposing (hexToColor)
@@ -217,10 +218,21 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
 
                 Nothing ->
                     False
+
+        hexPoints =
+            hexagonPoints ( 0, 0 ) (size * 1)
     in
     Canvas.group [ transform [ translate x y ] ]
         [ shapes [ fill (Color.hsl hue 0.3 0.7) ]
-            [ case hexagonPoints ( 0, 0 ) (size * 1) of
+            [ case hexPoints of
+                p1 :: ps ->
+                    Canvas.path p1 (List.map Canvas.lineTo ps)
+
+                _ ->
+                    rect ( 0, 0 ) 10 10
+            ]
+        , shapes [ Canvas.Settings.stroke <| forceHexToColor "#CCCCCC", lineWidth 1.0 ]
+            [ case hexPoints of
                 p1 :: ps ->
                     Canvas.path p1 (List.map Canvas.lineTo ps)
 

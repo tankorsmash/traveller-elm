@@ -3,7 +3,9 @@ module Traveller exposing (Model, Msg(..), init, subscriptions, update, view)
 import Browser.Dom
 import Browser.Events
 import Browser.Navigation
+import CanvasMap
 import Codec
+import Color
 import Css
 import Dict
 import Element
@@ -212,7 +214,6 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
             ]
             []
         , -- center star
-
           let
             -- drawStar : Float -> Float -> Int -> Star.Star -> Svg Msg
             drawStar ( starX, starY ) radius star =
@@ -697,6 +698,11 @@ calcDistance hex1 hex2 =
 view : Model -> Element.Element Msg
 view model =
     let
+        ( horizOffset, vertOffset ) =
+            model.offset
+        hexScale =
+            model.hexScale
+
         controlsColumn =
             column
                 [ centerX
@@ -711,20 +717,16 @@ view model =
                         ++ " rows"
                 , text <| "Total hexes: " ++ String.fromInt (numHexCols * numHexRows)
                 , -- zoom slider
-                  Input.slider []
+                  Input.slider [ height <| px 50 ]
                     { onChange = ZoomScaleChanged
-                    , label = Input.labelAbove [] (text <| "Zoom: " ++ String.fromFloat model.hexScale)
+                    , label = Input.labelAbove [] (text <| "Zoom: " ++ String.fromFloat hexScale)
                     , min = 1
                     , max = 75
                     , step = Just 1
-                    , value = model.hexScale
+                    , value = hexScale
                     , thumb = Input.defaultThumb
                     }
                 , -- horiz slider
-                  let
-                    horizOffset =
-                        Tuple.first model.offset
-                  in
                   Input.slider [ height <| px 50 ]
                     { onChange = OffsetChanged Horizontal
                     , label =
@@ -737,10 +739,6 @@ view model =
                     , thumb = Input.defaultThumb
                     }
                 , -- vertical slider
-                  let
-                    vertOffset =
-                        Tuple.second model.offset
-                  in
                   Input.slider [ height <| px 50 ]
                     { onChange = OffsetChanged Vertical
                     , label =
@@ -784,6 +782,21 @@ view model =
                         text "No loaded sector data yet"
                 ]
 
+        canvasMap =
+            case ( model.sectorData, model.viewport ) of
+                ( RemoteData.Success sectorData, Just viewport ) ->
+                    -- render the canvas
+                    CanvasMap.view
+                        { screenVp = viewport }
+                        sectorData
+                        hexScale
+                        model.offset
+                        |> -- turn the html canvas into an elm-ui element
+                           Element.html
+
+                _ ->
+                    text "Loading..."
+
         -- hexesColumn =
         --     column []
         --         [ Element.html <|
@@ -823,6 +836,7 @@ view model =
         [ controlsColumn
 
         -- , hexesColumn
+        , canvasMap
         ]
 
 

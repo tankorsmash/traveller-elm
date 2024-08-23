@@ -198,17 +198,7 @@ view model =
             , case model.route of
                 Just TravellerPage ->
                     div []
-                        [ case ( model.travellerModel.sectorData, model.travellerModel.viewport ) of
-                            ( Success sectorData, Just viewport ) ->
-                                CanvasMap.view
-                                    { screenVp = viewport }
-                                    sectorData
-                                    model.travellerModel.hexScale
-                                    model.travellerModel.offset
-
-                            _ ->
-                                text "TODO: Loading"
-                        , Html.map GotTravellerMsg <|
+                        [ Html.map GotTravellerMsg <|
                             Element.layout [ Element.centerX ] <|
                                 Traveller.view model.travellerModel
                         ]
