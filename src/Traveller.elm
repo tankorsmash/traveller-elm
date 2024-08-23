@@ -700,6 +700,7 @@ view model =
     let
         ( horizOffset, vertOffset ) =
             model.offset
+
         hexScale =
             model.hexScale
 
@@ -731,7 +732,7 @@ view model =
                     { onChange = OffsetChanged Horizontal
                     , label =
                         Input.labelAbove []
-                            (text <| "Horiz: " ++ (Round.round 3 <| horizOffset))
+                            (text <| "Horiz: " ++ (String.fromInt <| floor <| horizOffset * 100) ++ "%")
                     , min = 0
                     , max = 1.0
                     , step = Just 0.0125
@@ -743,7 +744,7 @@ view model =
                     { onChange = OffsetChanged Vertical
                     , label =
                         Input.labelAbove []
-                            (text <| "Vert: " ++ (Round.round 3 <| vertOffset))
+                            (text <| "Vert: " ++ (String.fromInt <| floor <| vertOffset * 100) ++ "%")
                     , min = 0
                     , max = 1.0
                     , step = Just 0.0125
