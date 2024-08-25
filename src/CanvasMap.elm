@@ -1,4 +1,4 @@
-module CanvasMap exposing (view)
+module CanvasMap exposing (Msg(..), update, view)
 
 import AssocList as Dict exposing (Dict)
 import Browser.Dom
@@ -12,8 +12,10 @@ import Color.Convert exposing (hexToColor)
 import Dict as ElmDict
 import Html exposing (div)
 import Html.Attributes exposing (style)
+import Html.Events.Extra.Mouse
 import Http exposing (Error(..))
 import RemoteData exposing (RemoteData(..))
+import Traveller.HexId as HexId exposing (HexId)
 import Traveller.SectorData exposing (SectorData)
 import Traveller.SolarSystem exposing (SolarSystem)
 import Traveller.Star as Star exposing (Star, StarColour(..))
@@ -30,12 +32,11 @@ type alias RenderConfig =
     }
 
 
-defaultHexBg =
-    "#f5f5f5"
 
-
-defaultHexSize =
-    40
+-- defaultHexBg =
+--     "#f5f5f5"
+-- defaultHexSize =
+--     40
 
 
 numHexCols =
@@ -46,18 +47,62 @@ numHexRows =
     40 * 1
 
 
-numHexes =
-    numHexCols * numHexRows
+
+-- numHexes =
+--     numHexCols * numHexRows
+--
+--
+-- hexWidth : Int
+-- hexWidth =
+--     100
+--
+--
+-- hexHeight : Int
+-- hexHeight =
+--     floor <| toFloat hexWidth * 1.2
 
 
-hexWidth : Int
-hexWidth =
-    100
+type Msg
+    = MouseMovedOnCanvas Html.Events.Extra.Mouse.Event
 
 
-hexHeight : Int
-hexHeight =
-    floor <| toFloat hexWidth * 1.2
+{-| check if the mouse is over the canvas's specific hex
+-}
+update : Msg -> Maybe HexId
+update msg =
+    case msg of
+        MouseMovedOnCanvas event ->
+            let
+                ( offsetX, offsetY ) =
+                    event.offsetPos
+
+                hexWidth =
+                    hexSize * 1.6
+
+                hexHeight =
+                    hexSize * 1.6
+
+                gridX =
+                    offsetX / hexWidth
+
+                gridY =
+                    offsetY / hexHeight
+
+                hexOffsetQ =
+                    gridX * 2 / 3
+
+                hexOffsetR =
+                    (-gridX / 3) + (sqrt 3 / 3) * gridY
+
+                _ =
+                    Debug.log "q, r" ( round hexOffsetQ, round hexOffsetR )
+
+                hexSize =
+                    -- TODO: replace with actual size from Traveller.Model
+                    40
+            in
+            HexId.createFromTwoInts (round hexOffsetR + 1) (round hexOffsetQ + 1)
+                |> Just
 
 
 render : RenderConfig -> Float -> Canvas.Renderable
@@ -190,8 +235,8 @@ colorGrey =
     forceHexToColor "#CCCCCC"
 
 
-renderHex : RenderConfig -> ( Int, Int ) -> Int -> Int -> Maybe SolarSystem -> Canvas.Renderable
-renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOrigin hexIndex index maybeSolarSystem =
+renderHex : RenderConfig -> ( Int, Int ) -> Int -> Int -> Maybe SolarSystem -> Bool -> Canvas.Renderable
+renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOrigin hexIndex index maybeSolarSystem isHovered =
     let
         ( x, y ) =
             hexOrigin
@@ -205,7 +250,10 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
             toFloat (toFloat index / 2 |> floor |> modBy 100)
                 / 100
                 |> (\h ->
-                        if hasStar then
+                        if isHovered then
+                            0
+
+                        else if hasStar then
                             255
 
                         else
@@ -358,8 +406,8 @@ hexagonPoints ( xOrigin, yOrigin ) size =
         |> List.map (toFloat >> buildPoint)
 
 
-view : { screenVp : Browser.Dom.Viewport } -> ( SectorData, ElmDict.Dict Int SolarSystem ) -> Float -> ( Float, Float ) -> Html.Html msg
-view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOffset ) =
+view : { screenVp : Browser.Dom.Viewport } -> ( SectorData, ElmDict.Dict Int SolarSystem ) -> Float -> ( Float, Float ) -> Maybe HexId -> Html.Html Msg
+view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOffset ) hoveredHexId =
     div
         [ style "display" "flex"
         , style "justify-content" "center"
@@ -448,6 +496,13 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
                                         hexIdx
                                         index
                                         (ElmDict.get hexIdx solarSystemDict)
+                                        (case hoveredHexId of
+                                            Just hid ->
+                                                (colIdx + rowIdx * 100) == hid.value
+
+                                            Nothing ->
+                                                False
+                                        )
                         )
 
             renderedHexes =
@@ -458,7 +513,9 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
           in
           Canvas.toHtml
             ( floor canvasWidthish, floor canvasHeightish )
-            [ style "border" "10px solid rgba(0,0,0,0.1)" ]
+            [ style "border" "10px solid rgba(0,0,0,0.1)"
+            , Html.Events.Extra.Mouse.onMove MouseMovedOnCanvas
+            ]
             ([ clearScreen
              , render renderConfig 106
              ]

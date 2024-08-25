@@ -93,6 +93,7 @@ type Msg
     | GotHexMapViewport (Result Browser.Dom.Error Browser.Dom.Viewport)
     | GotResize Int Int
     | GoToSolarSystemPage HexId
+    | GotCanvasMapMsg CanvasMap.Msg
 
 
 type alias HexOrigin =
@@ -792,6 +793,7 @@ view model =
                         sectorData
                         hexScale
                         model.offset
+                        model.hoveringHex
                         |> -- turn the html canvas into an elm-ui element
                            Element.html
 
@@ -837,7 +839,7 @@ view model =
         [ controlsColumn
 
         -- , hexesColumn
-        , canvasMap
+        , Element.map GotCanvasMapMsg canvasMap
         ]
 
 
@@ -1059,3 +1061,10 @@ update msg model =
             ( model
             , Browser.Navigation.pushUrl model.key <| "/view_system?hexid=" ++ hexId.raw
             )
+
+        GotCanvasMapMsg canvasMsg ->
+            let
+                hoveredHexId =
+                    CanvasMap.update canvasMsg
+            in
+            ( {model | hoveringHex  = hoveredHexId}, Cmd.none )
