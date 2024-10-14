@@ -236,8 +236,8 @@ colorGrey =
     forceHexToColor "#CCCCCC"
 
 
-renderHex : RenderConfig -> ( Int, Int ) -> Int -> Int -> Maybe SolarSystem -> Bool -> Canvas.Renderable
-renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOrigin hexIndex index maybeSolarSystem isHovered =
+renderHex : RenderConfig -> ( Int, Int ) -> Int -> Maybe SolarSystem -> Bool -> Canvas.Renderable
+renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOrigin index maybeSolarSystem isHovered =
     let
         ( x, y ) =
             hexOrigin
@@ -446,66 +446,68 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
                 -- view vertical offset
                 (canvasHeightish - (numHexRows * hexScale * 1.6)) * vertOffset
 
-            -- viewHexRow : Int -> List ( Maybe (Svg Msg), Int )
+            renderSingleHex rowIdx colIdx (( ox, oy ) as hexOrigin) =
+                let
+                    ( fox, foy ) =
+                        ( toFloat ox, toFloat oy )
+
+                    widestViewport =
+                        screenVp
+
+                    outsideX =
+                        let
+                            plus =
+                                fox + hexScale - horizOffset
+
+                            minus =
+                                fox - hexScale - horizOffset
+                        in
+                        (plus < 0) || (minus > widestViewport.viewport.width)
+
+                    outsideY =
+                        let
+                            plus =
+                                foy + hexScale - (canvasHeightish * vertOffset)
+
+                            minus =
+                                foy - hexScale - (canvasHeightish * vertOffset)
+                        in
+                        (plus < 0) || (minus > widestViewport.viewport.height)
+
+                    isOutOfView =
+                        outsideX || outsideY
+                in
+                if isOutOfView then
+                    Nothing
+
+                else
+                    let
+                        isHovered =
+                            case hoveredHexId of
+                                Just hid ->
+                                    (colIdx + rowIdx * 100) == hid.value
+
+                                Nothing ->
+                                    False
+
+                        -- hexIdx is the '0145' for the x 1, y 45 position
+                        hexIdx =
+                            (rowIdx + 1) + (colIdx + 1) * 100
+
+                    in
+                    Just <|
+                        renderHex
+                            renderConfig
+                            hexOrigin
+                            hexIdx
+                            (ElmDict.get hexIdx solarSystemDict)
+                            isHovered
+
             viewHexRow rowIdx =
                 List.range 0 numHexCols
                     |> Array.fromList
                     |> Array.map (calcOrigin hexScale rowIdx)
-                    |> Array.indexedMap
-                        (\colIdx (( ox, oy ) as hexOrigin) ->
-                            let
-                                -- hexIdx is the '0145' for the x 1, y 45 position
-                                hexIdx =
-                                    (rowIdx + 1) + (colIdx + 1) * 100
-
-                                index =
-                                    rowIdx * numHexCols + colIdx
-
-                                ( fox, foy ) =
-                                    ( toFloat ox, toFloat oy )
-
-                                widestViewport =
-                                    screenVp
-
-                                outsideX =
-                                    let
-                                        plus =
-                                            fox + hexScale - horizOffset
-
-                                        minus =
-                                            fox - hexScale - horizOffset
-                                    in
-                                    (plus < 0) || (minus > widestViewport.viewport.width)
-
-                                outsideY =
-                                    let
-                                        plus =
-                                            foy + hexScale - (canvasHeightish * vertOffset)
-
-                                        minus =
-                                            foy - hexScale - (canvasHeightish * vertOffset)
-                                    in
-                                    (plus < 0) || (minus > widestViewport.viewport.height)
-                            in
-                            if outsideX || outsideY then
-                                Nothing
-
-                            else
-                                Just <|
-                                    renderHex
-                                        renderConfig
-                                        hexOrigin
-                                        hexIdx
-                                        index
-                                        (ElmDict.get hexIdx solarSystemDict)
-                                        (case hoveredHexId of
-                                            Just hid ->
-                                                (colIdx + rowIdx * 100) == hid.value
-
-                                            Nothing ->
-                                                False
-                                        )
-                        )
+                    |> Array.indexedMap (renderSingleHex rowIdx)
 
             renderedHexes =
                 List.range 0 numHexRows
