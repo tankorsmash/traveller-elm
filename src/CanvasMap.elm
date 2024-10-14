@@ -236,7 +236,7 @@ colorGrey =
     forceHexToColor "#CCCCCC"
 
 
-renderHex : RenderConfig -> ( Int, Int ) -> Int -> List ( Float, Float ) -> Maybe SolarSystem -> Bool -> Canvas.Renderable
+renderHex : RenderConfig -> ( Int, Int ) -> Int -> List Canvas.Shape -> Maybe SolarSystem -> Bool -> Canvas.Renderable
 renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOrigin index hexPoints maybeSolarSystem isHovered =
     let
         ( x, y ) =
@@ -268,21 +268,9 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
     in
     Canvas.group [ transform [ translate x y ] ]
         [ shapes [ fill (Color.hsl hue 0.3 0.7) ]
-            [ case hexPoints of
-                p1 :: ps ->
-                    Canvas.path p1 (List.map Canvas.lineTo ps)
-
-                _ ->
-                    rect ( 0, 0 ) 10 10
-            ]
+            hexPoints
         , shapes [ Canvas.Settings.stroke <| colorGrey, lineWidth 1.0 ]
-            [ case hexPoints of
-                p1 :: ps ->
-                    Canvas.path p1 (List.map Canvas.lineTo ps)
-
-                _ ->
-                    rect ( 0, 0 ) 10 10
-            ]
+            hexPoints
         , case maybeSolarSystem of
             Just solarSystem ->
                 case solarSystem.stars of
@@ -441,7 +429,13 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
                 (canvasHeightish - (numHexRows * hexScale * 1.6)) * vertOffset
 
             hexPoints =
-                hexagonPoints ( 0, 0 ) (renderConfig.hexScale * 1)
+                [ case hexagonPoints ( 0, 0 ) (renderConfig.hexScale * 1) of
+                    p1 :: ps ->
+                        Canvas.path p1 (List.map Canvas.lineTo ps)
+
+                    _ ->
+                        rect ( 0, 0 ) 10 10
+                ]
 
             renderSingleHex rowIdx colIdx (( ox, oy ) as hexOrigin) =
                 let
