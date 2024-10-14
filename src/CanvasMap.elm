@@ -96,7 +96,7 @@ update msg =
                     (-gridX / 3) + (sqrt 3 / 3) * gridY
 
                 _ =
-                    Debug.log "q, r" ( round hexOffsetQ, round hexOffsetR )
+                    ( round hexOffsetQ, round hexOffsetR )
 
                 hexSize =
                     -- TODO: replace with actual size from Traveller.Model
@@ -236,16 +236,13 @@ colorGrey =
     forceHexToColor "#CCCCCC"
 
 
-renderHex : RenderConfig -> ( Int, Int ) -> Int -> Maybe SolarSystem -> Bool -> Canvas.Renderable
-renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOrigin index maybeSolarSystem isHovered =
+renderHex : RenderConfig -> ( Int, Int ) -> Int -> List ( Float, Float ) -> Maybe SolarSystem -> Bool -> Canvas.Renderable
+renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOrigin index hexPoints maybeSolarSystem isHovered =
     let
         ( x, y ) =
             hexOrigin
                 |> Tuple.mapBoth toFloat toFloat
                 |> Tuple.mapBoth ((+) xOffset) ((+) yOffset)
-
-        size =
-            hexScale
 
         hue =
             toFloat (toFloat index / 2 |> floor |> modBy 100)
@@ -268,9 +265,6 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
 
                 Nothing ->
                     False
-
-        hexPoints =
-            hexagonPoints ( 0, 0 ) (size * 1)
     in
     Canvas.group [ transform [ translate x y ] ]
         [ shapes [ fill (Color.hsl hue 0.3 0.7) ]
@@ -446,6 +440,9 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
                 -- view vertical offset
                 (canvasHeightish - (numHexRows * hexScale * 1.6)) * vertOffset
 
+            hexPoints =
+                hexagonPoints ( 0, 0 ) (renderConfig.hexScale * 1)
+
             renderSingleHex rowIdx colIdx (( ox, oy ) as hexOrigin) =
                 let
                     ( fox, foy ) =
@@ -493,13 +490,13 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
                         -- hexIdx is the '0145' for the x 1, y 45 position
                         hexIdx =
                             (rowIdx + 1) + (colIdx + 1) * 100
-
                     in
                     Just <|
                         renderHex
                             renderConfig
                             hexOrigin
                             hexIdx
+                            hexPoints
                             (ElmDict.get hexIdx solarSystemDict)
                             isHovered
 
