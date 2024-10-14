@@ -1,5 +1,6 @@
 module CanvasMap exposing (Msg(..), update, view)
 
+import Array exposing (Array)
 import AssocList as Dict exposing (Dict)
 import Browser.Dom
 import Canvas exposing (path, rect, shapes)
@@ -106,7 +107,7 @@ update msg =
 
 
 render : RenderConfig -> Float -> Canvas.Renderable
-render { width, height, centerX, centerY } count =
+render { width, height, centerX, centerY } bgRotateAndHue =
     let
         size =
             width / 3
@@ -118,10 +119,10 @@ render { width, height, centerX, centerY } count =
             -(size / 2)
 
         rotation =
-            degrees (count * 3)
+            degrees (bgRotateAndHue * 3)
 
         hue =
-            toFloat (count / 4 |> floor |> modBy 100) / 100
+            toFloat (bgRotateAndHue / 4 |> floor |> modBy 100) / 100
     in
     shapes
         [ transform
@@ -448,8 +449,9 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
             -- viewHexRow : Int -> List ( Maybe (Svg Msg), Int )
             viewHexRow rowIdx =
                 List.range 0 numHexCols
-                    |> List.map (calcOrigin hexScale rowIdx)
-                    |> List.indexedMap
+                    |> Array.fromList
+                    |> Array.map (calcOrigin hexScale rowIdx)
+                    |> Array.indexedMap
                         (\colIdx (( ox, oy ) as hexOrigin) ->
                             let
                                 -- hexIdx is the '0145' for the x 1, y 45 position
@@ -507,7 +509,9 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
 
             renderedHexes =
                 List.range 0 numHexRows
-                    |> List.map viewHexRow
+                    |> Array.fromList
+                    |> Array.map (Array.toList << viewHexRow)
+                    |> Array.toList
                     |> List.concat
                     |> List.filterMap identity
           in
@@ -517,7 +521,7 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
             , Html.Events.Extra.Mouse.onMove MouseMovedOnCanvas
             ]
             ([ clearScreen
-             , render renderConfig 106
+             , render renderConfig 105
              ]
                 ++ renderedHexes
             )
