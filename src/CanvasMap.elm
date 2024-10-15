@@ -67,10 +67,89 @@ type Msg
     = MouseMovedOnCanvas Html.Events.Extra.Mouse.Event
 
 
+
+-- Convert pixel coordinates to axial coordinates for flat-topped hexes
+
+
+pixelToAxial : Float -> Float -> Float -> ( Float, Float )
+pixelToAxial size x y =
+    let
+        q =
+            ((2 / 3) * x) / size
+
+        r =
+            ((-1 / 3) * x + (sqrt 3 / 3) * y) / size
+    in
+    ( q, r )
+
+
+
+-- Convert axial coordinates to cube coordinates
+
+
+axialToCube : ( Float, Float ) -> ( Float, Float, Float )
+axialToCube ( q, r ) =
+    let
+        x =
+            q
+
+        z =
+            r
+
+        y =
+            -x - z
+    in
+    ( x, y, z )
+
+
+
+-- Round cube coordinates to the nearest integer cube coordinates
+
+
+cubeRound : ( Float, Float, Float ) -> ( Int, Int, Int )
+cubeRound ( x, y, z ) =
+    let
+        rx =
+            round x
+
+        ry =
+            round y
+
+        rz =
+            round z
+
+        xDiff =
+            abs (toFloat rx - x)
+
+        yDiff =
+            abs (toFloat ry - y)
+
+        zDiff =
+            abs (toFloat rz - z)
+    in
+    if xDiff > yDiff && xDiff > zDiff then
+        ( -ry - rz, ry, rz )
+
+    else if yDiff > zDiff then
+        ( rx, -rx - rz, rz )
+
+    else
+        ( rx, ry, -rx - ry )
+
+
+
+-- Convert cube coordinates back to axial coordinates
+
+
+cubeToAxial : ( Int, Int, Int ) -> ( Int, Int )
+cubeToAxial ( x, y, z ) =
+    ( x, z )
+
+
 {-| check if the mouse is over the canvas's specific hex
 -}
-update : Msg -> Maybe HexId
-update msg =
+update : Float -> Msg -> Maybe HexId
+update hexSize msg =
     case msg of
         MouseMovedOnCanvas event ->
             let
@@ -90,19 +169,40 @@ update msg =
                     offsetY / hexHeight
 
                 hexOffsetQ =
-                    gridX * 2 / 3
+                    (gridX * 2 / 3) / hexSize
 
                 hexOffsetR =
-                    (-gridX / 3) + (sqrt 3 / 3) * gridY
+                    ((-1 / 3) * gridX) + ((sqrt 3 / 3) * gridY)
 
-                _ =
-                    ( round hexOffsetQ, round hexOffsetR )
+                ( q, r ) =
+                    pixelToAxial hexSize offsetX offsetY
 
-                hexSize =
-                    -- TODO: replace with actual size from Traveller.Model
-                    40
+                -- Convert axial to cube coordinates
+                ( cubeX, cubeY, cubeZ ) =
+                    axialToCube ( q, r )
+
+                -- Round cube coordinates to nearest integers
+                ( rx, ry, rz ) =
+                    cubeRound ( cubeX, cubeY, cubeZ )
+
+                -- Convert cube coordinates back to axial coordinates
+                ( finalQ, finalR ) =
+                    cubeToAxial ( rx, ry, rz )
+
+                -- Update the hovered hex ID
+                newHoveredHexId =
+                    HexId.createFromTwoInts (finalQ + 1) (finalR + 1)
+
+                -- sqrt3 = sqrt 3
+                --
+                -- q = ((sqrt3 / 3) * adjustedX - (1 / 3) * adjustedY) / hexSize
+                -- r = (2 / 3 * adjustedY) / hexSize
+                -- _ =
+                --     ( round q, round r )
             in
-            HexId.createFromTwoInts (round hexOffsetQ + 1) (round hexOffsetR + 1)
+            -- HexId.createFromTwoInts (round hexOffsetQ + 1) (round hexOffsetR + 1)
+            -- HexId.createFromTwoInts (round q ) (round r)
+            newHoveredHexId
                 |> Just
 
 

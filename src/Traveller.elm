@@ -1065,6 +1065,6 @@ update msg model =
         GotCanvasMapMsg canvasMsg ->
             let
                 hoveredHexId =
-                    CanvasMap.update canvasMsg
+                    CanvasMap.update model.hexScale canvasMsg
             in
             ( {model | hoveringHex  = hoveredHexId}, Cmd.none )
