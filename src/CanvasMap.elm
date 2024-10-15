@@ -102,7 +102,7 @@ update msg =
                     -- TODO: replace with actual size from Traveller.Model
                     40
             in
-            HexId.createFromTwoInts (round hexOffsetR + 1) (round hexOffsetQ + 1)
+            HexId.createFromTwoInts (round hexOffsetQ + 1) (round hexOffsetR + 1)
                 |> Just
 
 
@@ -457,7 +457,7 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
                         isHovered =
                             case hoveredHexId of
                                 Just hid ->
-                                    (colIdx + rowIdx * 100) == hid.value
+                                    hexIdx == hid.value
 
                                 Nothing ->
                                     False
