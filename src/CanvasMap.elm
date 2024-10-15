@@ -438,30 +438,13 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
             renderSingleHex rowIdx colIdx (( ox, oy ) as hexOrigin) =
                 let
                     ( fox, foy ) =
-                        ( toFloat ox, toFloat oy )
-
-                    widestViewport =
-                        screenVp
+                        ( toFloat ox + xOffset, toFloat oy + yOffset )
 
                     outsideX =
-                        let
-                            plus =
-                                fox + hexScale - horizOffset
-
-                            minus =
-                                fox - hexScale - horizOffset
-                        in
-                        (plus < 0) || (minus > widestViewport.viewport.width)
+                        (fox + hexScale < 0) || (fox - hexScale > canvasWidthish)
 
                     outsideY =
-                        let
-                            plus =
-                                foy + hexScale - (canvasHeightish * vertOffset)
-
-                            minus =
-                                foy - hexScale - (canvasHeightish * vertOffset)
-                        in
-                        (plus < 0) || (minus > widestViewport.viewport.height)
+                        (foy + hexScale < 0) || (foy - hexScale > canvasHeightish)
 
                     isOutOfView =
                         outsideX || outsideY
