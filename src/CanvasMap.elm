@@ -267,9 +267,7 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
                     False
     in
     Canvas.group [ transform [ translate x y ] ]
-        [ shapes [ fill (Color.hsl hue 0.3 0.7) ]
-            hexPoints
-        , shapes [ Canvas.Settings.stroke <| colorGrey, lineWidth 1.0 ]
+        [ shapes [ Canvas.Settings.stroke <| colorGrey, lineWidth 1.0, fill (Color.hsl hue 0.3 0.7) ]
             hexPoints
         , case maybeSolarSystem of
             Just solarSystem ->
