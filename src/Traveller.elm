@@ -64,6 +64,7 @@ type alias Model =
     , hexScale : Float
     , sectorData : RemoteData Http.Error ( SectorData, Dict.Dict RawHexId SolarSystem )
     , offset : ( Float, Float )
+    , mousePos : ( Float, Float )
     , playerHex : HexId
     , hoveringHex : Maybe HexId
     , viewingHexId : Maybe ( HexId, Int )
@@ -111,6 +112,7 @@ init key =
       , sectorData = RemoteData.NotAsked
       , surveyIndexData = RemoteData.NotAsked
       , offset = ( 0.0, 0.0 )
+      , mousePos = ( 0, 0 )
       , playerHex = HexId.createFromInt 135
       , hoveringHex = Nothing
       , viewingHexId = Nothing
@@ -793,6 +795,7 @@ view model =
                         sectorData
                         hexScale
                         model.offset
+                        model.mousePos
                         model.hoveringHex
                         |> -- turn the html canvas into an elm-ui element
                            Element.html
@@ -1064,7 +1067,8 @@ update msg model =
 
         GotCanvasMapMsg canvasMsg ->
             let
-                hoveredHexId =
+                mousePos =
                     CanvasMap.update model.hexScale canvasMsg
             in
-            ( {model | hoveringHex  = hoveredHexId}, Cmd.none )
+            -- ( {model | hoveringHex  = hoveredHexId}, Cmd.none )
+            ( {model | mousePos  = mousePos}, Cmd.none )

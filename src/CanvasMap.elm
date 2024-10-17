@@ -1,5 +1,6 @@
 module CanvasMap exposing (Msg(..), update, view)
 
+import Bitwise exposing (and)
 import Array exposing (Array)
 import AssocList as Dict exposing (Dict)
 import Browser.Dom
@@ -10,7 +11,11 @@ import Canvas.Settings.Line exposing (LineJoin, lineWidth)
 import Canvas.Settings.Text exposing (TextAlign(..), TextBaseLine(..))
 import Color
 import Color.Convert exposing (hexToColor)
+import Css exposing (calc)
 import Dict as ElmDict
+import Hexagons.Hex
+import Hexagons.Layout
+import Hexagons.Map
 import Html exposing (div)
 import Html.Attributes exposing (style)
 import Html.Events.Extra.Mouse
@@ -146,9 +151,43 @@ cubeToAxial ( x, y, z ) =
     ( x, z )
 
 
+
+-- calc : Float -> Float -> Float -> { q : Int, r : Int, s : Int }
+-- calc hexSize offsetX offsetY =
+--     let
+--         layout : Hexagons.Layout.Layout
+--         layout =
+--             { orientation = Hexagons.Layout.orientationLayoutFlat
+--             , size = ( hexSize, hexSize )
+--
+--             -- , origin = ( 0, -hexSize / 2 )
+--             , origin = ( 0, 0 )
+--
+--             -- , origin = ( -hexSize / 2 , hexSize / 2 )
+--             }
+--
+--         -- map =
+--         --     Hexagons.Map.rectangularFlatTopMap 40 30
+--         hex =
+--             Hexagons.Layout.pointToHex layout ( offsetX, offsetY )
+--                 |> --ints
+--                    (\h -> { q = Hexagons.Hex.intQ h, r = Hexagons.Hex.intR h, s = Hexagons.Hex.intS h })
+--
+--         -- |> -- floats
+--         --     (\h -> { q = Hexagons.Hex.q h, r = Hexagons.Hex.r h, s = Hexagons.Hex.s h })
+--     in
+--     hex
+
+
 {-| check if the mouse is over the canvas's specific hex
 -}
-update : Float -> Msg -> Maybe HexId
+
+
+
+-- update : Float -> Msg -> Maybe HexId
+
+
+update : Float -> Msg -> ( Float, Float )
 update hexSize msg =
     case msg of
         MouseMovedOnCanvas event ->
@@ -202,8 +241,12 @@ update hexSize msg =
             in
             -- HexId.createFromTwoInts (round hexOffsetQ + 1) (round hexOffsetR + 1)
             -- HexId.createFromTwoInts (round q ) (round r)
-            newHoveredHexId
-                |> Just
+            -- HexId.createFromTwoInts (floor <| hex.q + 1) (floor <| hex.r + 1)
+            -- HexId.createFromTwoInts ( hex.q + 1) ( hex.r + 1)
+            -- newHoveredHexId
+            -- |> Just
+            -- Nothing
+            ( offsetX, offsetY )
 
 
 render : RenderConfig -> Float -> Canvas.Renderable
@@ -337,12 +380,12 @@ colorGrey =
 
 
 renderHex : RenderConfig -> ( Int, Int ) -> Int -> List Canvas.Shape -> Maybe SolarSystem -> Bool -> Canvas.Renderable
-renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOrigin index hexPoints maybeSolarSystem isHovered =
+renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOrigin index hexPoints_ maybeSolarSystem isHovered =
     let
         ( x, y ) =
             hexOrigin
                 |> Tuple.mapBoth toFloat toFloat
-                |> Tuple.mapBoth ((+) xOffset) ((+) yOffset)
+                -- |> Tuple.mapBoth ((+) xOffset) ((+) yOffset)
 
         hue =
             toFloat (toFloat index / 2 |> floor |> modBy 100)
@@ -365,102 +408,61 @@ renderHex { width, height, centerX, centerY, hexScale, xOffset, yOffset } hexOri
 
                 Nothing ->
                     False
+
+        -- hex = (calc hexScale x y)
+        layout : Hexagons.Layout.Layout
+        layout =
+            { orientation = Hexagons.Layout.orientationLayoutFlat
+            , size = ( hexScale, hexScale )
+
+            -- , origin = ( 0, -hexScale / 2 )
+            -- , origin = ( 0, 0 )
+
+            , origin = ( hexScale / 2, hexScale / 2 )
+            }
+
+        -- map =
+        --     Hexagons.Map.rectangularFlatTopMap 40 30
+        hex =
+            -- Hexagons.Layout.offsetToHex ( 4, 0 )
+            Hexagons.Layout.offsetToHex ( Tuple.first hexOrigin, Tuple.second hexOrigin )
+
+        ( pointX, pointY ) =
+            Hexagons.Layout.hexToPoint layout hex
+
+        hexPoints =
+            [ case Hexagons.Layout.polygonCorners layout hex of
+                p1 :: ps ->
+                    Canvas.path p1 (List.map Canvas.lineTo ps)
+
+                _ ->
+                    rect ( 0, 0 ) 10 10
+            ]
     in
-    Canvas.group [ transform [ translate x y ] ]
+    -- Canvas.group [ transform [ translate 0 0 ] ]
+    Canvas.group []
+        -- Canvas.group [ transform [ translate x y ] ]
         [ shapes [ Canvas.Settings.stroke <| colorGrey, lineWidth 1.0, fill (Color.hsl hue 0.3 0.7) ]
             hexPoints
-        , case maybeSolarSystem of
-            Just solarSystem ->
-                case solarSystem.stars of
-                    [] ->
-                        shapes [] []
-
-                    primaryStar :: stars ->
-                        let
-                            primaryPos =
-                                ( x / 100, y / 100 )
-                        in
-                        Canvas.group
-                            []
-                            ((case primaryStar.companion of
-                                Just companionStar ->
-                                    let
-                                        companionStarPos =
-                                            primaryPos
-                                                |> Tuple.mapFirst (\x_ -> x_ - 5)
-                                    in
-                                    Canvas.group []
-                                        [ drawStar primaryPos 5 primaryStar
-                                        , drawStar companionStarPos 2 companionStar
-                                        ]
-
-                                Nothing ->
-                                    drawStar primaryPos 5 primaryStar
-                             )
-                                :: List.indexedMap
-                                    (\_ secondaryStar ->
-                                        let
-                                            secondaryStarPos =
-                                                -- rotatePoint idx primaryPos 60 20
-                                                ( 10, 10 )
-                                        in
-                                        case secondaryStar.companion of
-                                            Just companionStar ->
-                                                let
-                                                    companionStarPos =
-                                                        secondaryStarPos |> Tuple.mapFirst (\x_ -> x_ - 5)
-                                                in
-                                                Canvas.group []
-                                                    [ drawStar secondaryStarPos 7 secondaryStar
-                                                    , drawStar companionStarPos 3 companionStar
-                                                    ]
-
-                                            Nothing ->
-                                                drawStar secondaryStarPos 7 secondaryStar
-                                    )
-                                    stars
-                            )
-
-            Nothing ->
-                shapes [] []
         , -- Hex ID display
           Canvas.text
             [ fill Color.red
             , Canvas.Settings.Text.align Center
             , Canvas.Settings.Text.baseLine Middle
+            , transform [ translate pointX pointY ]
             ]
             ( 0, -hexScale * 0.65 )
             (case maybeSolarSystem of
                 Just solarSystem ->
-                    solarSystem.coordinates.raw
+                    Hexagons.Layout.hexToOffset hex
+                        |> Debug.toString
+                        |> (\s -> s ++ "\n" ++ solarSystem.coordinates.raw)
+                    -- solarSystem.coordinates.raw
 
                 Nothing ->
-                    ""
+                    Hexagons.Layout.hexToOffset hex
+                        |> Debug.toString
             )
-        , -- giants/planets/belts display
-          case maybeSolarSystem of
-            Just solarSystem ->
-                Canvas.group
-                    [ Canvas.Settings.Text.align Center
-                    , Canvas.Settings.Text.baseLine Middle
-                    , Canvas.Settings.Text.font { size = 14, family = "Arial" }
-                    ]
-                    [ Canvas.text
-                        [ fill <| gasGiantColor ]
-                        ( hexScale * -0.3, hexScale * 0.65 )
-                        (solarSystem.gasGiants |> String.fromInt)
-                    , Canvas.text
-                        [ fill <| terrestialPlanetColor ]
-                        ( 0, hexScale * 0.65 )
-                        (solarSystem.terrestrialPlanets |> String.fromInt)
-                    , Canvas.text
-                        [ fill <| planetoidBeltColor ]
-                        ( hexScale * 0.3, hexScale * 0.65 )
-                        (solarSystem.planetoidBelts |> String.fromInt)
-                    ]
-
-            Nothing ->
-                Canvas.group [] []
         ]
 
 
@@ -487,8 +489,8 @@ hexagonPoints ( xOrigin, yOrigin ) size =
         |> List.map (toFloat >> buildPoint)
 
 
-view : { screenVp : Browser.Dom.Viewport } -> ( SectorData, ElmDict.Dict Int SolarSystem ) -> Float -> ( Float, Float ) -> Maybe HexId -> Html.Html Msg
-view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOffset ) hoveredHexId =
+view : { screenVp : Browser.Dom.Viewport } -> ( SectorData, ElmDict.Dict Int SolarSystem ) -> Float -> ( Float, Float ) -> ( Float, Float ) -> Maybe HexId -> Html.Html Msg
+view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOffset ) mousePos hoveredHexId =
     div
         [ style "display" "flex"
         , style "justify-content" "center"
@@ -537,57 +539,125 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
 
             renderSingleHex rowIdx colIdx (( ox, oy ) as hexOrigin) =
                 let
-                    ( fox, foy ) =
-                        ( toFloat ox + xOffset, toFloat oy + yOffset )
+                    isHovered =
+                        case hoveredHexId of
+                            Just hid ->
+                                hexIdx == hid.value
 
-                    outsideX =
-                        (fox + hexScale < 0) || (fox - hexScale > canvasWidthish)
+                            Nothing ->
+                                False
 
-                    outsideY =
-                        (foy + hexScale < 0) || (foy - hexScale > canvasHeightish)
+                    axialToCube2 : ( Int, Int ) -> ( Int, Int, Int )
+                    axialToCube2 ( q, r ) =
+                        ( q, -q - r, r )
 
-                    isOutOfView =
-                        outsideX || outsideY
+                    -- /* 
+                    -- function cube_to_oddq(cube):
+                    --     col = cube.x
+                    --     row = cube.z + (cube.x - (cube.x&1)) / 2
+                    --     return Hex(col, row)
+                    -- */
+                    -- hexIdx = axialToCube2 (  rowIdx, colIdx) |> calcHexIdx
+                    -- hexIdx = axialToCube2 (  colIdx, rowIdx) |> calcHexIdx
+
+                    hexIdx =
+                        let 
+                            s = (-(q - r))
+                            r = rowIdx - (q + (q |> and 1)) // 2
+                            q = colIdx
+
+                        -- in (q, r)
+                        in ( (q +  1) * 100 ) + (r +  1)
+                        -- in ( (r +  1) * 100 ) + (q +  1)
+
+                    -- calcHexIdx : (Float, Float, Float) -> (Int, Int)
+                    calcHexIdx (x,y,z) =
+                        let
+                            col =
+                                -- Hexagons.Hex.intQ hex
+                                x
+
+                            row =
+                                -- Hexagons.Hex.intS hex + (Hexagons.Hex.intQ hex - (Hexagons.Hex.intQ hex |> and 1 ) ) // 2
+                                z + (x - (x |> and 1)) // 2
+                        in
+                        -- ( (col + (numHexCols//2) + 1) * 100 ) + (row + (numHexRows//2)+ 1)
+                        -- ( (row +  1) * 100 ) + (col +  1)
+                        ( (col +  1) * 100 ) + (row +  1)
+
+                        -- ( (col + (numHexCols//2) + 1) * 100 ) + (row + (numHexRows//2)+ 1)
+                        -- ( (col + (numHexCols//2) + 1) ) + (row + (numHexRows//2)+ 1)* 100 
+                        -- ( (col +  1) ) + (row +  1)* 100
+                        -- (colIdx + 1) + (rowIdx + 1) * 100
+
+
+                    -- hexIdx is the '0145' for the x 1, y 45 position
+                    -- hexIdx =
+                    --     (colIdx + 1) + (rowIdx + 1) * 100
+
+                    -- hex = (calc hexScale x y)
+                    layout : Hexagons.Layout.Layout
+                    layout =
+                        { orientation = Hexagons.Layout.orientationLayoutFlat
+                        , size = ( hexScale, hexScale )
+
+                        -- , origin = ( 0, -hexScale / 2 )
+                        -- , origin = ( 0, 0 )
+
+                        , origin = ( hexScale / 2, hexScale / 2 )
+                        }
+
+                    -- -- map =
+                    -- --     Hexagons.Map.rectangularFlatTopMap 40 30
+                    -- hex =
+                    --     -- Hexagons.Layout.offsetToHex ( 4, 0 )
+                    --     Hexagons.Layout.offsetToHex ( Tuple.first hexOrigin, Tuple.second hexOrigin )
+
+                    ( pointX, pointY ) =
+                        Hexagons.Layout.hexToPoint layout hex
+
+                    hex = Hexagons.Layout.offsetToHex (colIdx, rowIdx)
+
                 in
-                if isOutOfView then
-                    Nothing
-
-                else
-                    let
-                        isHovered =
-                            case hoveredHexId of
-                                Just hid ->
-                                    hexIdx == hid.value
-
-                                Nothing ->
-                                    False
-
-                        -- hexIdx is the '0145' for the x 1, y 45 position
-                        hexIdx =
-                            (rowIdx + 1) + (colIdx + 1) * 100
-                    in
-                    Just <|
-                        renderHex
-                            renderConfig
-                            hexOrigin
-                            hexIdx
-                            hexPoints
-                            (ElmDict.get hexIdx solarSystemDict)
-                            isHovered
+                Just <|
+                    renderHex
+                        renderConfig
+                        hexOrigin
+                        (Debug.log "hexidx" hexIdx)
+                        hexPoints
+                        (ElmDict.get hexIdx solarSystemDict)
+                        -- hexIdx
+                        isHovered
 
             viewHexRow rowIdx =
-                List.range 0 numHexCols
+                List.range  (negate (floor <| numHexCols/2)) (floor <| numHexCols/2)
                     |> Array.fromList
-                    |> Array.map (calcOrigin hexScale rowIdx)
-                    |> Array.indexedMap (renderSingleHex rowIdx)
+                    -- |> Array.map (calcOrigin hexScale rowIdx)
+                    |> Array.map (\col -> Tuple.pair rowIdx col)
+                    |> Array.map (\(r, c)-> renderSingleHex r c (r,c))
+
+
 
             renderedHexes =
-                List.range 0 numHexRows
+                List.range (negate (floor <| numHexRows/2)) (floor <| numHexRows/2)
                     |> Array.fromList
                     |> Array.map (Array.toList << viewHexRow)
                     |> Array.toList
                     |> List.concat
                     |> List.filterMap identity
+
+            -- renderDebugMouse =
+            --     let
+            --         ( mouseX, mouseY ) =
+            --             mousePos
+            --
+            --         hex =
+            --             calc hexScale mouseX mouseY
+            --     in
+            --     Canvas.group []
+            --         [ -- shapes [] [Canvas.rect ( mouseX, mouseY ) 200 200]
+            --           Canvas.text [ Canvas.Settings.fill Color.red, Canvas.Settings.stroke Color.green, Canvas.Settings.Text.font { size = 48, family = "Arial" } ] ( mouseX, mouseY ) (String.fromInt hex.q ++ ", " ++ String.fromInt hex.r ++ ", " ++ String.fromInt hex.s)
+            --         ]
           in
           Canvas.toHtml
             ( floor canvasWidthish, floor canvasHeightish )
@@ -598,5 +668,6 @@ view { screenVp } ( sectorData, solarSystemDict ) hexScale ( horizOffset, vertOf
              , render renderConfig 105
              ]
                 ++ renderedHexes
+             -- ++ [ renderDebugMouse ]
             )
         ]
