@@ -154,7 +154,7 @@ type alias StarData =
     , stellarObjects : List StellarObject
     , occupiedOrbits : List Float
     , orbitSequence : String
-    , jump : Float
+    , jumpShadow : Float
     }
 
 
@@ -186,7 +186,7 @@ type alias CompanionStar =
     }
 
 
-buildStarData orbitPosition_ inclination_ eccentricity_ effectiveHZCODeviation_ stellarClass_ stellarType_ totalObjects_ subtype_ orbitType_ mass_ diameter_ temperature_ age_ colour_ companion_ orbit_ period_ baseline_ emptyOrbits_ spread_ availableOrbits_ stellarObjects_ occupiedOrbits_ orbitSequence_ jump_ =
+buildStarData orbitPosition_ inclination_ eccentricity_ effectiveHZCODeviation_ stellarClass_ stellarType_ totalObjects_ subtype_ orbitType_ mass_ diameter_ temperature_ age_ colour_ companion_ orbit_ period_ baseline_ emptyOrbits_ spread_ availableOrbits_ stellarObjects_ occupiedOrbits_ orbitSequence_ jumpShadow_ =
     { orbitPosition = orbitPosition_
     , inclination = inclination_
     , eccentricity = eccentricity_
@@ -211,7 +211,7 @@ buildStarData orbitPosition_ inclination_ eccentricity_ effectiveHZCODeviation_ 
     , stellarObjects = stellarObjects_
     , occupiedOrbits = occupiedOrbits_
     , orbitSequence = orbitSequence_
-    , jump = jump_
+    , jumpShadow = jumpShadow_
     }
 
 
@@ -242,7 +242,7 @@ codecStar =
         |> Codec.field "stellarObjects" .stellarObjects (Codec.list codecStellarObject)
         |> Codec.field "occupiedOrbits" .occupiedOrbits (Codec.list Codec.float)
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
-        |> Codec.field "jump" .jump Codec.float
+        |> Codec.field "jumpShadow" .jumpShadow Codec.float
         |> Codec.buildObject
         |> -- Codec.map needs a way to go from object, and a way to go back to object
            Codec.map Star (\(Star data) -> data)
