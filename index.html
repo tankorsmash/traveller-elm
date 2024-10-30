@@ -44,7 +44,6 @@
       document.documentElement.setAttribute('data-bs-theme', (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'))
       elm.ports.toggleDarkMode.subscribe((isDarkMode)=> {
         document.documentElement.setAttribute('data-bs-theme', isDarkMode ? "dark":"light")
-
       });
 
     </script>
