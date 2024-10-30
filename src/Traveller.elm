@@ -32,7 +32,7 @@ import Http
 import Json.Decode as JsDecode
 import Maybe.Extra as Maybe
 import RemoteData exposing (RemoteData(..))
-import Round
+import Round exposing (round)
 import Svg.Attributes exposing (width)
 import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (fill, points, viewBox)
@@ -40,9 +40,11 @@ import Svg.Styled.Events as SvgEvents
 import Svg.Styled.Lazy
 import Task
 import Traveller.HexId as HexId exposing (HexId, RawHexId)
+import Traveller.Orbit
 import Traveller.SectorData exposing (SISector, SectorData, SurveyIndexData, codecSectorData, codecSurveyIndexData)
 import Traveller.SolarSystem exposing (SolarSystem)
-import Traveller.Star as Star exposing (starColourRGB)
+import Traveller.Star as Star exposing (Star, starColourRGB)
+import Traveller.StellarObject
 
 
 gasGiantSI =
@@ -237,7 +239,7 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                     [] ->
                         Html.text ""
 
-                    primaryStar :: stars ->
+                    (Star.Star primaryStar) :: stars ->
                         let
                             primaryPos =
                                 ( toFloat x, toFloat y )
@@ -245,7 +247,7 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                         Svg.g
                             []
                             ((case primaryStar.companion of
-                                Just compStar ->
+                                Just (Star.Star compStar) ->
                                     let
                                         compStarPos =
                                             Tuple.mapFirst (\x_ -> x_ - 5) primaryPos
@@ -259,13 +261,13 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                                     drawStar primaryPos 12 primaryStar
                              )
                                 :: List.indexedMap
-                                    (\idx secondaryStar ->
+                                    (\idx (Star.Star secondaryStar) ->
                                         let
                                             secondaryStarPos =
                                                 rotatePoint idx primaryPos 60 20
                                         in
                                         case secondaryStar.companion of
-                                            Just compStar ->
+                                            Just (Star.Star compStar) ->
                                                 let
                                                     compStarPos =
                                                         Tuple.mapFirst (\x_ -> x_ - 5) secondaryStarPos
@@ -625,34 +627,61 @@ viewSystemDetailsSidebar maybeViewingHexId maybeViewingHexOrigin solarSystemDict
           of
             ( Just ( viewingHexId, si ), Just solarSystem ) ->
                 let
-                    renderStar star =
-                        star.stellarType
-                            ++ (case star.subtype of
-                                    Just num ->
-                                        "" ++ String.fromInt num
+                    renderStar : Star.StarData -> Float -> Element.Element msg
+                    renderStar star nestingLevel =
+                        let
+                            renderStellarObject : Traveller.StellarObject.StellarObject -> Element.Element msg
+                            renderStellarObject (Traveller.StellarObject.StellarObject stellarObject) =
+                                row [ Element.spacing 8 ]
+                                    [ case stellarObject.orbit of
+                                        Traveller.Orbit.SimpleOrbit orbit ->
+                                            text <| Round.round 2 orbit
 
-                                    Nothing ->
-                                        ""
-                               )
-                            ++ " "
-                            ++ star.stellarClass
+                                        Traveller.Orbit.ComplexOrbit _ ->
+                                            Element.none
+                                    , case stellarObject.uwp of
+                                        Just uwp ->
+                                            text <| uwp
+
+                                        Nothing ->
+                                            Element.none
+                                    , case stellarObject.code of
+                                        Just code ->
+                                            text <| code
+
+                                        Nothing ->
+                                            Element.none
+                                    ]
+                        in
+                        column [ Element.moveRight <| nestingLevel * 10 ]
+                            [ el [] <|
+                                text <|
+                                    star.stellarType
+                                        ++ (case star.subtype of
+                                                Just num ->
+                                                    "" ++ String.fromInt num
+
+                                                Nothing ->
+                                                    ""
+                                           )
+                                        ++ " "
+                                        ++ star.stellarClass
+                            , star.companion
+                                |> Maybe.map
+                                    (\(Star.Star compStar) ->
+                                        renderStar compStar (nestingLevel + 1)
+                                    )
+                                |> Maybe.withDefault Element.none
+                            , column [] <| List.map renderStellarObject star.stellarObjects
+                            ]
+
+                    getStarData (Star.Star star) =
+                        star
                 in
                 column [ Element.spacing 10 ] <|
-                    (solarSystem.stars
-                        |> List.map
-                            (\star ->
-                                renderStar star
-                                    ++ (star.companion
-                                            |> Maybe.map
-                                                (\compStar ->
-                                                    "\n  └── " ++ renderStar compStar
-                                                )
-                                            |> Maybe.withDefault ""
-                                       )
-                            )
-                        |> List.map text
-                    )
-                        ++ [ Input.button
+                    renderStar (getStarData solarSystem.primaryStar) 0
+                        --|> List.map text
+                        :: [ Input.button
                                 [ Background.color <| rgb 0.5 1.5 0.5
                                 , Border.rounded 5
                                 , Border.width 10

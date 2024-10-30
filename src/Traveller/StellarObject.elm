@@ -114,6 +114,8 @@ type alias StellarData =
     , greenhouse : Maybe Int
     , meanTemperature : Maybe Float
     , orbitSequence : String
+    , uwp : Maybe String
+    , code : Maybe String
     }
 
 
@@ -123,7 +125,7 @@ type StellarObject
 
 
 buildStellarObject =
-    \orbPos incl ecc effHZCODev size orbit period comp retro troj axTilt moons biomass bioComplex bioDiversity compat resource currentNative extinctNative hasRing orbitType atm hydro pop gov law starPort tech tradeCodes albedo dens green meanTemp orbitSeq ->
+    \orbPos incl ecc effHZCODev size orbit period comp retro troj axTilt moons biomass bioComplex bioDiversity compat resource currentNative extinctNative hasRing orbitType atm hydro pop gov law starPort tech tradeCodes albedo dens green meanTemp orbitSeq uwp code ->
         -- StellarObject
         { orbitPosition = orbPos
         , inclination = incl
@@ -159,6 +161,8 @@ buildStellarObject =
         , greenhouse = green
         , meanTemperature = meanTemp
         , orbitSequence = orbitSeq
+        , uwp = uwp
+        , code = code
         }
 
 
@@ -200,6 +204,8 @@ codecStellarObject =
         |> Codec.maybeField "greenhouse" .greenhouse Codec.int
         |> Codec.maybeField "meanTemperature" .meanTemperature Codec.float
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
+        |> Codec.maybeField "uwp" .uwp Codec.string
+        |> Codec.maybeField "code" .code Codec.string
         |> Codec.buildObject
         |> -- Codec.map needs a way to go from object, and a way to go back to object
            Codec.map StellarObject (\(StellarObject data) -> data)

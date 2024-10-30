@@ -1,4 +1,4 @@
-module Traveller.Star exposing (CompanionStar, Star, StarColour, codecStar, sampleSystemText, starColourRGB)
+module Traveller.Star exposing (CompanionStar, Star(..), StarColour, StarData, codecStar, sampleSystemText, starColourRGB)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -124,7 +124,12 @@ starColourRGB colour =
             "#800000"
 
 
-type alias Star =
+type Star
+    = -- needs to be a type instead of an alias, because its recursive
+      Star StarData
+
+
+type alias StarData =
     { orbitPosition : StellarPoint
     , inclination : Int
     , eccentricity : Float
@@ -139,7 +144,7 @@ type alias Star =
     , temperature : Int
     , age : Float
     , colour : Maybe StarColour
-    , companion : Maybe CompanionStar
+    , companion : Maybe Star
     , orbit : Float
     , period : Float
     , baseline : Int
@@ -181,9 +186,38 @@ type alias CompanionStar =
     }
 
 
+buildStarData orbitPosition_ inclination_ eccentricity_ effectiveHZCODeviation_ stellarClass_ stellarType_ totalObjects_ subtype_ orbitType_ mass_ diameter_ temperature_ age_ colour_ companion_ orbit_ period_ baseline_ emptyOrbits_ spread_ availableOrbits_ stellarObjects_ occupiedOrbits_ orbitSequence_ jump_ =
+    { orbitPosition = orbitPosition_
+    , inclination = inclination_
+    , eccentricity = eccentricity_
+    , effectiveHZCODeviation = effectiveHZCODeviation_
+    , stellarClass = stellarClass_
+    , stellarType = stellarType_
+    , totalObjects = totalObjects_
+    , subtype = subtype_
+    , orbitType = orbitType_
+    , mass = mass_
+    , diameter = diameter_
+    , temperature = temperature_
+    , age = age_
+    , colour = colour_
+    , companion = companion_
+    , orbit = orbit_
+    , period = period_
+    , baseline = baseline_
+    , emptyOrbits = emptyOrbits_
+    , spread = spread_
+    , availableOrbits = availableOrbits_
+    , stellarObjects = stellarObjects_
+    , occupiedOrbits = occupiedOrbits_
+    , orbitSequence = orbitSequence_
+    , jump = jump_
+    }
+
+
 codecStar : Codec Star
 codecStar =
-    Codec.object Star
+    Codec.object buildStarData
         |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
         |> Codec.field "inclination" .inclination Codec.int
         |> Codec.field "eccentricity" .eccentricity Codec.float
@@ -198,7 +232,7 @@ codecStar =
         |> Codec.field "temperature" .temperature Codec.int
         |> Codec.field "age" .age Codec.float
         |> Codec.optionalField "colour" .colour codecStarColour
-        |> Codec.optionalNullableField "companion" .companion codecCompanionStar
+        |> Codec.field "companion" .companion (Codec.lazy (\_ -> Codec.nullable codecStar))
         |> Codec.field "orbit" .orbit Codec.float
         |> Codec.field "period" .period Codec.float
         |> Codec.field "baseline" .baseline Codec.int
@@ -210,6 +244,8 @@ codecStar =
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
         |> Codec.field "jump" .jump Codec.float
         |> Codec.buildObject
+        |> -- Codec.map needs a way to go from object, and a way to go back to object
+           Codec.map Star (\(Star data) -> data)
 
 
 codecCompanionStar : Codec CompanionStar
