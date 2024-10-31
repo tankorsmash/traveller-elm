@@ -1,4 +1,4 @@
-module Traveller.Star exposing (CompanionStar, Star(..), StarColour, StarData, codecStar, sampleSystemText, starColourRGB)
+module Traveller.Star exposing (CompanionStar, Star(..), StarColour, StarData, codecStar, getStarData, sampleSystemText, starColourRGB)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -276,3 +276,10 @@ codecCompanionStar =
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
         |> Codec.optionalField "jump" .jump Codec.float
         |> Codec.buildObject
+
+
+{-| Extract the StarData from a Star
+-}
+getStarData : Star -> StarData
+getStarData (Star starData) =
+    starData

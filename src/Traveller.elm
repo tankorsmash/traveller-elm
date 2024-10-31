@@ -612,6 +612,55 @@ hexToCoords hexId =
     ( row, col )
 
 
+renderStar : Star.StarData -> Float -> Element.Element msg
+renderStar starData nestingLevel =
+    let
+        renderStellarObject : StellarObject -> Element.Element msg
+        renderStellarObject (StellarObject stellarObject) =
+            row [ Element.spacing 8 ]
+                [ case stellarObject.orbit of
+                    SimpleOrbit orbit ->
+                        text <| Round.round 2 orbit
+
+                    ComplexOrbit _ ->
+                        Element.none
+                , case stellarObject.uwp of
+                    Just uwp ->
+                        text <| uwp
+
+                    Nothing ->
+                        Element.none
+                , case stellarObject.code of
+                    Just code ->
+                        text <| code
+
+                    Nothing ->
+                        Element.none
+                ]
+    in
+    column [ Element.moveRight <| nestingLevel * 10 ]
+        [ el [] <|
+            text <|
+                starData.stellarType
+                    ++ (case starData.subtype of
+                            Just num ->
+                                "" ++ String.fromInt num
+
+                            Nothing ->
+                                ""
+                       )
+                    ++ " "
+                    ++ starData.stellarClass
+        , starData.companion
+            |> Maybe.map
+                (\(Star.Star compStarData) ->
+                    renderStar compStarData (nestingLevel + 1)
+                )
+            |> Maybe.withDefault Element.none
+        , column [] <| List.map renderStellarObject starData.stellarObjects
+        ]
+
+
 viewSystemDetailsSidebar : Maybe ( HexId, Int ) -> Maybe HexOrigin -> Dict.Dict RawHexId SolarSystem -> Element Msg
 viewSystemDetailsSidebar maybeViewingHexId maybeViewingHexOrigin solarSystemDict =
     column
@@ -626,60 +675,8 @@ viewSystemDetailsSidebar maybeViewingHexId maybeViewingHexOrigin solarSystemDict
             )
           of
             ( Just ( viewingHexId, si ), Just solarSystem ) ->
-                let
-                    renderStar : Star.StarData -> Float -> Element.Element msg
-                    renderStar starData nestingLevel =
-                        let
-                            renderStellarObject : StellarObject -> Element.Element msg
-                            renderStellarObject (StellarObject stellarObject) =
-                                row [ Element.spacing 8 ]
-                                    [ case stellarObject.orbit of
-                                        SimpleOrbit orbit ->
-                                            text <| Round.round 2 orbit
-
-                                        ComplexOrbit _ ->
-                                            Element.none
-                                    , case stellarObject.uwp of
-                                        Just uwp ->
-                                            text <| uwp
-
-                                        Nothing ->
-                                            Element.none
-                                    , case stellarObject.code of
-                                        Just code ->
-                                            text <| code
-
-                                        Nothing ->
-                                            Element.none
-                                    ]
-                        in
-                        column [ Element.moveRight <| nestingLevel * 10 ]
-                            [ el [] <|
-                                text <|
-                                    starData.stellarType
-                                        ++ (case starData.subtype of
-                                                Just num ->
-                                                    "" ++ String.fromInt num
-
-                                                Nothing ->
-                                                    ""
-                                           )
-                                        ++ " "
-                                        ++ starData.stellarClass
-                            , starData.companion
-                                |> Maybe.map
-                                    (\(Star.Star compStarData) ->
-                                        renderStar compStarData (nestingLevel + 1)
-                                    )
-                                |> Maybe.withDefault Element.none
-                            , column [] <| List.map renderStellarObject starData.stellarObjects
-                            ]
-
-                    getStarData (Star.Star starData) =
-                        starData
-                in
                 column [ Element.spacing 10 ] <|
-                    [ renderStar (getStarData solarSystem.primaryStar) 0
+                    [ renderStar (Star.getStarData solarSystem.primaryStar) 0
                     , Input.button
                         [ Background.color <| rgb 0.5 1.5 0.5
                         , Border.rounded 5
