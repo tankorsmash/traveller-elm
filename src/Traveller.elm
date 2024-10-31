@@ -626,7 +626,10 @@ renderStar starData nestingLevel =
     let
         renderStellarObject : Int -> StellarObject -> Element.Element msg
         renderStellarObject newNestingLevel (StellarObject stellarObject) =
-            row [ Element.spacing 8, Element.moveRight <| toFloat <| newNestingLevel * 20 ]
+            row
+                [ Element.spacing 8
+                , Element.moveRight <| toFloat <| newNestingLevel * 20
+                ]
                 [ case stellarObject.orbit of
                     SimpleOrbit orbit ->
                         monospaceText <| Round.round 2 orbit
@@ -639,7 +642,8 @@ renderStar starData nestingLevel =
                             Ok uwpData ->
                                 column []
                                     [ monospaceText <| uwp
-                                    , monospaceText <| Debug.toString uwpData.size
+                                    , -- temporarily using Debug.toString
+                                      monospaceText <| Debug.toString uwpData.size
                                     ]
 
                             Err _ ->
