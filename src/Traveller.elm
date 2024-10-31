@@ -31,6 +31,7 @@ import Html.Styled.Events
 import Http
 import Json.Decode as JsDecode
 import Maybe.Extra as Maybe
+import Parser
 import RemoteData exposing (RemoteData(..))
 import Round exposing (round)
 import Svg.Attributes exposing (width)
@@ -41,6 +42,7 @@ import Svg.Styled.Lazy
 import Task
 import Traveller.HexId as HexId exposing (HexId, RawHexId)
 import Traveller.Orbit exposing (StellarOrbit(..))
+import Traveller.Parser as TravellerParser
 import Traveller.SectorData exposing (SISector, SectorData, SurveyIndexData, codecSectorData, codecSurveyIndexData)
 import Traveller.SolarSystem exposing (SolarSystem)
 import Traveller.Star as Star exposing (Star, starColourRGB)
@@ -612,7 +614,8 @@ hexToCoords hexId =
     ( row, col )
 
 
-{-| Builds a monospace text element -}
+{-| Builds a monospace text element
+-}
 monospaceText : String -> Element.Element msg
 monospaceText someString =
     text someString |> el [ Font.family [ Font.monospace ] ]
@@ -632,10 +635,19 @@ renderStar starData nestingLevel =
                         Element.none
                 , case stellarObject.uwp of
                     Just uwp ->
-                        monospaceText <| uwp
+                        case Parser.run TravellerParser.uwp uwp of
+                            Ok uwpData ->
+                                column []
+                                    [ monospaceText <| uwp
+                                    , monospaceText <| Debug.toString uwpData.size
+                                    ]
+
+                            Err _ ->
+                                monospaceText <| uwp
 
                     Nothing ->
                         Element.none
+                , text stellarObject.orbitSequence
                 , case stellarObject.code of
                     Just code ->
                         text <| code
