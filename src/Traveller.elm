@@ -612,6 +612,12 @@ hexToCoords hexId =
     ( row, col )
 
 
+{-| Builds a monospace text element -}
+monospaceText : String -> Element.Element msg
+monospaceText someString =
+    text someString |> el [ Font.family [ Font.monospace ] ]
+
+
 renderStar : Star.StarData -> Float -> Element.Element msg
 renderStar starData nestingLevel =
     let
@@ -620,13 +626,13 @@ renderStar starData nestingLevel =
             row [ Element.spacing 8 ]
                 [ case stellarObject.orbit of
                     SimpleOrbit orbit ->
-                        text <| Round.round 2 orbit
+                        monospaceText <| Round.round 2 orbit
 
                     ComplexOrbit _ ->
                         Element.none
                 , case stellarObject.uwp of
                     Just uwp ->
-                        text <| uwp
+                        monospaceText <| uwp
 
                     Nothing ->
                         Element.none
