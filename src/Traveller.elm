@@ -621,12 +621,12 @@ monospaceText someString =
     text someString |> el [ Font.family [ Font.monospace ] ]
 
 
-renderStar : Star.StarData -> Float -> Element.Element msg
+renderStar : Star.StarData -> Int -> Element.Element msg
 renderStar starData nestingLevel =
     let
-        renderStellarObject : StellarObject -> Element.Element msg
-        renderStellarObject (StellarObject stellarObject) =
-            row [ Element.spacing 8 ]
+        renderStellarObject : Int -> StellarObject -> Element.Element msg
+        renderStellarObject newNestingLevel (StellarObject stellarObject) =
+            row [ Element.spacing 8, Element.moveRight <| toFloat <| newNestingLevel * 20 ]
                 [ case stellarObject.orbit of
                     SimpleOrbit orbit ->
                         monospaceText <| Round.round 2 orbit
@@ -656,7 +656,7 @@ renderStar starData nestingLevel =
                         Element.none
                 ]
     in
-    column [ Element.moveRight <| nestingLevel * 10 ]
+    column [ Element.moveRight <| toFloat <| nestingLevel * 10 ]
         [ el [] <|
             text <|
                 starData.stellarType
@@ -675,7 +675,7 @@ renderStar starData nestingLevel =
                     renderStar compStarData (nestingLevel + 1)
                 )
             |> Maybe.withDefault Element.none
-        , column [] <| List.map renderStellarObject starData.stellarObjects
+        , column [] <| List.map (renderStellarObject <| nestingLevel + 1) starData.stellarObjects
         ]
 
 
