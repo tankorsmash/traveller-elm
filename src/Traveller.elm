@@ -40,11 +40,11 @@ import Svg.Styled.Events as SvgEvents
 import Svg.Styled.Lazy
 import Task
 import Traveller.HexId as HexId exposing (HexId, RawHexId)
-import Traveller.Orbit
+import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.SectorData exposing (SISector, SectorData, SurveyIndexData, codecSectorData, codecSurveyIndexData)
 import Traveller.SolarSystem exposing (SolarSystem)
 import Traveller.Star as Star exposing (Star, starColourRGB)
-import Traveller.StellarObject
+import Traveller.StellarObject exposing (StellarObject(..))
 
 
 gasGiantSI =
@@ -630,14 +630,14 @@ viewSystemDetailsSidebar maybeViewingHexId maybeViewingHexOrigin solarSystemDict
                     renderStar : Star.StarData -> Float -> Element.Element msg
                     renderStar starData nestingLevel =
                         let
-                            renderStellarObject : Traveller.StellarObject.StellarObject -> Element.Element msg
-                            renderStellarObject (Traveller.StellarObject.StellarObject stellarObject) =
+                            renderStellarObject : StellarObject -> Element.Element msg
+                            renderStellarObject (StellarObject stellarObject) =
                                 row [ Element.spacing 8 ]
                                     [ case stellarObject.orbit of
-                                        Traveller.Orbit.SimpleOrbit orbit ->
+                                        SimpleOrbit orbit ->
                                             text <| Round.round 2 orbit
 
-                                        Traveller.Orbit.ComplexOrbit _ ->
+                                        ComplexOrbit _ ->
                                             Element.none
                                     , case stellarObject.uwp of
                                         Just uwp ->
