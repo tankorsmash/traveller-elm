@@ -629,6 +629,7 @@ renderStar starData nestingLevel =
             row
                 [ Element.spacing 8
                 , Element.moveRight <| toFloat <| newNestingLevel * 20
+                , Font.size 14
                 ]
                 [ case stellarObject.orbit of
                     SimpleOrbit orbit ->
@@ -661,7 +662,7 @@ renderStar starData nestingLevel =
                 ]
     in
     column [ Element.moveRight <| toFloat <| nestingLevel * 10 ]
-        [ el [] <|
+        [ el [ Font.size 16, Font.bold ] <|
             text <|
                 starData.stellarType
                     ++ (case starData.subtype of
