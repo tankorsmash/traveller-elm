@@ -247,38 +247,38 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                         Svg.g
                             []
                             ((case primaryStar.companion of
-                                Just (Star.Star compStar) ->
+                                Just (Star.Star compStarData) ->
                                     let
                                         compStarPos =
                                             Tuple.mapFirst (\x_ -> x_ - 5) primaryPos
                                     in
                                     Svg.g []
                                         [ drawStar primaryPos 12 primaryStar
-                                        , drawStar compStarPos 6 compStar
+                                        , drawStar compStarPos 6 compStarData
                                         ]
 
                                 Nothing ->
                                     drawStar primaryPos 12 primaryStar
                              )
                                 :: List.indexedMap
-                                    (\idx (Star.Star secondaryStar) ->
+                                    (\idx (Star.Star secondaryStarData) ->
                                         let
                                             secondaryStarPos =
                                                 rotatePoint idx primaryPos 60 20
                                         in
-                                        case secondaryStar.companion of
-                                            Just (Star.Star compStar) ->
+                                        case secondaryStarData.companion of
+                                            Just (Star.Star compStarData) ->
                                                 let
                                                     compStarPos =
                                                         Tuple.mapFirst (\x_ -> x_ - 5) secondaryStarPos
                                                 in
                                                 Svg.g []
-                                                    [ drawStar secondaryStarPos 7 secondaryStar
-                                                    , drawStar compStarPos 3 compStar
+                                                    [ drawStar secondaryStarPos 7 secondaryStarData
+                                                    , drawStar compStarPos 3 compStarData
                                                     ]
 
                                             Nothing ->
-                                                drawStar secondaryStarPos 7 secondaryStar
+                                                drawStar secondaryStarPos 7 secondaryStarData
                                     )
                                     stars
                             )
@@ -628,7 +628,7 @@ viewSystemDetailsSidebar maybeViewingHexId maybeViewingHexOrigin solarSystemDict
             ( Just ( viewingHexId, si ), Just solarSystem ) ->
                 let
                     renderStar : Star.StarData -> Float -> Element.Element msg
-                    renderStar star nestingLevel =
+                    renderStar starData nestingLevel =
                         let
                             renderStellarObject : Traveller.StellarObject.StellarObject -> Element.Element msg
                             renderStellarObject (Traveller.StellarObject.StellarObject stellarObject) =
@@ -656,8 +656,8 @@ viewSystemDetailsSidebar maybeViewingHexId maybeViewingHexOrigin solarSystemDict
                         column [ Element.moveRight <| nestingLevel * 10 ]
                             [ el [] <|
                                 text <|
-                                    star.stellarType
-                                        ++ (case star.subtype of
+                                    starData.stellarType
+                                        ++ (case starData.subtype of
                                                 Just num ->
                                                     "" ++ String.fromInt num
 
@@ -665,37 +665,36 @@ viewSystemDetailsSidebar maybeViewingHexId maybeViewingHexOrigin solarSystemDict
                                                     ""
                                            )
                                         ++ " "
-                                        ++ star.stellarClass
-                            , star.companion
+                                        ++ starData.stellarClass
+                            , starData.companion
                                 |> Maybe.map
-                                    (\(Star.Star compStar) ->
-                                        renderStar compStar (nestingLevel + 1)
+                                    (\(Star.Star compStarData) ->
+                                        renderStar compStarData (nestingLevel + 1)
                                     )
                                 |> Maybe.withDefault Element.none
-                            , column [] <| List.map renderStellarObject star.stellarObjects
+                            , column [] <| List.map renderStellarObject starData.stellarObjects
                             ]
 
-                    getStarData (Star.Star star) =
-                        star
+                    getStarData (Star.Star starData) =
+                        starData
                 in
                 column [ Element.spacing 10 ] <|
-                    renderStar (getStarData solarSystem.primaryStar) 0
-                        --|> List.map text
-                        :: [ Input.button
-                                [ Background.color <| rgb 0.5 1.5 0.5
-                                , Border.rounded 5
-                                , Border.width 10
-                                , Border.color <| rgb 0.5 1.5 0.5
-                                , Font.size 14
-                                , Font.color <| rgb 0 0 0
-                                , Element.spacing 10
-                                , -- limited styling for mouse over
-                                  Element.mouseOver [ Border.color <| rgb 0.9 0.9 0.9, Background.color <| rgb 0.9 0.9 0.9 ]
-                                ]
-                                { onPress = Just <| GoToSolarSystemPage viewingHexId
-                                , label = text <| "Visualize Solar System: " ++ viewingHexId.raw
-                                }
-                           ]
+                    [ renderStar (getStarData solarSystem.primaryStar) 0
+                    , Input.button
+                        [ Background.color <| rgb 0.5 1.5 0.5
+                        , Border.rounded 5
+                        , Border.width 10
+                        , Border.color <| rgb 0.5 1.5 0.5
+                        , Font.size 14
+                        , Font.color <| rgb 0 0 0
+                        , Element.spacing 10
+                        , -- limited styling for mouse over
+                          Element.mouseOver [ Border.color <| rgb 0.9 0.9 0.9, Background.color <| rgb 0.9 0.9 0.9 ]
+                        ]
+                        { onPress = Just <| GoToSolarSystemPage viewingHexId
+                        , label = text <| "Visualize Solar System: " ++ viewingHexId.raw
+                        }
+                    ]
 
             _ ->
                 text "No solar system data found in dict"
