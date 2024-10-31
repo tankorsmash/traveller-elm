@@ -282,17 +282,21 @@ sampleStellarObject =
     """
 
 
+type alias PlanetoidBelt =
+    {}
+
+
 type alias TerrestrialData =
     { orbitPosition : StellarPoint
     , inclination : Float
     , eccentricity : Float
-    , effectiveHZCODeviation : Maybe Float
-    , size : String
-    , orbit : StellarOrbit
+    , effectiveHZCODeviation : Float
+    , size : Int
+    , orbit : Float
     , period : Float
     , composition : String
     , retrograde : Bool
-    , trojanOffset : Float
+    , trojanOffset : Maybe Float
     , axialTilt : Float
     , moons : List StellarMoon
     , biomassRating : Int
@@ -303,20 +307,55 @@ type alias TerrestrialData =
     , currentNativeSophont : Bool
     , extinctNativeSophont : Bool
     , hasRing : Bool
-    , orbitType : Int
-    , atmosphere : StellarAtmosphere
-    , hydrographics : StellarHydrographics
-    , population : StellarPopulation
-    , governmentCode : Int
-    , lawLevelCode : Int
-    , starPort : String
-    , techLevel : Int
-    , tradeCodes : List String
     , albedo : Float
     , density : Float
-    , greenhouse : Int
+    , greenhouse : Float
+    , meanTemperature : Float
+    , nativeSophont : Bool
+    , extinctSophont : Bool
+    , habitableRating : Int
+    , orbitSequence : String
+    , uwp : String
+    , diameter : Float
+    , gravity : Float
+    , mass : Float
+    , escapeVelocity : Float
+    , safeJumpTime : String
+    }
+
+
+type alias PlanetoidData =
+    { orbitPosition : StellarPoint
+    , inclination : Float
+    , eccentricity : Float
+    , effectiveHZCODeviation : Float
+    , size : String
+    , orbit : Float
+    , period : Float
+    , composition : String
+    , retrograde : Bool
+    , trojanOffset : Maybe Float
+    , axialTilt : Float
+    , moons : List StellarMoon
+    , biomassRating : Int
+    , biocomplexityCode : Int
+    , biodiversityRating : Int
+    , compatibilityRating : Int
+    , resourceRating : Int
+    , currentNativeSophont : Bool
+    , extinctNativeSophont : Bool
+    , hasRing : Bool
+    , albedo : Float
+    , density : Float
+    , greenhouse : Float
     , meanTemperature : Float
     , orbitSequence : String
+    , uwp : String
+    , diameter : Float
+    , gravity : Maybe Float
+    , mass : Maybe Float
+    , escapeVelocity : Maybe Float
+    , safeJumpTime : String
     }
 
 
@@ -325,23 +364,37 @@ type alias GasGiantData =
     , inclination : Float
     , eccentricity : Float
     , effectiveHZCODeviation : Maybe Float
-    , orbitType : Int
-    , orbit : StellarOrbit
     , code : String
+    , diameter : Float
+    , mass : Float
+    , orbit : Float
     , moons : List StellarMoon
     , hasRing : Bool
+    , trojanOffset : Maybe Float
+    , axialTilt : Float
+    , period : Float
     , orbitSequence : String
+    , safeJumpTime : String
     }
 
 
-type alias PlanetoidData =
+type alias PlanetoidBeltData =
     { orbitPosition : StellarPoint
     , inclination : Float
     , eccentricity : Float
-    , effectiveHZCODeviation : Maybe Float
-    , orbitType : Int
-    , orbit : StellarOrbit
+    , effectiveHZCODeviation : Float
+    , orbit : Float
+    , mType : Float
+    , sType : Float
+    , cType : Float
+    , oType : Float
+    , span : Float
+    , bulk : Float
+    , resourceRating : Float
+    , period : Float
     , orbitSequence : String
+    , uwp : String
+    , safeJumpTime : String
     }
 
 
@@ -376,21 +429,30 @@ type StarData
 type StellarObjectX
     = GasGiant GasGiantData
     | TerrestrialPlanet TerrestrialData
-    | Planetoid PlanetoidData
+    | Planetoid PlanetoidBeltData
     | Star StarData
 
 
-codecPlanetoidData : Codec PlanetoidData
-codecPlanetoidData =
+codecPlanetoidBeltData : Codec PlanetoidBeltData
+codecPlanetoidBeltData =
     Codec.object
-        PlanetoidData
+        PlanetoidBeltData
         |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
-        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
-        |> Codec.field "orbitType" .orbitType Codec.int
-        |> Codec.field "orbit" .orbit codecStellarOrbit
+        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
+        |> Codec.field "orbit" .orbit Codec.float
+        |> Codec.field "mType" .orbit Codec.float
+        |> Codec.field "sType" .orbit Codec.float
+        |> Codec.field "cType" .orbit Codec.float
+        |> Codec.field "oType" .orbit Codec.float
+        |> Codec.field "span" .orbit Codec.float
+        |> Codec.field "bulk" .orbit Codec.float
+        |> Codec.field "resourceRating" .orbit Codec.float
+        |> Codec.field "period" .orbit Codec.float
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
+        |> Codec.field "uwp" .orbitSequence Codec.string
+        |> Codec.field "safeJumpTime" .orbitSequence Codec.string
         |> Codec.buildObject
 
 
@@ -402,12 +464,17 @@ codecGasGiantData =
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
-        |> Codec.field "orbitType" .orbitType Codec.int
-        |> Codec.field "orbit" .orbit codecStellarOrbit
         |> Codec.field "code" .code Codec.string
+        |> Codec.field "diameter" .diameter Codec.float
+        |> Codec.field "mass" .mass Codec.float
+        |> Codec.field "orbit" .orbit Codec.float
         |> Codec.field "moons" .moons (Codec.list (Codec.lazy (\_ -> codecStellarMoon)))
         |> Codec.field "hasRing" .hasRing Codec.bool
+        |> Codec.field "trojanOffset" .trojanOffset (Codec.nullable Codec.float)
+        |> Codec.field "axialTilt" .orbit Codec.float
+        |> Codec.field "period" .orbit Codec.float
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
+        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
         |> Codec.buildObject
 
 
@@ -418,13 +485,13 @@ codecTerrestrialData =
         |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
-        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
-        |> Codec.field "size" .size Codec.string
-        |> Codec.field "orbit" .orbit codecStellarOrbit
+        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
+        |> Codec.field "size" .size Codec.int
+        |> Codec.field "orbit" .orbit Codec.float
         |> Codec.field "period" .period Codec.float
         |> Codec.field "composition" .composition Codec.string
         |> Codec.field "retrograde" .retrograde Codec.bool
-        |> Codec.field "trojanOffset" .trojanOffset Codec.float
+        |> Codec.field "trojanOffset" .trojanOffset (Codec.nullable Codec.float)
         |> Codec.field "axialTilt" .axialTilt Codec.float
         |> Codec.field "moons" .moons (Codec.list (Codec.lazy (\_ -> codecStellarMoon)))
         |> Codec.field "biomassRating" .biomassRating Codec.int
@@ -435,20 +502,58 @@ codecTerrestrialData =
         |> Codec.field "currentNativeSophont" .currentNativeSophont Codec.bool
         |> Codec.field "extinctNativeSophont" .extinctNativeSophont Codec.bool
         |> Codec.field "hasRing" .hasRing Codec.bool
-        |> Codec.field "orbitType" .orbitType Codec.int
-        |> Codec.field "atmosphere" .atmosphere codecStellarAtmosphere
-        |> Codec.field "hydrographics" .hydrographics codecStellarHydrographics
-        |> Codec.field "population" .population codecStellarPopulation
-        |> Codec.field "governmentCode" .governmentCode Codec.int
-        |> Codec.field "lawLevelCode" .lawLevelCode Codec.int
-        |> Codec.field "starPort" .starPort Codec.string
-        |> Codec.field "techLevel" .techLevel Codec.int
-        |> Codec.field "tradeCodes" .tradeCodes (Codec.list Codec.string)
         |> Codec.field "albedo" .albedo Codec.float
         |> Codec.field "density" .density Codec.float
-        |> Codec.field "greenhouse" .greenhouse Codec.int
+        |> Codec.field "greenhouse" .greenhouse Codec.float
+        |> Codec.field "meanTemperature" .meanTemperature Codec.float
+        |> Codec.field "nativeSophont" .nativeSophont Codec.bool
+        |> Codec.field "extinctSophont" .extinctSophont Codec.bool
+        |> Codec.field "habitableRating" .habitableRating Codec.int
+        |> Codec.field "orbitSequence" .orbitSequence Codec.string
+        |> Codec.field "uwp" .uwp Codec.string
+        |> Codec.field "diameter" .diameter Codec.float
+        |> Codec.field "gravity" .gravity Codec.float
+        |> Codec.field "mass" .mass Codec.float
+        |> Codec.field "escapeVelocity" .escapeVelocity Codec.float
+        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
+        |> Codec.buildObject
+
+
+codecPlanetoidData : Codec PlanetoidData
+codecPlanetoidData =
+    Codec.object
+        PlanetoidData
+        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+        |> Codec.field "inclination" .inclination Codec.float
+        |> Codec.field "eccentricity" .eccentricity Codec.float
+        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
+        |> Codec.field "size" .size Codec.string
+        |> Codec.field "orbit" .orbit Codec.float
+        |> Codec.field "period" .period Codec.float
+        |> Codec.field "composition" .composition Codec.string
+        |> Codec.field "retrograde" .retrograde Codec.bool
+        |> Codec.field "trojanOffset" .trojanOffset (Codec.nullable Codec.float)
+        |> Codec.field "axialTilt" .axialTilt Codec.float
+        |> Codec.field "moons" .moons (Codec.list (Codec.lazy (\_ -> codecStellarMoon)))
+        |> Codec.field "biomassRating" .biomassRating Codec.int
+        |> Codec.field "biocomplexityCode" .biocomplexityCode Codec.int
+        |> Codec.field "biodiversityRating" .biodiversityRating Codec.int
+        |> Codec.field "compatibilityRating" .compatibilityRating Codec.int
+        |> Codec.field "resourceRating" .resourceRating Codec.int
+        |> Codec.field "currentNativeSophont" .currentNativeSophont Codec.bool
+        |> Codec.field "extinctNativeSophont" .extinctNativeSophont Codec.bool
+        |> Codec.field "hasRing" .hasRing Codec.bool
+        |> Codec.field "albedo" .albedo Codec.float
+        |> Codec.field "density" .density Codec.float
+        |> Codec.field "greenhouse" .greenhouse Codec.float
         |> Codec.field "meanTemperature" .meanTemperature Codec.float
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
+        |> Codec.field "uwp" .uwp Codec.string
+        |> Codec.field "diameter" .diameter Codec.float
+        |> Codec.field "gravity" .gravity (Codec.nullable Codec.float)
+        |> Codec.field "mass" .mass (Codec.nullable Codec.float)
+        |> Codec.field "escapeVelocity" .escapeVelocity (Codec.nullable Codec.float)
+        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
         |> Codec.buildObject
 
 
