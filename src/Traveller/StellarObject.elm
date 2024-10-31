@@ -282,10 +282,6 @@ sampleStellarObject =
     """
 
 
-type alias PlanetoidBelt =
-    {}
-
-
 type alias TerrestrialData =
     { orbitPosition : StellarPoint
     , inclination : Float
@@ -429,7 +425,8 @@ type StarData
 type StellarObjectX
     = GasGiant GasGiantData
     | TerrestrialPlanet TerrestrialData
-    | Planetoid PlanetoidBeltData
+    | PlanetoidBelt PlanetoidBeltData
+    | Planetoid PlanetoidData
     | Star StarData
 
 
