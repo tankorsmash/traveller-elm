@@ -1,15 +1,10 @@
-module Traveller.StellarMoon exposing (Moon(..), codecMoon, sampleStellarMoon)
+module Traveller.StellarMoon exposing (MoonData, decodeMoonData, sampleStellarMoon)
 
 import Codec exposing (Codec)
-import Json.Decode as JsDecode
-import Json.Encode as JsEncode
-import Parser exposing ((|.), (|=), Parser)
-import Parser.Extras as Parser
-import Traveller.Atmosphere exposing (StellarAtmosphere, codecStellarAtmosphere)
-import Traveller.Hydrographics exposing (StellarHydrographics, codecStellarHydrographics)
+import Json.Decode as Decode
+import Json.Decode.Pipeline as Decode
 import Traveller.Orbit exposing (StellarOrbit, codecStellarOrbit)
 import Traveller.Point exposing (StellarPoint, codecStellarPoint)
-import Traveller.Population exposing (StellarPopulation, codecStellarPopulation)
 
 
 sampleStellarMoon : String
@@ -77,40 +72,16 @@ type alias MoonData =
     }
 
 
-type Moon
-    = -- needs to be a type instead of an alias, because its recursive
-      Moon MoonData
-
-
-buildMoon =
-    \orbPos incl ecc effHZCODev orbit size period biomass axialTilt sjd ->
-        { orbitPosition = orbPos
-        , inclination = incl
-        , eccentricity = ecc
-        , effectiveHZCODeviation = effHZCODev
-        , orbit = orbit
-        , size = size
-        , period = period
-        , biomassRating = biomass
-        , axialTilt = axialTilt
-        , safeJumpDistance = sjd
-        }
-
-
-codecMoon : Codec Moon
-codecMoon =
-    Codec.object
-        buildMoon
-        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
-        |> Codec.field "inclination" .inclination Codec.float
-        |> Codec.field "eccentricity" .eccentricity Codec.float
-        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
-        |> Codec.field "orbit" .orbit codecStellarOrbit
-        |> Codec.nullableField "size" .size Codec.string
-        |> Codec.nullableField "period" .period Codec.float
-        |> Codec.maybeField "biomassRating" .biomassRating Codec.int
-        |> Codec.maybeField "axialTilt" .axialTilt Codec.float
-        |> Codec.maybeField "safeJumpDistance" .safeJumpDistance Codec.string
-        |> Codec.buildObject
-        |> -- Codec.map needs a way to go from object, and a way to go back to object
-           Codec.map Moon (\(Moon data) -> data)
+decodeMoonData : Decode.Decoder MoonData
+decodeMoonData =
+    Decode.succeed MoonData
+        |> Decode.required "orbitPosition" (Codec.decoder codecStellarPoint)
+        |> Decode.required "inclination" Decode.float
+        |> Decode.required "eccentricity" Decode.float
+        |> Decode.required "effectiveHZCODeviation" Decode.float
+        |> Decode.required "orbit" (Codec.decoder codecStellarOrbit)
+        |> Decode.required "size" (Decode.nullable Decode.string)
+        |> Decode.required "period" (Decode.nullable Decode.float)
+        |> Decode.required "biomassRating" Decode.int
+        |> Decode.required "axialTilt" Decode.float
+        |> Decode.required "safeJumpDistance" Decode.string

@@ -3,16 +3,12 @@ module Traveller.StellarObject exposing (StellarObject(..), codecStellarObject, 
 import Codec exposing (Codec)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
-import Json.Encode as JsEncode
-import Parser exposing ((|.), (|=), Parser)
-import Parser.Extras as Parser
-import Random.Char as Codec
 import Traveller.Atmosphere exposing (StellarAtmosphere, codecStellarAtmosphere)
 import Traveller.Hydrographics exposing (StellarHydrographics, codecStellarHydrographics)
 import Traveller.Orbit exposing (StellarOrbit, codecStellarOrbit)
 import Traveller.Point exposing (StellarPoint, codecStellarPoint)
 import Traveller.Population exposing (StellarPopulation, codecStellarPopulation)
-import Traveller.StellarMoon exposing (Moon, codecMoon)
+import Traveller.StellarMoon exposing (MoonData, decodeMoonData)
 
 
 type StarColour
@@ -93,7 +89,7 @@ type alias StellarData =
     , retrograde : Maybe Bool
     , trojanOffset : Maybe Float
     , axialTilt : Maybe Float
-    , moons : Maybe (List Moon)
+    , moons : Maybe (List MoonData)
     , biomassRating : Maybe Int
     , biocomplexityCode : Maybe Int
     , biodiversityRating : Maybe Int
@@ -172,51 +168,52 @@ buildStellarObject =
         }
 
 
-codecStellarObject : Codec StellarObject
-codecStellarObject =
-    Codec.object
-        buildStellarObject
-        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
-        |> Codec.field "inclination" .inclination Codec.float
-        |> Codec.field "eccentricity" .eccentricity Codec.float
-        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
-        |> Codec.maybeField "size" .size Codec.string
-        |> Codec.field "orbit" .orbit codecStellarOrbit
-        |> Codec.nullableField "period" .period Codec.float
-        |> Codec.maybeField "composition" .composition Codec.string
-        |> Codec.maybeField "retrograde" .retrograde Codec.bool
-        |> Codec.maybeField "trojanOffset" .trojanOffset Codec.float
-        |> Codec.maybeField "axialTilt" .axialTilt Codec.float
-        |> Codec.maybeField "moons" .moons (Codec.list (Codec.lazy (\_ -> codecMoon)))
-        |> Codec.maybeField "biomassRating" .biomassRating Codec.int
-        |> Codec.maybeField "biocomplexityCode" .biocomplexityCode Codec.int
-        |> Codec.maybeField "biodiversityRating" .biodiversityRating Codec.int
-        |> Codec.maybeField "compatibilityRating" .compatibilityRating Codec.int
-        |> Codec.maybeField "resourceRating" .resourceRating Codec.int
-        |> Codec.maybeField "currentNativeSophont" .currentNativeSophont Codec.bool
-        |> Codec.maybeField "extinctNativeSophont" .extinctNativeSophont Codec.bool
-        |> Codec.maybeField "hasRing" .hasRing Codec.bool
-        |> Codec.field "orbitType" .orbitType Codec.int
-        |> Codec.maybeField "atmosphere" .atmosphere codecStellarAtmosphere
-        |> Codec.maybeField "hydrographics" .hydrographics codecStellarHydrographics
-        |> Codec.maybeField "population" .population codecStellarPopulation
-        |> Codec.maybeField "governmentCode" .governmentCode Codec.int
-        |> Codec.maybeField "lawLevelCode" .lawLevelCode Codec.int
-        |> Codec.maybeField "starPort" .starPort Codec.string
-        |> Codec.maybeField "techLevel" .techLevel Codec.int
-        |> Codec.maybeField "tradeCodes" .tradeCodes (Codec.list Codec.string)
-        |> Codec.maybeField "albedo" .albedo Codec.float
-        |> Codec.maybeField "density" .density Codec.float
-        |> Codec.maybeField "greenhouse" .greenhouse Codec.int
-        |> Codec.maybeField "meanTemperature" .meanTemperature Codec.float
-        |> Codec.field "orbitSequence" .orbitSequence Codec.string
-        |> Codec.maybeField "uwp" .uwp Codec.string
-        |> Codec.maybeField "code" .code Codec.string
-        |> Codec.optionalField "jumpShadow" .jumpShadow Codec.float
-        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
-        |> Codec.buildObject
-        |> -- Codec.map needs a way to go from object, and a way to go back to object
-           Codec.map StellarObject (\(StellarObject data) -> data)
+
+--codecStellarObject : Decode.Decoder StellarObject
+--codecStellarObject =
+--    Decode.succeed StellarObject
+--        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+--        |> Codec.field "inclination" .inclination Codec.float
+--        |> Codec.field "eccentricity" .eccentricity Codec.float
+--        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
+--        |> Codec.maybeField "size" .size Codec.string
+--        |> Codec.field "orbit" .orbit codecStellarOrbit
+--        |> Codec.nullableField "period" .period Codec.float
+--        |> Codec.maybeField "composition" .composition Codec.string
+--        |> Codec.maybeField "retrograde" .retrograde Codec.bool
+--        |> Codec.maybeField "trojanOffset" .trojanOffset Codec.float
+--        |> Codec.maybeField "axialTilt" .axialTilt Codec.float
+--        |> Codec.maybeField "moons" .moons (Decode.list decodeMoonData)
+--        |> Codec.maybeField "biomassRating" .biomassRating Codec.int
+--        |> Codec.maybeField "biocomplexityCode" .biocomplexityCode Codec.int
+--        |> Codec.maybeField "biodiversityRating" .biodiversityRating Codec.int
+--        |> Codec.maybeField "compatibilityRating" .compatibilityRating Codec.int
+--        |> Codec.maybeField "resourceRating" .resourceRating Codec.int
+--        |> Codec.maybeField "currentNativeSophont" .currentNativeSophont Codec.bool
+--        |> Codec.maybeField "extinctNativeSophont" .extinctNativeSophont Codec.bool
+--        |> Codec.maybeField "hasRing" .hasRing Codec.bool
+--        |> Codec.field "orbitType" .orbitType Codec.int
+--        |> Codec.maybeField "atmosphere" .atmosphere codecStellarAtmosphere
+--        |> Codec.maybeField "hydrographics" .hydrographics codecStellarHydrographics
+--        |> Codec.maybeField "population" .population codecStellarPopulation
+--        |> Codec.maybeField "governmentCode" .governmentCode Codec.int
+--        |> Codec.maybeField "lawLevelCode" .lawLevelCode Codec.int
+--        |> Codec.maybeField "starPort" .starPort Codec.string
+--        |> Codec.maybeField "techLevel" .techLevel Codec.int
+--        |> Codec.maybeField "tradeCodes" .tradeCodes (Codec.list Codec.string)
+--        |> Codec.maybeField "albedo" .albedo Codec.float
+--        |> Codec.maybeField "density" .density Codec.float
+--        |> Codec.maybeField "greenhouse" .greenhouse Codec.int
+--        |> Codec.maybeField "meanTemperature" .meanTemperature Codec.float
+--        |> Codec.field "orbitSequence" .orbitSequence Codec.string
+--        |> Codec.maybeField "uwp" .uwp Codec.string
+--        |> Codec.maybeField "code" .code Codec.string
+--        |> Codec.optionalField "jumpShadow" .jumpShadow Codec.float
+--        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
+--        |> Codec.buildObject
+--        |> -- Codec.map needs a way to go from object, and a way to go back to object
+--           Codec.map StellarObject (\(StellarObject data) -> data)
+--
 
 
 sampleStellarObject : String
@@ -296,7 +293,7 @@ type alias TerrestrialData =
     , retrograde : Bool
     , trojanOffset : Maybe Float
     , axialTilt : Float
-    , moons : List Moon
+    , moons : List MoonData
     , biomassRating : Int
     , biocomplexityCode : Int
     , biodiversityRating : Int
@@ -334,7 +331,7 @@ type alias PlanetoidData =
     , retrograde : Bool
     , trojanOffset : Maybe Float
     , axialTilt : Float
-    , moons : List Moon
+    , moons : List MoonData
     , biomassRating : Int
     , biocomplexityCode : Int
     , biodiversityRating : Int
@@ -366,7 +363,7 @@ type alias GasGiantData =
     , diameter : Float
     , mass : Float
     , orbit : Float
-    , moons : List Moon
+    , moons : List MoonData
     , hasRing : Bool
     , trojanOffset : Maybe Float
     , axialTilt : Float
@@ -414,7 +411,7 @@ type alias StarDataConfig =
     , orbit : Float
     , period : Float
     , baseline : Int
-    , stellarObjects : List StellarObject
+    , stellarObjects : List StellarObjectX
     , orbitSequence : String
     , jump : Float
     }
@@ -464,7 +461,7 @@ decodeGasGiantData =
         |> Decode.required "diameter" Decode.float
         |> Decode.required "mass" Decode.float
         |> Decode.required "orbit" Decode.float
-        |> Decode.required "moons" (Decode.list (Decode.lazy (\_ -> Codec.decoder codecStellarMoon)))
+        |> Decode.required "moons" (Decode.list decodeMoonData)
         |> Decode.required "hasRing" Decode.bool
         |> Decode.required "trojanOffset" (Decode.nullable Decode.float)
         |> Decode.required "axialTilt" Decode.float
@@ -473,26 +470,27 @@ decodeGasGiantData =
         |> Decode.required "safeJumpTime" Decode.string
 
 
-codecGasGiantData : Codec GasGiantData
-codecGasGiantData =
-    Codec.object
-        GasGiantData
-        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
-        |> Codec.field "inclination" .inclination Codec.float
-        |> Codec.field "eccentricity" .eccentricity Codec.float
-        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
-        |> Codec.field "code" .code Codec.string
-        |> Codec.field "diameter" .diameter Codec.float
-        |> Codec.field "mass" .mass Codec.float
-        |> Codec.field "orbit" .orbit Codec.float
-        |> Codec.field "moons" .moons (Codec.list (Codec.lazy (\_ -> codecMoon)))
-        |> Codec.field "hasRing" .hasRing Codec.bool
-        |> Codec.field "trojanOffset" .trojanOffset (Codec.nullable Codec.float)
-        |> Codec.field "axialTilt" .orbit Codec.float
-        |> Codec.field "period" .orbit Codec.float
-        |> Codec.field "orbitSequence" .orbitSequence Codec.string
-        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
-        |> Codec.buildObject
+
+--codecGasGiantData : Codec GasGiantData
+--codecGasGiantData =
+--    Codec.object
+--        GasGiantData
+--        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+--        |> Codec.field "inclination" .inclination Codec.float
+--        |> Codec.field "eccentricity" .eccentricity Codec.float
+--        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
+--        |> Codec.field "code" .code Codec.string
+--        |> Codec.field "diameter" .diameter Codec.float
+--        |> Codec.field "mass" .mass Codec.float
+--        |> Codec.field "orbit" .orbit Codec.float
+--        |> Codec.field "moons" .moons (Codec.list decodeMoonData)
+--        |> Codec.field "hasRing" .hasRing Codec.bool
+--        |> Codec.field "trojanOffset" .trojanOffset (Codec.nullable Codec.float)
+--        |> Codec.field "axialTilt" .orbit Codec.float
+--        |> Codec.field "period" .orbit Codec.float
+--        |> Codec.field "orbitSequence" .orbitSequence Codec.string
+--        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
+--        |> Codec.buildObject
 
 
 decodeTerrestrialData : Decode.Decoder TerrestrialData
@@ -509,7 +507,7 @@ decodeTerrestrialData =
         |> Decode.required "retrograde" Decode.bool
         |> Decode.required "trojanOffset" (Decode.nullable Decode.float)
         |> Decode.required "axialTilt" Decode.float
-        |> Decode.required "moons" (Decode.list (Decode.lazy (\_ -> Codec.decoder codecMoon)))
+        |> Decode.required "moons" (Decode.list decodeMoonData)
         |> Decode.required "biomassRating" Decode.int
         |> Decode.required "biocomplexityCode" Decode.int
         |> Decode.required "biodiversityRating" Decode.int
@@ -549,7 +547,7 @@ codecPlanetoidData =
         |> Decode.required "retrograde" Decode.bool
         |> Decode.required "trojanOffset" (Decode.nullable Decode.float)
         |> Decode.required "axialTilt" Decode.float
-        |> Decode.required "moons" (Decode.list (Decode.lazy (\_ -> Codec.decoder codecMoon)))
+        |> Decode.required "moons" (Decode.list decodeMoonData)
         |> Decode.required "biomassRating" Decode.int
         |> Decode.required "biocomplexityCode" Decode.int
         |> Decode.required "biodiversityRating" Decode.int
@@ -569,6 +567,17 @@ codecPlanetoidData =
         |> Decode.required "mass" (Decode.nullable Decode.float)
         |> Decode.required "escapeVelocity" (Decode.nullable Decode.float)
         |> Decode.required "safeJumpTime" Decode.string
+
+
+decodeStellarObjectX : Decode.Decoder StellarObjectX
+decodeStellarObjectX =
+    Decode.oneOf
+        [ Decode.map GasGiant <| decodeGasGiantData
+        , Decode.map TerrestrialPlanet <| decodeTerrestrialData
+        , Decode.map PlanetoidBelt <| decodePlanetoidBeltData
+        , Decode.map Planetoid <| codecPlanetoidData
+        , Decode.map Star <| (Decode.map StarData <| codecStarData)
+        ]
 
 
 codecStarData : Decode.Decoder StarDataConfig
@@ -597,17 +606,12 @@ codecStarData =
         |> Decode.required "orbit" Decode.float
         |> Decode.required "period" Decode.float
         |> Decode.required "baseline" Decode.int
-        |> Decode.required "stellarObjects" (Decode.list (Codec.decoder codecStellarObject))
+        --|> Decode.required "stellarObjects" (Decode.list decodeStellarObjectX)
+        |> Decode.required "stellarObjects"
+            (Decode.list
+                (Decode.lazy
+                    (\_ -> Decode.map StellarObjectx <| decodeStellarObjectX)
+                )
+            )
         |> Decode.required "orbitSequence" Decode.string
         |> Decode.required "jump" Decode.float
-
-
-decodeStellarObjectX : Decode.Decoder StellarObjectX
-decodeStellarObjectX =
-    Decode.oneOf
-        [ Decode.map GasGiant <| decodeGasGiantData
-        , Decode.map TerrestrialPlanet <| decodeTerrestrialData
-        , Decode.map PlanetoidBelt <| decodePlanetoidBeltData
-        , Decode.map Planetoid <| codecPlanetoidData
-        , Decode.map Star <| (Decode.map StarData <| codecStarData)
-        ]
