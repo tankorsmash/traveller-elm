@@ -12,7 +12,7 @@ import Traveller.Hydrographics exposing (StellarHydrographics, codecStellarHydro
 import Traveller.Orbit exposing (StellarOrbit, codecStellarOrbit)
 import Traveller.Point exposing (StellarPoint, codecStellarPoint)
 import Traveller.Population exposing (StellarPopulation, codecStellarPopulation)
-import Traveller.StellarMoon exposing (StellarMoon(..), codecStellarMoon)
+import Traveller.StellarMoon exposing (Moon, codecMoon)
 
 
 type StarColour
@@ -93,7 +93,7 @@ type alias StellarData =
     , retrograde : Maybe Bool
     , trojanOffset : Maybe Float
     , axialTilt : Maybe Float
-    , moons : Maybe (List StellarMoon)
+    , moons : Maybe (List Moon)
     , biomassRating : Maybe Int
     , biocomplexityCode : Maybe Int
     , biodiversityRating : Maybe Int
@@ -187,7 +187,7 @@ codecStellarObject =
         |> Codec.maybeField "retrograde" .retrograde Codec.bool
         |> Codec.maybeField "trojanOffset" .trojanOffset Codec.float
         |> Codec.maybeField "axialTilt" .axialTilt Codec.float
-        |> Codec.maybeField "moons" .moons (Codec.list (Codec.lazy (\_ -> codecStellarMoon)))
+        |> Codec.maybeField "moons" .moons (Codec.list (Codec.lazy (\_ -> codecMoon)))
         |> Codec.maybeField "biomassRating" .biomassRating Codec.int
         |> Codec.maybeField "biocomplexityCode" .biocomplexityCode Codec.int
         |> Codec.maybeField "biodiversityRating" .biodiversityRating Codec.int
@@ -296,7 +296,7 @@ type alias TerrestrialData =
     , retrograde : Bool
     , trojanOffset : Maybe Float
     , axialTilt : Float
-    , moons : List StellarMoon
+    , moons : List Moon
     , biomassRating : Int
     , biocomplexityCode : Int
     , biodiversityRating : Int
@@ -334,7 +334,7 @@ type alias PlanetoidData =
     , retrograde : Bool
     , trojanOffset : Maybe Float
     , axialTilt : Float
-    , moons : List StellarMoon
+    , moons : List Moon
     , biomassRating : Int
     , biocomplexityCode : Int
     , biodiversityRating : Int
@@ -366,7 +366,7 @@ type alias GasGiantData =
     , diameter : Float
     , mass : Float
     , orbit : Float
-    , moons : List StellarMoon
+    , moons : List Moon
     , hasRing : Bool
     , trojanOffset : Maybe Float
     , axialTilt : Float
@@ -473,6 +473,28 @@ decodeGasGiantData =
         |> Decode.required "safeJumpTime" Decode.string
 
 
+codecGasGiantData : Codec GasGiantData
+codecGasGiantData =
+    Codec.object
+        GasGiantData
+        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+        |> Codec.field "inclination" .inclination Codec.float
+        |> Codec.field "eccentricity" .eccentricity Codec.float
+        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
+        |> Codec.field "code" .code Codec.string
+        |> Codec.field "diameter" .diameter Codec.float
+        |> Codec.field "mass" .mass Codec.float
+        |> Codec.field "orbit" .orbit Codec.float
+        |> Codec.field "moons" .moons (Codec.list (Codec.lazy (\_ -> codecMoon)))
+        |> Codec.field "hasRing" .hasRing Codec.bool
+        |> Codec.field "trojanOffset" .trojanOffset (Codec.nullable Codec.float)
+        |> Codec.field "axialTilt" .orbit Codec.float
+        |> Codec.field "period" .orbit Codec.float
+        |> Codec.field "orbitSequence" .orbitSequence Codec.string
+        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
+        |> Codec.buildObject
+
+
 decodeTerrestrialData : Decode.Decoder TerrestrialData
 decodeTerrestrialData =
     Decode.succeed TerrestrialData
@@ -487,7 +509,7 @@ decodeTerrestrialData =
         |> Decode.required "retrograde" Decode.bool
         |> Decode.required "trojanOffset" (Decode.nullable Decode.float)
         |> Decode.required "axialTilt" Decode.float
-        |> Decode.required "moons" (Decode.list (Decode.lazy (\_ -> Codec.decoder codecStellarMoon)))
+        |> Decode.required "moons" (Decode.list (Decode.lazy (\_ -> Codec.decoder codecMoon)))
         |> Decode.required "biomassRating" Decode.int
         |> Decode.required "biocomplexityCode" Decode.int
         |> Decode.required "biodiversityRating" Decode.int
@@ -527,7 +549,7 @@ codecPlanetoidData =
         |> Decode.required "retrograde" Decode.bool
         |> Decode.required "trojanOffset" (Decode.nullable Decode.float)
         |> Decode.required "axialTilt" Decode.float
-        |> Decode.required "moons" (Decode.list (Decode.lazy (\_ -> Codec.decoder codecStellarMoon)))
+        |> Decode.required "moons" (Decode.list (Decode.lazy (\_ -> Codec.decoder codecMoon)))
         |> Decode.required "biomassRating" Decode.int
         |> Decode.required "biocomplexityCode" Decode.int
         |> Decode.required "biodiversityRating" Decode.int
