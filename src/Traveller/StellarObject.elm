@@ -609,7 +609,7 @@ codecStarData =
         |> Decode.required "stellarObjects"
             (Decode.list
                 (Decode.lazy
-                    (\_ -> Decode.map StellarObjectx <| decodeStellarObjectX)
+                    (\_ -> Decode.map StellarObjectX <| decodeStellarObjectX)
                 )
             )
         |> Decode.required "orbitSequence" Decode.string
