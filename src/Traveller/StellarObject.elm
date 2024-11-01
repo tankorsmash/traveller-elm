@@ -1,4 +1,4 @@
-module Traveller.StellarObject exposing (StellarObject(..), codecStellarObject, sampleStellarObject)
+module Traveller.StellarObject exposing (StellarObject(..), codecStellarObject, decodeStellarObjectX, sampleStellarObject)
 
 import Codec exposing (Codec)
 import Json.Decode as Decode
@@ -578,3 +578,14 @@ codecStarData =
         |> Decode.required "stellarObjects" (Decode.list (Codec.decoder codecStellarObject))
         |> Decode.required "orbitSequence" Decode.string
         |> Decode.required "jump" Decode.float
+
+
+decodeStellarObjectX : Decode.Decoder StellarObjectX
+decodeStellarObjectX =
+    Decode.oneOf
+        [ Decode.map GasGiant <| decodeGasGiantData
+        , Decode.map TerrestrialPlanet <| decodeTerrestrialData
+        , Decode.map PlanetoidBelt <| decodePlanetoidBeltData
+        , Decode.map Planetoid <| codecPlanetoidData
+        , Decode.map Star <| (Decode.map StarData <| codecStarData)
+        ]
