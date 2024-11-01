@@ -1,4 +1,4 @@
-module Traveller.Star exposing (CompanionStar, Star(..), StarColour, StarData, codecStar, getStarData, sampleSystemText, starColourRGB)
+module Traveller.Star exposing (Star(..), StarColour, StarData, codecStar, getStarData, sampleSystemText, starColourRGB)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -158,34 +158,6 @@ type alias StarData =
     }
 
 
-type alias CompanionStar =
-    { orbitPosition : StellarPoint
-    , inclination : Int
-    , eccentricity : Float
-    , effectiveHZCODeviation : Maybe Float
-    , stellarClass : String
-    , stellarType : String
-    , totalObjects : Int
-    , subtype : Maybe Int
-    , orbitType : Int
-    , mass : Maybe Float
-    , diameter : Maybe Float
-    , temperature : Int
-    , age : Float
-    , colour : Maybe StarColour
-    , orbit : Float
-    , period : Maybe Float
-    , baseline : Int
-    , emptyOrbits : Int
-    , spread : Float
-    , availableOrbits : List ( Float, Float )
-    , stellarObjects : List StellarObject
-    , occupiedOrbits : List Float
-    , orbitSequence : String
-    , jump : Maybe Float
-    }
-
-
 buildStarData orbitPosition_ inclination_ eccentricity_ effectiveHZCODeviation_ stellarClass_ stellarType_ totalObjects_ subtype_ orbitType_ mass_ diameter_ temperature_ age_ colour_ companion_ orbit_ period_ baseline_ emptyOrbits_ spread_ availableOrbits_ stellarObjects_ occupiedOrbits_ orbitSequence_ jumpShadow_ =
     { orbitPosition = orbitPosition_
     , inclination = inclination_
@@ -246,36 +218,6 @@ codecStar =
         |> Codec.buildObject
         |> -- Codec.map needs a way to go from object, and a way to go back to object
            Codec.map Star (\(Star data) -> data)
-
-
-codecCompanionStar : Codec CompanionStar
-codecCompanionStar =
-    Codec.object CompanionStar
-        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
-        |> Codec.field "inclination" .inclination Codec.int
-        |> Codec.field "eccentricity" .eccentricity Codec.float
-        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
-        |> Codec.field "stellarClass" .stellarClass Codec.string
-        |> Codec.field "stellarType" .stellarType Codec.string
-        |> Codec.field "totalObjects" .totalObjects Codec.int
-        |> Codec.field "subtype" .subtype (Codec.nullable Codec.int)
-        |> Codec.field "orbitType" .orbitType Codec.int
-        |> Codec.optionalField "mass" .mass Codec.float
-        |> Codec.optionalField "diameter" .diameter Codec.float
-        |> Codec.field "temperature" .temperature Codec.int
-        |> Codec.field "age" .age Codec.float
-        |> Codec.optionalField "colour" .colour codecStarColour
-        |> Codec.field "orbit" .orbit Codec.float
-        |> Codec.nullableField "period" .period Codec.float
-        |> Codec.field "baseline" .baseline Codec.int
-        |> Codec.field "emptyOrbits" .emptyOrbits Codec.int
-        |> Codec.field "spread" .spread Codec.float
-        |> Codec.field "availableOrbits" .availableOrbits (Codec.list (Codec.tuple Codec.float Codec.float))
-        |> Codec.field "stellarObjects" .stellarObjects (Codec.list codecStellarObject)
-        |> Codec.field "occupiedOrbits" .occupiedOrbits (Codec.list Codec.float)
-        |> Codec.field "orbitSequence" .orbitSequence Codec.string
-        |> Codec.optionalField "jump" .jump Codec.float
-        |> Codec.buildObject
 
 
 {-| Extract the StarData from a Star
