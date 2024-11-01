@@ -5,6 +5,7 @@ import Json.Decode as JsDecode
 import Json.Encode as JsEncode
 import Parser exposing ((|.), (|=), Parser)
 import Parser.Extras as Parser
+import Random.Char as Codec
 import Traveller.Atmosphere exposing (StellarAtmosphere, codecStellarAtmosphere)
 import Traveller.Hydrographics exposing (StellarHydrographics, codecStellarHydrographics)
 import Traveller.Orbit exposing (StellarOrbit, codecStellarOrbit)
@@ -439,17 +440,17 @@ codecPlanetoidBeltData =
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
         |> Codec.field "orbit" .orbit Codec.float
-        |> Codec.field "mType" .orbit Codec.float
-        |> Codec.field "sType" .orbit Codec.float
-        |> Codec.field "cType" .orbit Codec.float
-        |> Codec.field "oType" .orbit Codec.float
-        |> Codec.field "span" .orbit Codec.float
-        |> Codec.field "bulk" .orbit Codec.float
-        |> Codec.field "resourceRating" .orbit Codec.float
-        |> Codec.field "period" .orbit Codec.float
+        |> Codec.field "mType" .mType Codec.float
+        |> Codec.field "sType" .sType Codec.float
+        |> Codec.field "cType" .cType Codec.float
+        |> Codec.field "oType" .oType Codec.float
+        |> Codec.field "span" .span Codec.float
+        |> Codec.field "bulk" .bulk Codec.float
+        |> Codec.field "resourceRating" .resourceRating Codec.float
+        |> Codec.field "period" .period Codec.float
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
-        |> Codec.field "uwp" .orbitSequence Codec.string
-        |> Codec.field "safeJumpTime" .orbitSequence Codec.string
+        |> Codec.field "uwp" .uwp Codec.string
+        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
         |> Codec.buildObject
 
 
