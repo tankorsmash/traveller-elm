@@ -606,7 +606,6 @@ codecStarData =
         |> Decode.required "orbit" Decode.float
         |> Decode.required "period" Decode.float
         |> Decode.required "baseline" Decode.int
-        --|> Decode.required "stellarObjects" (Decode.list decodeStellarObjectX)
         |> Decode.required "stellarObjects"
             (Decode.list
                 (Decode.lazy
