@@ -18,9 +18,11 @@ import Traveller.HexId exposing (HexId, RawHexId)
 import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.SectorData exposing (SectorData, codecSectorData)
 import Traveller.SolarSystem exposing (SolarSystem)
-import Traveller.Star as Star exposing (Star)
 import Traveller.StellarMoon exposing (StellarMoon)
 import Traveller.StellarObject exposing (StellarObject(..))
+import Traveller.StellarObject exposing (StarDataConfig)
+import Traveller.StellarObject exposing (StarData(..))
+import Traveller.StellarObject exposing (StarDataConfig)
 
 
 type alias Model =
@@ -33,7 +35,7 @@ type alias Model =
 
 type HoveredBody
     = HoveredPlanet StellarObject
-    | HoveredStar Star.StarData
+    | HoveredStar StarDataConfig
     | HoveredMoon StellarMoon
     | NoHoveredBody
 
@@ -99,7 +101,7 @@ viewSystem system =
             -- view vertical offset
             String.fromFloat (height * vertOffset)
 
-        drawStar : Star.StarData -> ( Float, Float ) -> Float -> Svg.Svg Msg
+        drawStar : StarDataConfig -> ( Float, Float ) -> Float -> Svg.Svg Msg
         drawStar star ( starX, starY ) radius =
             Svg.g []
                 [ Svg.circle
@@ -174,7 +176,7 @@ viewSystem system =
                 ++ stringHeight
         ]
         (List.indexedMap
-            (\i (Star.Star star) ->
+            (\i (StarData star) ->
                 let
                     _ =
                         Debug.log "star" <| star

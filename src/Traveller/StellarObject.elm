@@ -1,4 +1,4 @@
-module Traveller.StellarObject exposing (StellarObject(..), codecStellarObject, sampleStellarObject)
+module Traveller.StellarObject exposing (StarData(..), StarDataConfig, StellarObject(..), codecStarData, codecStellarObject, getStarDataConfig, sampleStellarObject, starColourRGB)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -423,6 +423,11 @@ type StarData
     = StarData StarDataConfig
 
 
+getStarDataConfig : StarData -> StarDataConfig
+getStarDataConfig (StarData starDataConfig) =
+    starDataConfig
+
+
 type StellarObjectX
     = GasGiant GasGiantData
     | TerrestrialPlanet TerrestrialData
@@ -618,5 +623,3 @@ codecStellarObjectX =
     Codec.build
         encodeStellarObjectX
         decodeStellarObjectX
-
-

@@ -45,8 +45,7 @@ import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.Parser as TravellerParser
 import Traveller.SectorData exposing (SISector, SectorData, SurveyIndexData, codecSectorData, codecSurveyIndexData)
 import Traveller.SolarSystem exposing (SolarSystem)
-import Traveller.Star as Star exposing (Star, starColourRGB)
-import Traveller.StellarObject exposing (StellarObject(..))
+import Traveller.StellarObject exposing (StarData(..), StarDataConfig, StellarObject(..), getStarDataConfig, starColourRGB)
 
 
 gasGiantSI =
@@ -217,7 +216,7 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
             []
         , -- center star
           let
-            -- drawStar : Float -> Float -> Int -> Star.Star -> Svg Msg
+            drawStar : ( Float, Float ) -> Int -> StarDataConfig -> Svg Msg
             drawStar ( starX, starY ) radius star =
                 Svg.circle
                     [ SvgAttrs.cx <| String.fromFloat <| starX
@@ -226,12 +225,7 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                         String.fromFloat <|
                             scaleAttr radius
                     , SvgAttrs.fill <|
-                        case star.colour of
-                            Just starColor ->
-                                starColourRGB starColor
-
-                            Nothing ->
-                                "#FF00FF"
+                        starColourRGB star.colour
                     ]
                     []
           in
@@ -241,7 +235,7 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                     [] ->
                         Html.text ""
 
-                    (Star.Star primaryStar) :: stars ->
+                    (StarData primaryStar) :: stars ->
                         let
                             primaryPos =
                                 ( toFloat x, toFloat y )
@@ -249,7 +243,7 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                         Svg.g
                             []
                             ((case primaryStar.companion of
-                                Just (Star.Star compStarData) ->
+                                Just (StarData compStarData) ->
                                     let
                                         compStarPos =
                                             Tuple.mapFirst (\x_ -> x_ - 5) primaryPos
@@ -263,13 +257,13 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                                     drawStar primaryPos 12 primaryStar
                              )
                                 :: List.indexedMap
-                                    (\idx (Star.Star secondaryStarData) ->
+                                    (\idx (StarData secondaryStarData) ->
                                         let
                                             secondaryStarPos =
                                                 rotatePoint idx primaryPos 60 20
                                         in
                                         case secondaryStarData.companion of
-                                            Just (Star.Star compStarData) ->
+                                            Just (StarData compStarData) ->
                                                 let
                                                     compStarPos =
                                                         Tuple.mapFirst (\x_ -> x_ - 5) secondaryStarPos
@@ -621,8 +615,8 @@ monospaceText someString =
     text someString |> el [ Font.family [ Font.monospace ] ]
 
 
-renderStar : Star.StarData -> Int -> Element.Element msg
-renderStar starData nestingLevel =
+renderStar : StarData -> Int -> Element.Element msg
+renderStar (StarData starData) nestingLevel =
     let
         renderStellarObject : Int -> StellarObject -> Element.Element msg
         renderStellarObject newNestingLevel (StellarObject stellarObject) =
@@ -676,7 +670,7 @@ renderStar starData nestingLevel =
                     ++ starData.stellarClass
         , starData.companion
             |> Maybe.map
-                (\(Star.Star compStarData) ->
+                (\compStarData ->
                     renderStar compStarData (nestingLevel + 1)
                 )
             |> Maybe.withDefault Element.none
@@ -699,7 +693,7 @@ viewSystemDetailsSidebar maybeViewingHexId maybeViewingHexOrigin solarSystemDict
           of
             ( Just ( viewingHexId, si ), Just solarSystem ) ->
                 column [ Element.spacing 10 ] <|
-                    [ renderStar (Star.getStarData solarSystem.primaryStar) 0
+                    [ renderStar solarSystem.primaryStar 0
                     , Input.button
                         [ Background.color <| rgb 0.5 1.5 0.5
                         , Border.rounded 5
