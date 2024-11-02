@@ -1,4 +1,4 @@
-module Traveller.Hydrographics exposing (StellarHydrographics, codecStellarHydrographics)
+module Traveller.Hydrographics exposing (StellarHydrographics, codec)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -11,8 +11,8 @@ type alias StellarHydrographics =
     { code : Int, distribution : Int }
 
 
-codecStellarHydrographics : Codec StellarHydrographics
-codecStellarHydrographics =
+codec : Codec StellarHydrographics
+codec =
     Codec.object StellarHydrographics
         |> Codec.field "code" .code Codec.int
         |> Codec.field "distribution" .distribution Codec.int

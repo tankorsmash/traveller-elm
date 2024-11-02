@@ -1,4 +1,4 @@
-module Traveller.Orbit exposing (StellarOrbit(..), codecStellarOrbit)
+module Traveller.Orbit exposing (StellarOrbit(..), codec)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -12,8 +12,8 @@ type StellarOrbit
     | ComplexOrbit { zone : String, orbit : Float }
 
 
-codecStellarOrbit : Codec StellarOrbit
-codecStellarOrbit =
+codec : Codec StellarOrbit
+codec =
     Codec.build
         (\stellarOrbit ->
             case stellarOrbit of

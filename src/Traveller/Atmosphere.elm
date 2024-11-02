@@ -1,4 +1,4 @@
-module Traveller.Atmosphere exposing (Atmosphere(..), StellarAtmosphere, atmosphere, codecStellarAtmosphere)
+module Traveller.Atmosphere exposing (Atmosphere(..), StellarAtmosphere, atmosphere, codec)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -20,8 +20,8 @@ type alias StellarAtmosphere =
     }
 
 
-codecStellarAtmosphere : Codec StellarAtmosphere
-codecStellarAtmosphere =
+codec : Codec StellarAtmosphere
+codec =
     Codec.object StellarAtmosphere
         |> Codec.field "code" .code Codec.int
         |> Codec.field "irritant" .irritant Codec.bool

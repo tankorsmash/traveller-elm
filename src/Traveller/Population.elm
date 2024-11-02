@@ -1,4 +1,4 @@
-module Traveller.Population exposing (Population(..), StellarPopulation, codecStellarPopulation, population)
+module Traveller.Population exposing (Population(..), StellarPopulation, codec, population)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -11,8 +11,8 @@ type alias StellarPopulation =
     { code : Int, concentrationRating : Maybe Float }
 
 
-codecStellarPopulation : Codec StellarPopulation
-codecStellarPopulation =
+codec : Codec StellarPopulation
+codec =
     Codec.object StellarPopulation
         |> Codec.field "code" .code Codec.int
         |> Codec.field "concentrationRating" .concentrationRating (Codec.maybe Codec.float)

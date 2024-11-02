@@ -8,11 +8,11 @@ import Json.Encode as JsEncode
 import Parser exposing ((|.), (|=), Parser)
 import Parser.Extras as Parser
 import Random.Char as Codec
-import Traveller.Atmosphere exposing (StellarAtmosphere, codecStellarAtmosphere)
-import Traveller.Hydrographics exposing (StellarHydrographics, codecStellarHydrographics)
-import Traveller.Orbit exposing (StellarOrbit, codecStellarOrbit)
-import Traveller.Point exposing (StellarPoint, codecStellarPoint)
-import Traveller.Population exposing (StellarPopulation, codecStellarPopulation)
+import Traveller.Atmosphere as Atmosphere exposing (StellarAtmosphere)
+import Traveller.Hydrographics as Hydrographics exposing (StellarHydrographics)
+import Traveller.Orbit as Orbit exposing (StellarOrbit)
+import Traveller.Point as Point exposing (StellarPoint)
+import Traveller.Population as Population exposing (StellarPopulation)
 import Traveller.Moon as Moon exposing (Moon)
 
 
@@ -443,7 +443,7 @@ codecPlanetoidBeltData : Codec PlanetoidBeltData
 codecPlanetoidBeltData =
     Codec.object
         PlanetoidBeltData
-        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+        |> Codec.field "orbitPosition" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
@@ -466,7 +466,7 @@ codecGasGiantData : Codec GasGiantData
 codecGasGiantData =
    Codec.object
        GasGiantData
-       |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+       |> Codec.field "orbitPosition" .orbitPosition Point.codec
        |> Codec.field "inclination" .inclination Codec.float
        |> Codec.field "eccentricity" .eccentricity Codec.float
        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
@@ -488,7 +488,7 @@ codecTerrestrialData : Codec TerrestrialData
 codecTerrestrialData =
     Codec.object
         TerrestrialData
-        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+        |> Codec.field "orbitPosition" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
@@ -529,7 +529,7 @@ codecPlanetoidData : Codec PlanetoidData
 codecPlanetoidData =
     Codec.object
         PlanetoidData
-        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+        |> Codec.field "orbitPosition" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
@@ -580,7 +580,7 @@ codecStarData : Codec StarData
 codecStarData =
     Codec.object
         StarDataConfig
-        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+        |> Codec.field "orbitPosition" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.int
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
@@ -607,12 +607,12 @@ codecStellarObject : Codec StellarObject
 codecStellarObject =
     Codec.object
         buildStellarObject
-        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+        |> Codec.field "orbitPosition" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
         |> Codec.maybeField "size" .size Codec.string
-        |> Codec.field "orbit" .orbit codecStellarOrbit
+        |> Codec.field "orbit" .orbit Orbit.codec
         |> Codec.nullableField "period" .period Codec.float
         |> Codec.maybeField "composition" .composition Codec.string
         |> Codec.maybeField "retrograde" .retrograde Codec.bool
@@ -628,9 +628,9 @@ codecStellarObject =
         |> Codec.maybeField "extinctNativeSophont" .extinctNativeSophont Codec.bool
         |> Codec.maybeField "hasRing" .hasRing Codec.bool
         |> Codec.field "orbitType" .orbitType Codec.int
-        |> Codec.maybeField "atmosphere" .atmosphere codecStellarAtmosphere
-        |> Codec.maybeField "hydrographics" .hydrographics codecStellarHydrographics
-        |> Codec.maybeField "population" .population codecStellarPopulation
+        |> Codec.maybeField "atmosphere" .atmosphere Atmosphere.codec
+        |> Codec.maybeField "hydrographics" .hydrographics Hydrographics.codec
+        |> Codec.maybeField "population" .population Population.codec
         |> Codec.maybeField "governmentCode" .governmentCode Codec.int
         |> Codec.maybeField "lawLevelCode" .lawLevelCode Codec.int
         |> Codec.maybeField "starPort" .starPort Codec.string

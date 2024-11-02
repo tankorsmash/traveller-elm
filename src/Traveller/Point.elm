@@ -1,4 +1,4 @@
-module Traveller.Point exposing (StellarPoint, codecStellarPoint)
+module Traveller.Point exposing (StellarPoint, codec)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -11,8 +11,8 @@ type alias StellarPoint =
     { x : Float, y : Float }
 
 
-codecStellarPoint : Codec StellarPoint
-codecStellarPoint =
+codec : Codec StellarPoint
+codec =
     Codec.object StellarPoint
         |> Codec.field "x" .x Codec.float
         |> Codec.field "y" .y Codec.float

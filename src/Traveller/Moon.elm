@@ -1,8 +1,8 @@
 module Traveller.Moon exposing (Moon, codec)
 
 import Codec exposing (Codec)
-import Traveller.Orbit exposing (StellarOrbit, codecStellarOrbit)
-import Traveller.Point exposing (StellarPoint, codecStellarPoint)
+import Traveller.Orbit as Orbit exposing (StellarOrbit )
+import Traveller.Point as Point exposing (StellarPoint)
 
 
 {-| the data structure for a stellar object.
@@ -25,11 +25,11 @@ type alias Moon =
 codec : Codec Moon
 codec =
     Codec.object Moon
-        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+        |> Codec.field "orbitPosition" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
-        |> Codec.field "orbit" .orbit codecStellarOrbit
+        |> Codec.field "orbit" .orbit Orbit.codec
         |> Codec.field "size" .size Codec.string
         |> Codec.field "period" .period Codec.float
         |> Codec.field "biomassRating" .biomassRating Codec.int
