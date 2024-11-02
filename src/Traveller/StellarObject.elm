@@ -100,10 +100,10 @@ type alias TerrestrialData =
     , extinctNativeSophont : Bool
     , hasRing : Bool
     , albedo : Float
-    , density : Float
+    , density : Maybe Float
     , greenhouse : Float
-    , meanTemperature : Float
-    , habitabilityRating : Int
+    , meanTemperature : Maybe Float
+    , habitabilityRating : Maybe Int
     , orbitSequence : String
     , uwp : String
     , diameter : Float
@@ -136,9 +136,9 @@ type alias PlanetoidData =
     , extinctNativeSophont : Bool
     , hasRing : Bool
     , albedo : Float
-    , density : Float
+    , density : Maybe Float
     , greenhouse : Float
-    , meanTemperature : Float
+    , meanTemperature : Maybe Float
     , orbitSequence : String
     , uwp : String
     , diameter : Float
@@ -146,6 +146,8 @@ type alias PlanetoidData =
     , mass : Maybe Float
     , escapeVelocity : Maybe Float
     , safeJumpTime : String
+    , -- maybe not required for Planetoid?
+      code : Maybe String
     }
 
 
@@ -208,7 +210,7 @@ type alias StarDataConfig =
     , baseline : Int
     , stellarObjects : List StellarObjectX
     , orbitSequence : String
-    , jump : Float
+    , safeJumpTime : String
     }
 
 
@@ -296,10 +298,10 @@ codecTerrestrialData =
         |> Codec.field "extinctNativeSophont" .extinctNativeSophont Codec.bool
         |> Codec.field "hasRing" .hasRing Codec.bool
         |> Codec.field "albedo" .albedo Codec.float
-        |> Codec.field "density" .density Codec.float
+        |> Codec.optionalField "density" .density Codec.float
         |> Codec.field "greenhouse" .greenhouse Codec.float
-        |> Codec.field "meanTemperature" .meanTemperature Codec.float
-        |> Codec.field "habitabilityRating" .habitabilityRating Codec.int
+        |> Codec.field "meanTemperature" .meanTemperature (Codec.nullable Codec.float)
+        |> Codec.optionalField "habitabilityRating" .habitabilityRating Codec.int
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
         |> Codec.field "uwp" .uwp Codec.string
         |> Codec.field "diameter" .diameter Codec.float
@@ -334,9 +336,9 @@ codecPlanetoidData =
         |> Codec.field "extinctNativeSophont" .extinctNativeSophont Codec.bool
         |> Codec.field "hasRing" .hasRing Codec.bool
         |> Codec.field "albedo" .albedo Codec.float
-        |> Codec.field "density" .density Codec.float
+        |> Codec.optionalField "density" .density Codec.float
         |> Codec.field "greenhouse" .greenhouse Codec.float
-        |> Codec.field "meanTemperature" .meanTemperature Codec.float
+        |> Codec.field "meanTemperature" .meanTemperature (Codec.nullable Codec.float)
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
         |> Codec.field "uwp" .uwp Codec.string
         |> Codec.field "diameter" .diameter Codec.float
@@ -344,6 +346,7 @@ codecPlanetoidData =
         |> Codec.field "mass" .mass (Codec.nullable Codec.float)
         |> Codec.field "escapeVelocity" .escapeVelocity (Codec.nullable Codec.float)
         |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
+        |> Codec.optionalField "code" .code Codec.string
         |> Codec.buildObject
 
 
@@ -380,7 +383,7 @@ codecStarData =
         |> Codec.field "baseline" .baseline Codec.int
         |> Codec.field "stellarObjects" .stellarObjects (Codec.list (Codec.lazy (\_ -> codecStellarObject)))
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
-        |> Codec.field "jump" .jump Codec.float
+        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
         |> Codec.buildObject
         |> Codec.map StarData (\(StarData data) -> data)
 
