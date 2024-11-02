@@ -64,8 +64,8 @@ type alias Moon =
     , eccentricity : Float
     , effectiveHZCODeviation : Float
     , orbit : StellarOrbit
-    , size : Maybe String
-    , period : Maybe Float
+    , size : String
+    , period : Float
     , biomassRating : Int
     , axialTilt : Float
     , safeJumpDistance : String
@@ -79,8 +79,8 @@ codecMoon =
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
         |> Codec.field "orbit" .orbit codecStellarOrbit
-        |> Codec.nullableField "size" .size Codec.string
-        |> Codec.nullableField "period" .period Codec.float
+        |> Codec.field "size" .size Codec.string
+        |> Codec.field "period" .period Codec.float
         |> Codec.field "biomassRating" .biomassRating Codec.int
         |> Codec.field "axialTilt" .axialTilt Codec.float
         |> Codec.field "safeJumpDistance" .safeJumpDistance Codec.string
