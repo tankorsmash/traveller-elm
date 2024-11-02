@@ -633,7 +633,7 @@ renderStar (StarData starData) nestingLevel =
                 [ monospaceText <| String.fromFloat gasGiantData.orbit
                 , text "gas giant"
                 , text gasGiantData.orbitSequence
-                , text gasGiantData.code
+                , text (gasGiantData.code |> Maybe.withDefault "no gas giant code")
                 ]
 
         renderTerrestrialPlanet : Int -> TerrestrialData -> Element.Element msg

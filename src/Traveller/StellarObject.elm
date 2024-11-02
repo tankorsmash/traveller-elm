@@ -314,7 +314,7 @@ type alias GasGiantData =
     , inclination : Float
     , eccentricity : Float
     , effectiveHZCODeviation : Maybe Float
-    , code : String
+    , code : Maybe String
     , diameter : Float
     , mass : Float
     , orbit : Float
@@ -350,7 +350,7 @@ type alias PlanetoidBeltData =
 
 type alias StarDataConfig =
     { orbitPosition : StellarPoint
-    , inclination : Int
+    , inclination : Float
     , eccentricity : Float
     , effectiveHZCODeviation : Float
     , stellarClass : String
@@ -420,7 +420,7 @@ codecGasGiantData =
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
-        |> Codec.field "code" .code Codec.string
+        |> Codec.field "code" .code (Codec.maybe Codec.string)
         |> Codec.field "diameter" .diameter Codec.float
         |> Codec.field "mass" .mass Codec.float
         |> Codec.field "orbit" .orbit Codec.float
@@ -529,7 +529,7 @@ codecStarData =
     Codec.object
         StarDataConfig
         |> Codec.field "orbitPosition" .orbitPosition Point.codec
-        |> Codec.field "inclination" .inclination Codec.int
+        |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
         |> Codec.field "stellarClass" .stellarClass Codec.string

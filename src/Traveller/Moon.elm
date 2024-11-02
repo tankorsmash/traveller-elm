@@ -1,7 +1,7 @@
 module Traveller.Moon exposing (Moon, codec)
 
 import Codec exposing (Codec)
-import Traveller.Orbit as Orbit exposing (StellarOrbit )
+import Traveller.Orbit as Orbit exposing (StellarOrbit)
 import Traveller.Point as Point exposing (StellarPoint)
 
 
@@ -15,11 +15,16 @@ type alias Moon =
     , effectiveHZCODeviation : Float
     , orbit : StellarOrbit
     , size : String
-    , period : Float
+    , period : Maybe Float
     , biomassRating : Int
     , axialTilt : Float
-    , safeJumpDistance : String
+    , safeJumpDistance : Maybe String
     }
+
+
+codecMoonSize : Codec String
+codecMoonSize =
+    Codec.oneOf Codec.string [ Codec.int |> Codec.map String.fromInt (String.toInt >> Maybe.withDefault 0) ]
 
 
 codec : Codec Moon
@@ -30,9 +35,9 @@ codec =
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
         |> Codec.field "orbit" .orbit Orbit.codec
-        |> Codec.field "size" .size Codec.string
-        |> Codec.field "period" .period Codec.float
+        |> Codec.field "size" .size codecMoonSize
+        |> Codec.field "period" .period (Codec.maybe Codec.float)
         |> Codec.field "biomassRating" .biomassRating Codec.int
         |> Codec.field "axialTilt" .axialTilt Codec.float
-        |> Codec.field "safeJumpDistance" .safeJumpDistance Codec.string
+        |> Codec.optionalField "safeJumpDistance" .safeJumpDistance Codec.string
         |> Codec.buildObject
