@@ -8,7 +8,6 @@ import Parser exposing ((|.), (|=), Parser)
 import Parser.Extras as Parser
 import Traveller.HexId exposing (HexId, codecHexId)
 import Traveller.SolarSystem exposing (SolarSystem, codecSolarSystem)
-import Traveller.Star exposing (Star, codecStar)
 
 
 type alias SectorData =

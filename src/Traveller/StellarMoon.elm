@@ -1,4 +1,4 @@
-module Traveller.StellarMoon exposing (MoonData, decodeMoonData, sampleStellarMoon)
+module Traveller.StellarMoon exposing (Moon, codecMoon, sampleStellarMoon)
 
 import Codec exposing (Codec)
 import Json.Decode as Decode
@@ -58,7 +58,7 @@ sampleStellarMoon =
 {-| the data structure for a stellar object.
 It needs to be separate from StellarObject so that it can nest within itself
 -}
-type alias MoonData =
+type alias Moon =
     { orbitPosition : StellarPoint
     , inclination : Float
     , eccentricity : Float
@@ -71,17 +71,17 @@ type alias MoonData =
     , safeJumpDistance : String
     }
 
-
-decodeMoonData : Decode.Decoder MoonData
-decodeMoonData =
-    Decode.succeed MoonData
-        |> Decode.required "orbitPosition" (Codec.decoder codecStellarPoint)
-        |> Decode.required "inclination" Decode.float
-        |> Decode.required "eccentricity" Decode.float
-        |> Decode.required "effectiveHZCODeviation" Decode.float
-        |> Decode.required "orbit" (Codec.decoder codecStellarOrbit)
-        |> Decode.required "size" (Decode.nullable Decode.string)
-        |> Decode.required "period" (Decode.nullable Decode.float)
-        |> Decode.required "biomassRating" Decode.int
-        |> Decode.required "axialTilt" Decode.float
-        |> Decode.required "safeJumpDistance" Decode.string
+codecMoon : Codec Moon
+codecMoon =
+    Codec.object Moon
+        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+        |> Codec.field "inclination" .inclination Codec.float
+        |> Codec.field "eccentricity" .eccentricity Codec.float
+        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
+        |> Codec.field "orbit" .orbit codecStellarOrbit
+        |> Codec.nullableField "size" .size Codec.string
+        |> Codec.nullableField "period" .period Codec.float
+        |> Codec.field "biomassRating" .biomassRating Codec.int
+        |> Codec.field "axialTilt" .axialTilt Codec.float
+        |> Codec.field "safeJumpDistance" .safeJumpDistance Codec.string
+        |> Codec.buildObject
