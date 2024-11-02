@@ -1032,9 +1032,9 @@ update msg model =
                 Http.BadBody bodyErr ->
                     let
                         _ =
-                            Debug.log bodyErr ""
+                            Debug.log bodyErr "__ END OF ERROR Traveller.elm __"
                     in
-                    Debug.todo "branch 'DownloadedSectorJson BadBody' not implemented"
+                    ( { model | sectorData = RemoteData.Failure err }, Cmd.none )
 
         DownloadSurveyIndexJson ->
             ( model

@@ -349,9 +349,9 @@ update msg model =
                 Http.BadBody bodyErr ->
                     let
                         _ =
-                            Debug.log bodyErr ""
+                            Debug.log bodyErr "__ END OF ERROR SolarSystemPage.elm __"
                     in
-                    Debug.todo "branch 'DownloadedSectorJson BadBody' not implemented"
+                    ( { model | sectorData = RemoteData.Failure err }, Cmd.none )
 
         HoveredBody ((HoveredPlanet hoveredPlanet) as hoveredBody) ->
             ( { model | hoveredBody = hoveredBody }, Cmd.none )
