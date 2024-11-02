@@ -939,8 +939,36 @@ view model =
                                 model.hexScale
                                 |> Html.toUnstyled
 
-                        _ ->
+                        ( RemoteData.Failure _, _, _ ) ->
+                            Html.toUnstyled <|
+                                Html.div
+                                    [ Html.Styled.Attributes.css
+                                        [ Css.color (Css.hex "#ff0000") ]
+                                    ]
+                                    [ Html.text "Failed to decode SectorData. See console for details" ]
+
+                        ( NotAsked, _, _ ) ->
+                            Html.toUnstyled <|
+                                Html.div
+                                    [ Html.Styled.Attributes.css
+                                        [ Css.color (Css.rgb 100 100 100) ]
+                                    ]
+                                    [ Html.text "Not asked" ]
+
+                        ( Loading, _, _ ) ->
                             Html.toUnstyled <| Html.text "Loading..."
+
+                        ( Success _, Nothing, _ ) ->
+                            Html.toUnstyled <| Html.text "Have sector data but no viewport"
+
+                        ( Success _, Just _, NotAsked ) ->
+                            Html.toUnstyled <| Html.text "Have sector data and viewport, but not yet asked for survey index data"
+
+                        ( Success _, Just _, Loading ) ->
+                            Html.toUnstyled <| Html.text "Have sector data and viewport, but loading survey index data"
+
+                        ( Success _, Just _, Failure _ ) ->
+                            Html.toUnstyled <| Html.text "Have sector data and viewport, but failed to load survey index data"
                 ]
     in
     row [ Font.size 20, centerX, centerY, Font.color <| Element.rgb 0.5 1.5 0.5 ]
