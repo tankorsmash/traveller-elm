@@ -1,19 +1,18 @@
-module Traveller.StellarObject exposing (StarData(..), StarDataConfig, StellarObject(..), codecStarData, codecStellarObject, getStarDataConfig, sampleStellarObject, starColourRGB)
+module Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObjectX(..), TerrestrialData, codecStarData, codecStellarObject, getStarDataConfig, sampleStellarObject, starColourRGB)
 
 import Codec exposing (Codec)
-import Json.Decode as Decode
-import Json.Decode.Pipeline as Decode
 import Json.Decode as JsDecode
+import Json.Decode.Pipeline as Decode
 import Json.Encode as JsEncode
 import Parser exposing ((|.), (|=), Parser)
 import Parser.Extras as Parser
 import Random.Char as Codec
 import Traveller.Atmosphere as Atmosphere exposing (StellarAtmosphere)
 import Traveller.Hydrographics as Hydrographics exposing (StellarHydrographics)
+import Traveller.Moon as Moon exposing (Moon)
 import Traveller.Orbit as Orbit exposing (StellarOrbit)
 import Traveller.Point as Point exposing (StellarPoint)
 import Traveller.Population as Population exposing (StellarPopulation)
-import Traveller.Moon as Moon exposing (Moon)
 
 
 type StarColour
@@ -122,55 +121,6 @@ type alias StellarData =
     , jumpShadow : Maybe Float
     , safeJumpTime : String
     }
-
-
-type StellarObject
-    = -- needs to be a type instead of an alias, because its recursive
-      StellarObject StellarData
-
-
-buildStellarObject =
-    \orbPos incl ecc effHZCODev size orbit period comp retro troj axTilt moons biomass bioComplex bioDiversity compat resource currentNative extinctNative hasRing orbitType atm hydro pop gov law starPort tech tradeCodes albedo dens green meanTemp orbitSeq uwp code jumpShadow safeJumpTime ->
-        -- StellarObject
-        { orbitPosition = orbPos
-        , inclination = incl
-        , eccentricity = ecc
-        , effectiveHZCODeviation = effHZCODev
-        , size = size
-        , orbit = orbit
-        , period = period
-        , composition = comp
-        , retrograde = retro
-        , trojanOffset = troj
-        , axialTilt = axTilt
-        , moons = moons
-        , biomassRating = biomass
-        , biocomplexityCode = bioComplex
-        , biodiversityRating = bioDiversity
-        , compatibilityRating = compat
-        , resourceRating = resource
-        , currentNativeSophont = currentNative
-        , extinctNativeSophont = extinctNative
-        , hasRing = hasRing
-        , orbitType = orbitType
-        , atmosphere = atm
-        , hydrographics = hydro
-        , population = pop
-        , governmentCode = gov
-        , lawLevelCode = law
-        , starPort = starPort
-        , techLevel = tech
-        , tradeCodes = tradeCodes
-        , albedo = albedo
-        , density = dens
-        , greenhouse = green
-        , meanTemperature = meanTemp
-        , orbitSequence = orbitSeq
-        , uwp = uwp
-        , code = code
-        , jumpShadow = jumpShadow
-        , safeJumpTime = safeJumpTime
-        }
 
 
 
@@ -313,7 +263,7 @@ type alias TerrestrialData =
     , meanTemperature : Float
     , nativeSophont : Bool
     , extinctSophont : Bool
-    , habitableRating : Int
+    , habitabilityRating : Int
     , orbitSequence : String
     , uwp : String
     , diameter : Float
@@ -416,7 +366,7 @@ type alias StarDataConfig =
     , orbit : Float
     , period : Float
     , baseline : Int
-    , stellarObjects : List StellarObject
+    , stellarObjects : List StellarObjectX
     , orbitSequence : String
     , jump : Float
     }
@@ -464,24 +414,24 @@ codecPlanetoidBeltData =
 
 codecGasGiantData : Codec GasGiantData
 codecGasGiantData =
-   Codec.object
-       GasGiantData
-       |> Codec.field "orbitPosition" .orbitPosition Point.codec
-       |> Codec.field "inclination" .inclination Codec.float
-       |> Codec.field "eccentricity" .eccentricity Codec.float
-       |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
-       |> Codec.field "code" .code Codec.string
-       |> Codec.field "diameter" .diameter Codec.float
-       |> Codec.field "mass" .mass Codec.float
-       |> Codec.field "orbit" .orbit Codec.float
-       |> Codec.field "moons" .moons (Codec.list Moon.codec)
-       |> Codec.field "hasRing" .hasRing Codec.bool
-       |> Codec.field "trojanOffset" .trojanOffset (Codec.nullable Codec.float)
-       |> Codec.field "axialTilt" .orbit Codec.float
-       |> Codec.field "period" .orbit Codec.float
-       |> Codec.field "orbitSequence" .orbitSequence Codec.string
-       |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
-       |> Codec.buildObject
+    Codec.object
+        GasGiantData
+        |> Codec.field "orbitPosition" .orbitPosition Point.codec
+        |> Codec.field "inclination" .inclination Codec.float
+        |> Codec.field "eccentricity" .eccentricity Codec.float
+        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
+        |> Codec.field "code" .code Codec.string
+        |> Codec.field "diameter" .diameter Codec.float
+        |> Codec.field "mass" .mass Codec.float
+        |> Codec.field "orbit" .orbit Codec.float
+        |> Codec.field "moons" .moons (Codec.list Moon.codec)
+        |> Codec.field "hasRing" .hasRing Codec.bool
+        |> Codec.field "trojanOffset" .trojanOffset (Codec.nullable Codec.float)
+        |> Codec.field "axialTilt" .orbit Codec.float
+        |> Codec.field "period" .orbit Codec.float
+        |> Codec.field "orbitSequence" .orbitSequence Codec.string
+        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
+        |> Codec.buildObject
 
 
 codecTerrestrialData : Codec TerrestrialData
@@ -514,7 +464,7 @@ codecTerrestrialData =
         |> Codec.field "meanTemperature" .meanTemperature Codec.float
         |> Codec.field "nativeSophont" .nativeSophont Codec.bool
         |> Codec.field "extinctSophont" .extinctSophont Codec.bool
-        |> Codec.field "habitableRating" .habitableRating Codec.int
+        |> Codec.field "habitabilityRating" .habitabilityRating Codec.int
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
         |> Codec.field "uwp" .uwp Codec.string
         |> Codec.field "diameter" .diameter Codec.float
@@ -563,7 +513,6 @@ codecPlanetoidData =
         |> Codec.buildObject
 
 
-
 decodeStellarObjectX : JsDecode.Decoder StellarObjectX
 decodeStellarObjectX =
     JsDecode.oneOf
@@ -573,7 +522,6 @@ decodeStellarObjectX =
         , JsDecode.map Planetoid (Codec.decoder codecPlanetoidData)
         , JsDecode.map Star (Codec.decoder codecStarData)
         ]
-
 
 
 codecStarData : Codec StarData
@@ -597,60 +545,11 @@ codecStarData =
         |> Codec.field "orbit" .orbit Codec.float
         |> Codec.field "period" .period Codec.float
         |> Codec.field "baseline" .baseline Codec.int
-        |> Codec.field "stellarObjects" .stellarObjects (Codec.list codecStellarObject)
+        |> Codec.field "stellarObjects" .stellarObjects (Codec.list (Codec.lazy (\_ -> codecStellarObject)))
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
         |> Codec.field "jump" .jump Codec.float
         |> Codec.buildObject
         |> Codec.map StarData (\(StarData data) -> data)
-
-codecStellarObject : Codec StellarObject
-codecStellarObject =
-    Codec.object
-        buildStellarObject
-        |> Codec.field "orbitPosition" .orbitPosition Point.codec
-        |> Codec.field "inclination" .inclination Codec.float
-        |> Codec.field "eccentricity" .eccentricity Codec.float
-        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
-        |> Codec.maybeField "size" .size Codec.string
-        |> Codec.field "orbit" .orbit Orbit.codec
-        |> Codec.nullableField "period" .period Codec.float
-        |> Codec.maybeField "composition" .composition Codec.string
-        |> Codec.maybeField "retrograde" .retrograde Codec.bool
-        |> Codec.maybeField "trojanOffset" .trojanOffset Codec.float
-        |> Codec.maybeField "axialTilt" .axialTilt Codec.float
-        |> Codec.maybeField "moons" .moons (Codec.list (Codec.lazy (\_ -> Moon.codec)))
-        |> Codec.maybeField "biomassRating" .biomassRating Codec.int
-        |> Codec.maybeField "biocomplexityCode" .biocomplexityCode Codec.int
-        |> Codec.maybeField "biodiversityRating" .biodiversityRating Codec.int
-        |> Codec.maybeField "compatibilityRating" .compatibilityRating Codec.int
-        |> Codec.maybeField "resourceRating" .resourceRating Codec.int
-        |> Codec.maybeField "currentNativeSophont" .currentNativeSophont Codec.bool
-        |> Codec.maybeField "extinctNativeSophont" .extinctNativeSophont Codec.bool
-        |> Codec.maybeField "hasRing" .hasRing Codec.bool
-        |> Codec.field "orbitType" .orbitType Codec.int
-        |> Codec.maybeField "atmosphere" .atmosphere Atmosphere.codec
-        |> Codec.maybeField "hydrographics" .hydrographics Hydrographics.codec
-        |> Codec.maybeField "population" .population Population.codec
-        |> Codec.maybeField "governmentCode" .governmentCode Codec.int
-        |> Codec.maybeField "lawLevelCode" .lawLevelCode Codec.int
-        |> Codec.maybeField "starPort" .starPort Codec.string
-        |> Codec.maybeField "techLevel" .techLevel Codec.int
-        |> Codec.maybeField "tradeCodes" .tradeCodes (Codec.list Codec.string)
-        |> Codec.maybeField "albedo" .albedo Codec.float
-        |> Codec.maybeField "density" .density Codec.float
-        |> Codec.maybeField "greenhouse" .greenhouse Codec.int
-        |> Codec.maybeField "meanTemperature" .meanTemperature Codec.float
-        |> Codec.field "orbitSequence" .orbitSequence Codec.string
-        |> Codec.maybeField "uwp" .uwp Codec.string
-        |> Codec.maybeField "code" .code Codec.string
-        |> Codec.optionalField "jumpShadow" .jumpShadow Codec.float
-        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
-        |> Codec.buildObject
-        |> -- Codec.map needs a way to go from object, and a way to go back to object
-           Codec.map StellarObject (\(StellarObject data) -> data)
-
-
-
 
 
 encodeStellarObjectX : StellarObjectX -> Codec.Value
@@ -672,8 +571,8 @@ encodeStellarObjectX stellarObjectX =
             Codec.encodeToValue codecStarData data
 
 
-codecStellarObjectX : Codec StellarObjectX
-codecStellarObjectX =
+codecStellarObject : Codec StellarObjectX
+codecStellarObject =
     Codec.build
         encodeStellarObjectX
         decodeStellarObjectX

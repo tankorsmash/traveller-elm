@@ -15,14 +15,11 @@ import Svg.Styled.Events
 import Task
 import Traveller exposing (Msg(..))
 import Traveller.HexId exposing (HexId, RawHexId)
+import Traveller.Moon exposing (Moon)
 import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.SectorData exposing (SectorData, codecSectorData)
 import Traveller.SolarSystem exposing (SolarSystem)
-import Traveller.Moon exposing (Moon)
-import Traveller.StellarObject exposing (StellarObject(..))
-import Traveller.StellarObject exposing (StarDataConfig)
-import Traveller.StellarObject exposing (StarData(..))
-import Traveller.StellarObject exposing (StarDataConfig)
+import Traveller.StellarObject exposing (StarData(..), StarDataConfig, StellarObjectX(..))
 
 
 type alias Model =
@@ -34,7 +31,7 @@ type alias Model =
 
 
 type HoveredBody
-    = HoveredPlanet StellarObject
+    = HoveredPlanet StellarObjectX
     | HoveredStar StarDataConfig
     | HoveredMoon Moon
     | NoHoveredBody
@@ -132,7 +129,7 @@ viewSystem system =
                     , SvgAttrs.cy <| String.fromFloat <| planetY
                     , SvgAttrs.r <| String.fromFloat <| radius
                     , SvgAttrs.fill <| "green"
-                    , Svg.Styled.Events.onMouseOver <| HoveredBody <| HoveredPlanet (StellarObject stellarData)
+                    , Svg.Styled.Events.onMouseOver <| HoveredBody <| HoveredPlanet stellarData
                     ]
                     []
                 , Svg.text_
@@ -144,8 +141,9 @@ viewSystem system =
                     , SvgAttrs.pointerEvents "none"
                     , SvgAttrs.fontSize "8"
                     ]
-                    [ Svg.text <| "Planet: " ++ String.fromInt (List.length (Maybe.withDefault [] <| stellarData.moons)) ++ " m"
+                    [ Svg.text <| "Planet: " ++ "WIP"
 
+                    -- [ Svg.text <| "Planet: " ++ String.fromInt (List.length (Maybe.withDefault [] <| stellarData.moons)) ++ " m"
                     -- [ Svg.text <| "Planet, " ++ String.fromInt (List.length stellarData.moons) ++ " moons"
                     ]
                 ]
@@ -198,64 +196,50 @@ viewSystem system =
                             , drawStar star ( starX, starY ) (star.mass * 50)
                             ]
 
-                    orbitingBodies =
-                        List.indexedMap
-                            (\planetI (Traveller.StellarObject.StellarObject stellarBody) ->
-                                let
-                                    planetPos =
-                                        rotatePoint
-                                            (Vector2.vec2 0 0)
-                                            (Angle.degrees (35 * toFloat planetI))
-                                            (case stellarBody.orbit of
-                                                SimpleOrbit orbitVal ->
-                                                    55 + (toFloat planetI * 5)
-
-                                                ComplexOrbit { zone, orbit } ->
-                                                    55 + (toFloat planetI * 5)
-                                            )
-                                            |> Vector2.add (Vector2.vec2 starX starY)
-                                in
-                                Svg.g []
-                                    [ drawStellarObject
-                                        stellarBody
-                                        (planetPos
-                                            |> Vector2.toRecord
-                                            |> (\{ x, y } -> ( x, y ))
-                                        )
-                                        5
-                                    , drawOrbit
-                                        ( starX, starY )
-                                        (case stellarBody.orbit of
-                                            SimpleOrbit orbitVal ->
-                                                55 + (toFloat planetI * 5)
-
-                                            ComplexOrbit { zone, orbit } ->
-                                                55 + (toFloat planetI * 5)
-                                        )
-                                        "gray"
-                                    ]
-                            )
-                            star.stellarObjects
+                    -- orbitingBodies =
+                    --     List.indexedMap
+                    --         (\planetI stellarObjectX ->
+                    --             let
+                    --                 planetPos =
+                    --                     rotatePoint
+                    --                         (Vector2.vec2 0 0)
+                    --                         (Angle.degrees (35 * toFloat planetI))
+                    --                         (case stellarBody.orbit of
+                    --                             SimpleOrbit orbitVal ->
+                    --                                 55 + (toFloat planetI * 5)
+                    --
+                    --                             ComplexOrbit { zone, orbit } ->
+                    --                                 55 + (toFloat planetI * 5)
+                    --                         )
+                    --                         |> Vector2.add (Vector2.vec2 starX starY)
+                    --             in
+                    --             Svg.g []
+                    --                 [ drawStellarObject
+                    --                     stellarBody
+                    --                     (planetPos
+                    --                         |> Vector2.toRecord
+                    --                         |> (\{ x, y } -> ( x, y ))
+                    --                     )
+                    --                     5
+                    --                 , drawOrbit
+                    --                     ( starX, starY )
+                    --                     (case stellarBody.orbit of
+                    --                         SimpleOrbit orbitVal ->
+                    --                             55 + (toFloat planetI * 5)
+                    --
+                    --                         ComplexOrbit { zone, orbit } ->
+                    --                             55 + (toFloat planetI * 5)
+                    --                     )
+                    --                     "gray"
+                    --                 ]
+                    --         )
+                    --         star.stellarObjects
                 in
-                Svg.g [] (drawnStar :: orbitingBodies)
+                -- Svg.g [] (drawnStar :: orbitingBodies)
+                Svg.g [] [ drawnStar ]
             )
             stars
         )
-
-
-sidebarPlanet : StellarObject -> Element Msg
-sidebarPlanet stellarObject =
-    text "Hovering planet"
-
-
-sidebarStar : a -> Element Msg
-sidebarStar star =
-    text "Hovering star"
-
-
-sidebarMoon : Moon -> Element Msg
-sidebarMoon stellarMoon =
-    text "Hovering moon"
 
 
 view : Model -> Element.Element Msg
@@ -275,13 +259,13 @@ view model =
                             text "Hover body to see details"
 
                         HoveredPlanet hoveredPlanet ->
-                            sidebarPlanet hoveredPlanet
+                            text "TODO: hovering planet"
 
                         HoveredStar hoveredStar ->
-                            sidebarStar hoveredStar
+                            text "TODO: hovering star"
 
                         HoveredMoon hoveredMoon ->
-                            sidebarMoon hoveredMoon
+                            text "TODO: hovering moon"
                     , viewSystem system
                         |> Svg.toUnstyled
                         |> Element.html

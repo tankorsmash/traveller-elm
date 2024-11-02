@@ -25,8 +25,6 @@ module Traveller.Parser exposing
     , base
     , culturalExtension
     , debugLogErrors
-    , decodeExampleStellarData
-    , decodeStellarData
     , economicExtension
     , government
     , hydrosphere
@@ -62,7 +60,7 @@ import Traveller.Atmosphere exposing (Atmosphere, atmosphere)
 import Traveller.EHex exposing (EHex, eHex)
 import Traveller.HexId exposing (HexId, hexId)
 import Traveller.Population exposing (Population, population)
-import Traveller.StellarObject exposing (StellarObject, codecStellarObject, sampleStellarObject)
+import Traveller.StellarObject exposing (codecStellarObject, sampleStellarObject)
 
 
 
@@ -1205,14 +1203,6 @@ parseRefereeCsv =
         |> List.map printOutput
 
 
-decodeStellarData : String -> Result Codec.Error StellarObject
-decodeStellarData rawJson =
-    Codec.decodeString codecStellarObject rawJson
-
-
-decodeExampleStellarData : Result Codec.Error StellarObject
-decodeExampleStellarData =
-    decodeStellarData sampleStellarObject
 
 
 

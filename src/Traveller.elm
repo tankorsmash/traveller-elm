@@ -45,7 +45,7 @@ import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.Parser as TravellerParser
 import Traveller.SectorData exposing (SISector, SectorData, SurveyIndexData, codecSectorData, codecSurveyIndexData)
 import Traveller.SolarSystem exposing (SolarSystem)
-import Traveller.StellarObject exposing (StarData(..), StarDataConfig, StellarObject(..), getStarDataConfig, starColourRGB)
+import Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObjectX(..), TerrestrialData, getStarDataConfig, starColourRGB)
 
 
 gasGiantSI =
@@ -618,41 +618,124 @@ monospaceText someString =
 renderStar : StarData -> Int -> Element.Element msg
 renderStar (StarData starData) nestingLevel =
     let
-        renderStellarObject : Int -> StellarObject -> Element.Element msg
-        renderStellarObject newNestingLevel (StellarObject stellarObject) =
+        -- = GasGiant GasGiantData
+        -- | TerrestrialPlanet TerrestrialData
+        -- | PlanetoidBelt PlanetoidBeltData
+        -- | Planetoid PlanetoidData
+        -- | Star StarData
+        renderGasGiant : Int -> GasGiantData -> Element.Element msg
+        renderGasGiant newNestingLevel gasGiantData =
             row
                 [ Element.spacing 8
                 , Element.moveRight <| toFloat <| newNestingLevel * 20
                 , Font.size 14
                 ]
-                [ case stellarObject.orbit of
-                    SimpleOrbit orbit ->
-                        monospaceText <| Round.round 2 orbit
+                [ monospaceText <| String.fromFloat gasGiantData.orbit
+                , text "gas giant"
+                , text gasGiantData.orbitSequence
+                , text gasGiantData.code
+                ]
 
-                    ComplexOrbit _ ->
-                        Element.none
-                , case stellarObject.uwp of
-                    Just uwp ->
-                        case Parser.run TravellerParser.uwp uwp of
-                            Ok uwpData ->
-                                column []
-                                    [ monospaceText <| uwp
-                                    , -- temporarily using Debug.toString
-                                      monospaceText <| Debug.toString uwpData.size
-                                    ]
+        renderTerrestrialPlanet : Int -> TerrestrialData -> Element.Element msg
+        renderTerrestrialPlanet newNestingLevel terrestrialData =
+            row
+                [ Element.spacing 8
+                , Element.moveRight <| toFloat <| newNestingLevel * 20
+                , Font.size 14
+                ]
+                [ monospaceText <| String.fromFloat terrestrialData.orbit
+                , let
+                    rawUwp =
+                        terrestrialData.uwp
+                  in
+                  case Parser.run TravellerParser.uwp rawUwp of
+                    Ok uwpData ->
+                        column []
+                            [ monospaceText <| rawUwp
+                            , -- temporarily using Debug.toString
+                              monospaceText <| Debug.toString uwpData.size
+                            ]
 
-                            Err _ ->
-                                monospaceText <| uwp
+                    Err _ ->
+                        monospaceText <| rawUwp
+                , text terrestrialData.orbitSequence
+                , text "terrestrial data has no code"
+                ]
 
-                    Nothing ->
-                        Element.none
-                , text stellarObject.orbitSequence
-                , case stellarObject.code of
-                    Just code ->
-                        text <| code
+        renderPlanetoidBelt : Int -> PlanetoidBeltData -> Element.Element msg
+        renderPlanetoidBelt newNestingLevel planetoidBeltData =
+            row
+                [ Element.spacing 8
+                , Element.moveRight <| toFloat <| newNestingLevel * 20
+                , Font.size 14
+                ]
+                [ monospaceText <| String.fromFloat planetoidBeltData.orbit
+                , let
+                    rawUwp =
+                        planetoidBeltData.uwp
+                  in
+                  case Parser.run TravellerParser.uwp rawUwp of
+                    Ok uwpData ->
+                        column []
+                            [ monospaceText <| rawUwp
+                            , -- temporarily using Debug.toString
+                              monospaceText <| Debug.toString uwpData.size
+                            ]
 
-                    Nothing ->
-                        Element.none
+                    Err _ ->
+                        monospaceText <| rawUwp
+                , text planetoidBeltData.orbitSequence
+                , text "no code for pbelts"
+                ]
+
+        renderPlanetoid : Int -> PlanetoidData -> Element.Element msg
+        renderPlanetoid newNestingLevel planetoidData =
+            row
+                [ Element.spacing 8
+                , Element.moveRight <| toFloat <| newNestingLevel * 20
+                , Font.size 14
+                ]
+                [ monospaceText <| String.fromFloat planetoidData.orbit
+                , let
+                    rawUwp =
+                        planetoidData.uwp
+                  in
+                  case Parser.run TravellerParser.uwp rawUwp of
+                    Ok uwpData ->
+                        column []
+                            [ monospaceText <| planetoidData.uwp
+                            , -- temporarily using Debug.toString
+                              monospaceText <| Debug.toString uwpData.size
+                            ]
+
+                    Err _ ->
+                        monospaceText <| rawUwp
+                , text planetoidData.orbitSequence
+                , text <| "No code for planetoid"
+                ]
+
+        renderStellarObject : Int -> StellarObjectX -> Element.Element msg
+        renderStellarObject newNestingLevel stellarObject =
+            row
+                [ Element.spacing 8
+                , Element.moveRight <| toFloat <| newNestingLevel * 20
+                , Font.size 14
+                ]
+                [ case stellarObject of
+                    GasGiant gasGiantData ->
+                        renderGasGiant newNestingLevel gasGiantData
+
+                    TerrestrialPlanet terrestrialData ->
+                        renderTerrestrialPlanet newNestingLevel terrestrialData
+
+                    PlanetoidBelt planetoidBeltData ->
+                        renderPlanetoidBelt newNestingLevel planetoidBeltData
+
+                    Planetoid planetoidData ->
+                        renderPlanetoid newNestingLevel planetoidData
+
+                    Star starDataConfig ->
+                        renderStar starDataConfig (newNestingLevel + 1)
                 ]
     in
     column [ Element.moveRight <| toFloat <| nestingLevel * 10 ]

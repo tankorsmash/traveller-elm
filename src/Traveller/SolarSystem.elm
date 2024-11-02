@@ -2,7 +2,7 @@ module Traveller.SolarSystem exposing (SolarSystem, codec)
 
 import Codec
 import Traveller.HexId exposing (HexId, codecHexId)
-import Traveller.StellarObject exposing (StarData, StellarObject, codecStarData, codecStellarObject)
+import Traveller.StellarObject exposing (StarData,  codecStarData, codecStellarObject)
 
 
 type alias SolarSystem =
