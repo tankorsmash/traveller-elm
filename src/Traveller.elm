@@ -971,9 +971,39 @@ view model =
                             Html.toUnstyled <| Html.text "Have sector data and viewport, but failed to load survey index data"
                 ]
     in
-    row [ Font.size 20, centerX, centerY, Font.color <| Element.rgb 0.5 1.5 0.5 ]
-        [ controlsColumn
-        , hexesColumn
+    column [ centerX, centerY ]
+        [ row [ Font.size 20, Font.color <| Element.rgb 0.5 1.5 0.5 ]
+            [ controlsColumn
+            , hexesColumn
+            ]
+        , -- displaying json errors for SectorData
+          case model.sectorData of
+            Failure (Http.BadBody error) ->
+                (-- turn html into elm-ui
+                 Element.html <|
+                    -- convert from elm-css's HTML
+                    Html.toUnstyled
+                    <|
+                        -- use <pre> to preserve whitespace
+                        Html.pre [] [ Html.text error ]
+                )
+
+            _ ->
+                Element.none
+        , -- displaying json errors for SurveyIndexData
+          case model.surveyIndexData of
+            Failure (Http.BadBody error) ->
+                (-- turn html into elm-ui
+                 Element.html
+                    << -- convert from elm-css's HTML
+                       Html.toUnstyled
+                 <|
+                    -- use <pre> to preserve whitespace
+                    Html.pre [] [ Html.text error ]
+                )
+
+            _ ->
+                Element.none
         ]
 
 
