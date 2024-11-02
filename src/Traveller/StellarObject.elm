@@ -13,7 +13,7 @@ import Traveller.Hydrographics exposing (StellarHydrographics, codecStellarHydro
 import Traveller.Orbit exposing (StellarOrbit, codecStellarOrbit)
 import Traveller.Point exposing (StellarPoint, codecStellarPoint)
 import Traveller.Population exposing (StellarPopulation, codecStellarPopulation)
-import Traveller.StellarMoon exposing (Moon, codecMoon)
+import Traveller.Moon as Moon exposing (Moon)
 
 
 type StarColour
@@ -474,7 +474,7 @@ codecGasGiantData =
        |> Codec.field "diameter" .diameter Codec.float
        |> Codec.field "mass" .mass Codec.float
        |> Codec.field "orbit" .orbit Codec.float
-       |> Codec.field "moons" .moons (Codec.list codecMoon)
+       |> Codec.field "moons" .moons (Codec.list Moon.codec)
        |> Codec.field "hasRing" .hasRing Codec.bool
        |> Codec.field "trojanOffset" .trojanOffset (Codec.nullable Codec.float)
        |> Codec.field "axialTilt" .orbit Codec.float
@@ -499,7 +499,7 @@ codecTerrestrialData =
         |> Codec.field "retrograde" .retrograde Codec.bool
         |> Codec.field "trojanOffset" .trojanOffset (Codec.nullable Codec.float)
         |> Codec.field "axialTilt" .axialTilt Codec.float
-        |> Codec.field "moons" .moons (Codec.list (Codec.lazy (\_ -> codecMoon)))
+        |> Codec.field "moons" .moons (Codec.list (Codec.lazy (\_ -> Moon.codec)))
         |> Codec.field "biomassRating" .biomassRating Codec.int
         |> Codec.field "biocomplexityCode" .biocomplexityCode Codec.int
         |> Codec.field "biodiversityRating" .biodiversityRating Codec.int
@@ -540,7 +540,7 @@ codecPlanetoidData =
         |> Codec.field "retrograde" .retrograde Codec.bool
         |> Codec.field "trojanOffset" .trojanOffset (Codec.nullable Codec.float)
         |> Codec.field "axialTilt" .axialTilt Codec.float
-        |> Codec.field "moons" .moons (Codec.list (Codec.lazy (\_ -> codecMoon)))
+        |> Codec.field "moons" .moons (Codec.list (Codec.lazy (\_ -> Moon.codec)))
         |> Codec.field "biomassRating" .biomassRating Codec.int
         |> Codec.field "biocomplexityCode" .biocomplexityCode Codec.int
         |> Codec.field "biodiversityRating" .biodiversityRating Codec.int
@@ -618,7 +618,7 @@ codecStellarObject =
         |> Codec.maybeField "retrograde" .retrograde Codec.bool
         |> Codec.maybeField "trojanOffset" .trojanOffset Codec.float
         |> Codec.maybeField "axialTilt" .axialTilt Codec.float
-        |> Codec.maybeField "moons" .moons (Codec.list (Codec.lazy (\_ -> codecMoon)))
+        |> Codec.maybeField "moons" .moons (Codec.list (Codec.lazy (\_ -> Moon.codec)))
         |> Codec.maybeField "biomassRating" .biomassRating Codec.int
         |> Codec.maybeField "biocomplexityCode" .biocomplexityCode Codec.int
         |> Codec.maybeField "biodiversityRating" .biodiversityRating Codec.int

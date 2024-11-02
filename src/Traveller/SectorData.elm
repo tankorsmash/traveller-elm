@@ -7,7 +7,7 @@ import Json.Encode as JsEncode
 import Parser exposing ((|.), (|=), Parser)
 import Parser.Extras as Parser
 import Traveller.HexId exposing (HexId, codecHexId)
-import Traveller.SolarSystem exposing (SolarSystem, codecSolarSystem)
+import Traveller.SolarSystem exposing (SolarSystem, codec)
 
 
 type alias SectorData =
@@ -21,7 +21,7 @@ type alias SectorData =
 codecSectorData : Codec.Codec SectorData
 codecSectorData =
     Codec.object SectorData
-        |> Codec.field "solarSystems" .solarSystems (Codec.list codecSolarSystem)
+        |> Codec.field "solarSystems" .solarSystems (Codec.list codec)
         |> Codec.field "name" .name Codec.string
         |> Codec.field "X" .x Codec.int
         |> Codec.field "Y" .y Codec.int

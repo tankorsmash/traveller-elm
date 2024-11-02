@@ -1,8 +1,8 @@
-module Traveller.SolarSystem exposing (SolarSystem, codecSolarSystem)
+module Traveller.SolarSystem exposing (SolarSystem, codec)
 
 import Codec
 import Traveller.HexId exposing (HexId, codecHexId)
-import Traveller.StellarObject exposing (StarData, codecStarData, StellarObject, codecStellarObject)
+import Traveller.StellarObject exposing (StarData, StellarObject, codecStarData, codecStellarObject)
 
 
 type alias SolarSystem =
@@ -15,8 +15,8 @@ type alias SolarSystem =
     }
 
 
-codecSolarSystem : Codec.Codec SolarSystem
-codecSolarSystem =
+codec : Codec.Codec SolarSystem
+codec =
     Codec.object SolarSystem
         |> Codec.field "stars" .stars (Codec.list codecStarData)
         |> Codec.field "coordinates" .coordinates codecHexId
