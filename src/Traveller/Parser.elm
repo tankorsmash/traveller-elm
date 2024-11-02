@@ -60,7 +60,7 @@ import Traveller.Atmosphere exposing (Atmosphere, atmosphere)
 import Traveller.EHex exposing (EHex, eHex)
 import Traveller.HexId exposing (HexId, hexId)
 import Traveller.Population exposing (Population, population)
-import Traveller.StellarObject exposing (codecStellarObject, sampleStellarObject)
+import Traveller.StellarObject exposing (codecStellarObject)
 
 
 
@@ -1201,8 +1201,6 @@ parseRefereeCsv =
            List.drop 1
         |> List.map (\line -> ( line, Parser.run parseRefereeData line ))
         |> List.map printOutput
-
-
 
 
 
