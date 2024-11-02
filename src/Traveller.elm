@@ -867,7 +867,9 @@ view model =
                 ]
     in
     row [ Font.size 20, centerX, centerY, Font.color <| Element.rgb 0.5 1.5 0.5 ]
-        [ controlsColumn, hexesColumn ]
+        [ controlsColumn
+        , hexesColumn
+        ]
 
 
 sendSectorRequest : Cmd Msg

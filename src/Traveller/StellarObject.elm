@@ -1,4 +1,4 @@
-module Traveller.StellarObject exposing (StellarObject(..), codecStellarObject,  sampleStellarObject)
+module Traveller.StellarObject exposing (StellarObject(..), codecStellarObject, sampleStellarObject)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -581,3 +581,42 @@ codecStarData =
         |> Codec.field "jump" .jump Codec.float
         |> Codec.buildObject
         |> Codec.map StarData (\(StarData data) -> data)
+
+
+decodeStellarObjectX : JsDecode.Decoder StellarObjectX
+decodeStellarObjectX =
+    JsDecode.oneOf
+        [ JsDecode.map GasGiant (Codec.decoder codecGasGiantData)
+        , JsDecode.map TerrestrialPlanet (Codec.decoder codecTerrestrialData)
+        , JsDecode.map PlanetoidBelt (Codec.decoder codecPlanetoidBeltData)
+        , JsDecode.map Planetoid (Codec.decoder codecPlanetoidData)
+        , JsDecode.map Star (Codec.decoder codecStarData)
+        ]
+
+
+encodeStellarObjectX : StellarObjectX -> Codec.Value
+encodeStellarObjectX stellarObjectX =
+    case stellarObjectX of
+        GasGiant data ->
+            Codec.encodeToValue codecGasGiantData data
+
+        TerrestrialPlanet data ->
+            Codec.encodeToValue codecTerrestrialData data
+
+        PlanetoidBelt data ->
+            Codec.encodeToValue codecPlanetoidBeltData data
+
+        Planetoid data ->
+            Codec.encodeToValue codecPlanetoidData data
+
+        Star data ->
+            Codec.encodeToValue codecStarData data
+
+
+codecStellarObjectX : Codec StellarObjectX
+codecStellarObjectX =
+    Codec.build
+        encodeStellarObjectX
+        decodeStellarObjectX
+
+
