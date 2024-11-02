@@ -60,7 +60,6 @@ import Traveller.Atmosphere exposing (Atmosphere, atmosphere)
 import Traveller.EHex exposing (EHex, eHex)
 import Traveller.HexId exposing (HexId, hexId)
 import Traveller.Population exposing (Population, population)
-import Traveller.StellarObject exposing (codecStellarObject)
 
 
 

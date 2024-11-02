@@ -103,8 +103,6 @@ type alias TerrestrialData =
     , density : Float
     , greenhouse : Float
     , meanTemperature : Float
-    , nativeSophont : Bool
-    , extinctSophont : Bool
     , habitabilityRating : Int
     , orbitSequence : String
     , uwp : String
@@ -233,8 +231,7 @@ type StellarObjectX
 
 codecPlanetoidBeltData : Codec PlanetoidBeltData
 codecPlanetoidBeltData =
-    Codec.object
-        PlanetoidBeltData
+    Codec.object PlanetoidBeltData
         |> Codec.field "orbitPosition" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
@@ -256,8 +253,7 @@ codecPlanetoidBeltData =
 
 codecGasGiantData : Codec GasGiantData
 codecGasGiantData =
-    Codec.object
-        GasGiantData
+    Codec.object GasGiantData
         |> Codec.field "orbitPosition" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
@@ -278,8 +274,7 @@ codecGasGiantData =
 
 codecTerrestrialData : Codec TerrestrialData
 codecTerrestrialData =
-    Codec.object
-        TerrestrialData
+    Codec.object TerrestrialData
         |> Codec.field "orbitPosition" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
@@ -304,8 +299,6 @@ codecTerrestrialData =
         |> Codec.field "density" .density Codec.float
         |> Codec.field "greenhouse" .greenhouse Codec.float
         |> Codec.field "meanTemperature" .meanTemperature Codec.float
-        |> Codec.field "nativeSophont" .nativeSophont Codec.bool
-        |> Codec.field "extinctSophont" .extinctSophont Codec.bool
         |> Codec.field "habitabilityRating" .habitabilityRating Codec.int
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
         |> Codec.field "uwp" .uwp Codec.string
@@ -319,8 +312,7 @@ codecTerrestrialData =
 
 codecPlanetoidData : Codec PlanetoidData
 codecPlanetoidData =
-    Codec.object
-        PlanetoidData
+    Codec.object PlanetoidData
         |> Codec.field "orbitPosition" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
@@ -368,8 +360,7 @@ decodeStellarObjectX =
 
 codecStarData : Codec StarData
 codecStarData =
-    Codec.object
-        StarDataConfig
+    Codec.object StarDataConfig
         |> Codec.field "orbitPosition" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
