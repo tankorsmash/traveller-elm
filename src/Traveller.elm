@@ -615,141 +615,147 @@ monospaceText someString =
     text someString |> el [ Font.family [ Font.monospace ] ]
 
 
+renderGasGiant : Int -> GasGiantData -> Element.Element msg
+renderGasGiant newNestingLevel gasGiantData =
+    row
+        [ Element.spacing 8
+        , Element.moveRight <| calcNestedOffset newNestingLevel
+        , Font.size 14
+        ]
+        [ renderRawOrbit gasGiantData.orbit
+        , text gasGiantData.orbitSequence
+        , text (gasGiantData.code |> Maybe.withDefault "??")
+        , text "🛢"
+        , text <| "j: " ++ gasGiantData.safeJumpTime
+        ]
+
+
+renderTerrestrialPlanet : Int -> TerrestrialData -> Element.Element msg
+renderTerrestrialPlanet newNestingLevel terrestrialData =
+    row
+        [ Element.spacing 8
+        , Element.moveRight <| calcNestedOffset newNestingLevel
+        , Font.size 14
+        ]
+        [ renderRawOrbit terrestrialData.orbit
+        , let
+            rawUwp =
+                terrestrialData.uwp
+          in
+          case Parser.run TravellerParser.uwp rawUwp of
+            Ok uwpData ->
+                column []
+                    [ monospaceText <| rawUwp
+                    , -- temporarily using Debug.toString
+                      monospaceText <| Debug.toString uwpData.size
+                    ]
+
+            Err _ ->
+                monospaceText <| rawUwp
+        , text terrestrialData.orbitSequence
+        , text "🌍"
+        , text <| "j: " ++ terrestrialData.safeJumpTime
+        ]
+
+
+calcNestedOffset : Int -> Float
+calcNestedOffset newNestingLevel =
+    toFloat <| newNestingLevel * 10
+
+
+renderRawOrbit : Float -> Element.Element msg
+renderRawOrbit orbit =
+    row []
+        [ monospaceText <| Round.round 2 orbit
+        , text " ("
+        , monospaceText <| Round.round 2 (orbit * 2.5)
+        , text ")"
+        ]
+
+
+renderPlanetoidBelt : Int -> PlanetoidBeltData -> Element.Element msg
+renderPlanetoidBelt newNestingLevel planetoidBeltData =
+    row
+        [ Element.spacing 8
+        , Element.moveRight <| calcNestedOffset newNestingLevel
+        , Font.size 14
+        ]
+        [ renderRawOrbit planetoidBeltData.orbit
+        , let
+            rawUwp =
+                planetoidBeltData.uwp
+          in
+          case Parser.run TravellerParser.uwp rawUwp of
+            Ok uwpData ->
+                column []
+                    [ monospaceText <| rawUwp
+
+                    -- , -- temporarily using Debug.toString
+                    --   monospaceText <| Debug.toString uwpData.size
+                    ]
+
+            Err _ ->
+                monospaceText <| rawUwp
+        , text planetoidBeltData.orbitSequence
+        , text "🗿"
+        , text <| "j: " ++ planetoidBeltData.safeJumpTime
+        ]
+
+
+renderPlanetoid : Int -> PlanetoidData -> Element.Element msg
+renderPlanetoid newNestingLevel planetoidData =
+    row
+        [ Element.spacing 8
+        , Element.moveRight <| calcNestedOffset newNestingLevel
+        , Font.size 14
+        ]
+        [ renderRawOrbit planetoidData.orbit
+        , let
+            rawUwp =
+                planetoidData.uwp
+          in
+          case Parser.run TravellerParser.uwp rawUwp of
+            Ok uwpData ->
+                column []
+                    [ monospaceText <| planetoidData.uwp
+                    , -- temporarily using Debug.toString
+                      monospaceText <| Debug.toString uwpData.size
+                    ]
+
+            Err _ ->
+                monospaceText <| rawUwp
+        , text planetoidData.orbitSequence
+        , text "🌎"
+        , text <| "j: " ++ planetoidData.safeJumpTime
+        ]
+
+
+renderStellarObject : Int -> StellarObjectX -> Element.Element msg
+renderStellarObject newNestingLevel stellarObject =
+    row
+        [ Element.spacing 8
+        , Font.size 14
+        ]
+        [ case stellarObject of
+            GasGiant gasGiantData ->
+                renderGasGiant newNestingLevel gasGiantData
+
+            TerrestrialPlanet terrestrialData ->
+                renderTerrestrialPlanet newNestingLevel terrestrialData
+
+            PlanetoidBelt planetoidBeltData ->
+                renderPlanetoidBelt newNestingLevel planetoidBeltData
+
+            Planetoid planetoidData ->
+                renderPlanetoid newNestingLevel planetoidData
+
+            Star starDataConfig ->
+                renderStar starDataConfig (newNestingLevel + 1)
+        ]
+
+
 renderStar : StarData -> Int -> Element.Element msg
 renderStar (StarData starData) nestingLevel =
-    let
-        calcNestedOffset : Int -> Float
-        calcNestedOffset newNestingLevel =
-            toFloat <| newNestingLevel * 10
-
-        renderRawOrbit : Float -> Element.Element msg
-        renderRawOrbit orbit =
-            row []
-                [ monospaceText <| Round.round 2 orbit
-                , text " ("
-                , monospaceText <| Round.round 2 (orbit * 2.5)
-                , text ")"
-                ]
-
-        renderGasGiant : Int -> GasGiantData -> Element.Element msg
-        renderGasGiant newNestingLevel gasGiantData =
-            row
-                [ Element.spacing 8
-                , Element.moveRight <| calcNestedOffset newNestingLevel
-                , Font.size 14
-                ]
-                [ renderRawOrbit gasGiantData.orbit
-                , text gasGiantData.orbitSequence
-                , text (gasGiantData.code |> Maybe.withDefault "??")
-                , text "🛢"
-                , text <| "j: " ++ gasGiantData.safeJumpTime
-                ]
-
-        renderTerrestrialPlanet : Int -> TerrestrialData -> Element.Element msg
-        renderTerrestrialPlanet newNestingLevel terrestrialData =
-            row
-                [ Element.spacing 8
-                , Element.moveRight <| calcNestedOffset newNestingLevel
-                , Font.size 14
-                ]
-                [ renderRawOrbit terrestrialData.orbit
-                , let
-                    rawUwp =
-                        terrestrialData.uwp
-                  in
-                  case Parser.run TravellerParser.uwp rawUwp of
-                    Ok uwpData ->
-                        column []
-                            [ monospaceText <| rawUwp
-                            , -- temporarily using Debug.toString
-                              monospaceText <| Debug.toString uwpData.size
-                            ]
-
-                    Err _ ->
-                        monospaceText <| rawUwp
-                , text terrestrialData.orbitSequence
-                , text "🌍"
-                , text <| "j: " ++ terrestrialData.safeJumpTime
-                ]
-
-        renderPlanetoidBelt : Int -> PlanetoidBeltData -> Element.Element msg
-        renderPlanetoidBelt newNestingLevel planetoidBeltData =
-            row
-                [ Element.spacing 8
-                , Element.moveRight <| calcNestedOffset newNestingLevel
-                , Font.size 14
-                ]
-                [ renderRawOrbit planetoidBeltData.orbit
-                , let
-                    rawUwp =
-                        planetoidBeltData.uwp
-                  in
-                  case Parser.run TravellerParser.uwp rawUwp of
-                    Ok uwpData ->
-                        column []
-                            [ monospaceText <| rawUwp
-
-                            -- , -- temporarily using Debug.toString
-                            --   monospaceText <| Debug.toString uwpData.size
-                            ]
-
-                    Err _ ->
-                        monospaceText <| rawUwp
-                , text planetoidBeltData.orbitSequence
-                , text "🗿"
-                , text <| "j: " ++ planetoidBeltData.safeJumpTime
-                ]
-
-        renderPlanetoid : Int -> PlanetoidData -> Element.Element msg
-        renderPlanetoid newNestingLevel planetoidData =
-            row
-                [ Element.spacing 8
-                , Element.moveRight <| calcNestedOffset newNestingLevel
-                , Font.size 14
-                ]
-                [ renderRawOrbit planetoidData.orbit
-                , let
-                    rawUwp =
-                        planetoidData.uwp
-                  in
-                  case Parser.run TravellerParser.uwp rawUwp of
-                    Ok uwpData ->
-                        column []
-                            [ monospaceText <| planetoidData.uwp
-                            , -- temporarily using Debug.toString
-                              monospaceText <| Debug.toString uwpData.size
-                            ]
-
-                    Err _ ->
-                        monospaceText <| rawUwp
-                , text planetoidData.orbitSequence
-                , text "🌎"
-                , text <| "j: " ++ planetoidData.safeJumpTime
-                ]
-
-        renderStellarObject : Int -> StellarObjectX -> Element.Element msg
-        renderStellarObject newNestingLevel stellarObject =
-            row
-                [ Element.spacing 8
-                , Font.size 14
-                ]
-                [ case stellarObject of
-                    GasGiant gasGiantData ->
-                        renderGasGiant newNestingLevel gasGiantData
-
-                    TerrestrialPlanet terrestrialData ->
-                        renderTerrestrialPlanet newNestingLevel terrestrialData
-
-                    PlanetoidBelt planetoidBeltData ->
-                        renderPlanetoidBelt newNestingLevel planetoidBeltData
-
-                    Planetoid planetoidData ->
-                        renderPlanetoid newNestingLevel planetoidData
-
-                    Star starDataConfig ->
-                        renderStar starDataConfig (newNestingLevel + 1)
-                ]
-    in
     column [ Element.moveRight <| toFloat <| nestingLevel * 10 ]
         [ el [ Font.size 16, Font.bold ] <|
             text <|
