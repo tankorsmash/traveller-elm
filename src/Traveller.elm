@@ -618,16 +618,15 @@ monospaceText someString =
 renderStar : StarData -> Int -> Element.Element msg
 renderStar (StarData starData) nestingLevel =
     let
-        -- = GasGiant GasGiantData
-        -- | TerrestrialPlanet TerrestrialData
-        -- | PlanetoidBelt PlanetoidBeltData
-        -- | Planetoid PlanetoidData
-        -- | Star StarData
+        calcNestedOffset : Int -> Float
+        calcNestedOffset newNestingLevel =
+            toFloat <| newNestingLevel * 10
+
         renderGasGiant : Int -> GasGiantData -> Element.Element msg
         renderGasGiant newNestingLevel gasGiantData =
             row
                 [ Element.spacing 8
-                , Element.moveRight <| toFloat <| newNestingLevel * 10
+                , Element.moveRight <| calcNestedOffset newNestingLevel
                 , Font.size 14
                 ]
                 [ monospaceText <| Round.round 4 gasGiantData.orbit
@@ -639,7 +638,7 @@ renderStar (StarData starData) nestingLevel =
         renderTerrestrialPlanet newNestingLevel terrestrialData =
             row
                 [ Element.spacing 8
-                , Element.moveRight <| toFloat <| newNestingLevel * 10
+                , Element.moveRight <| calcNestedOffset newNestingLevel
                 , Font.size 14
                 ]
                 [ monospaceText <| String.fromFloat terrestrialData.orbit
@@ -665,7 +664,7 @@ renderStar (StarData starData) nestingLevel =
         renderPlanetoidBelt newNestingLevel planetoidBeltData =
             row
                 [ Element.spacing 8
-                , Element.moveRight <| toFloat <| newNestingLevel * 10
+                , Element.moveRight <| calcNestedOffset newNestingLevel
                 , Font.size 14
                 ]
                 [ monospaceText <| Round.round 4 planetoidBeltData.orbit
@@ -691,7 +690,7 @@ renderStar (StarData starData) nestingLevel =
         renderPlanetoid newNestingLevel planetoidData =
             row
                 [ Element.spacing 8
-                , Element.moveRight <| toFloat <| newNestingLevel * 20
+                , Element.moveRight <| calcNestedOffset newNestingLevel
                 , Font.size 14
                 ]
                 [ monospaceText <| String.fromFloat planetoidData.orbit
@@ -717,7 +716,7 @@ renderStar (StarData starData) nestingLevel =
         renderStellarObject newNestingLevel stellarObject =
             row
                 [ Element.spacing 8
-                , Element.moveRight <| toFloat <| newNestingLevel * 20
+                , Element.moveRight <| calcNestedOffset newNestingLevel
                 , Font.size 14
                 ]
                 [ case stellarObject of
@@ -740,10 +739,11 @@ renderStar (StarData starData) nestingLevel =
     column [ Element.moveRight <| toFloat <| nestingLevel * 10 ]
         [ el [ Font.size 16, Font.bold ] <|
             text <|
-                starData.stellarType
+                (List.repeat nestingLevel "↳" |> String.join "")
+                    ++ starData.stellarType
                     ++ (case starData.subtype of
                             Just num ->
-                                "" ++ String.fromInt num
+                                String.fromInt num
 
                             Nothing ->
                                 ""
@@ -756,7 +756,7 @@ renderStar (StarData starData) nestingLevel =
                     renderStar compStarData (nestingLevel + 1)
                 )
             |> Maybe.withDefault Element.none
-        , column [] <| List.map (renderStellarObject <| nestingLevel + 1) starData.stellarObjects
+        , column [] <| List.map (renderStellarObject <| nestingLevel) starData.stellarObjects
         ]
 
 
