@@ -780,40 +780,26 @@ renderStar (StarData starData) nestingLevel =
         ]
 
 
-viewSystemDetailsSidebar : Maybe ( HexId, Int ) -> Maybe HexOrigin -> Dict.Dict RawHexId SolarSystem -> Element Msg
-viewSystemDetailsSidebar maybeViewingHexId maybeViewingHexOrigin solarSystemDict =
-    column
-        []
-        [ case
-            ( maybeViewingHexId
-            , maybeViewingHexId
-                |> Maybe.andThen
-                    (\( hid, _ ) ->
-                        Dict.get hid.value solarSystemDict
-                    )
-            )
-          of
-            ( Just ( viewingHexId, si ), Just solarSystem ) ->
-                column [ Element.spacing 10 ] <|
-                    [ renderStar solarSystem.primaryStar 0
-                    , Input.button
-                        [ Background.color <| rgb 0.5 1.5 0.5
-                        , Border.rounded 5
-                        , Border.width 10
-                        , Border.color <| rgb 0.5 1.5 0.5
-                        , Font.size 14
-                        , Font.color <| rgb 0 0 0
-                        , Element.spacing 10
-                        , -- limited styling for mouse over
-                          Element.mouseOver [ Border.color <| rgb 0.9 0.9 0.9, Background.color <| rgb 0.9 0.9 0.9 ]
-                        ]
-                        { onPress = Just <| GoToSolarSystemPage viewingHexId
-                        , label = text <| "Visualize Solar System: " ++ viewingHexId.raw
-                        }
-                    ]
-
-            _ ->
-                text "No solar system data found in dict"
+viewSystemDetailsSidebar : ( HexId, Int ) -> Maybe HexOrigin -> SolarSystem -> Element Msg
+viewSystemDetailsSidebar ( viewingHexId, si ) maybeViewingHexOrigin solarSystem =
+    column [ Element.spacing 10 ] <|
+        [ -- render the nested chart of the system
+          renderStar solarSystem.primaryStar 0
+        , -- the button to load the solar system
+          Input.button
+            [ Background.color <| rgb 0.5 1.5 0.5
+            , Border.rounded 5
+            , Border.width 10
+            , Border.color <| rgb 0.5 1.5 0.5
+            , Font.size 14
+            , Font.color <| rgb 0 0 0
+            , Element.spacing 10
+            , -- limited styling for mouse over
+              Element.mouseOver [ Border.color <| rgb 0.9 0.9 0.9, Background.color <| rgb 0.9 0.9 0.9 ]
+            ]
+            { onPress = Just <| GoToSolarSystemPage viewingHexId
+            , label = text <| "Visualize Solar System: " ++ viewingHexId.raw
+            }
         ]
 
 
@@ -840,10 +826,8 @@ calcDistance hex1 hex2 =
 view : Model -> Element.Element Msg
 view model =
     let
-        controlsColumn =
-            column
-                [ centerX
-                ]
+        sidebarColumn =
+            column [ centerX ]
                 [ text <|
                     "Welcome to the Traveller app!"
                 , text <|
@@ -918,10 +902,20 @@ view model =
                     ]
                 , case model.sectorData of
                     Success ( sectorData, solarSystemDict ) ->
-                        viewSystemDetailsSidebar
-                            model.viewingHexId
-                            model.viewingHexOrigin
-                            solarSystemDict
+                        case model.viewingHexId of
+                            Just ( viewingHexId, si ) ->
+                                case solarSystemDict |> Dict.get viewingHexId.value of
+                                    Just solarSystem ->
+                                        viewSystemDetailsSidebar
+                                            ( viewingHexId, si )
+                                            model.viewingHexOrigin
+                                            solarSystem
+
+                                    Nothing ->
+                                        text "No solar system data found in dict"
+
+                            Nothing ->
+                                text "No viewing hex data yet"
 
                     _ ->
                         text "No loaded sector data yet"
@@ -992,7 +986,7 @@ view model =
     in
     column [ centerX, centerY ]
         [ row [ Font.size 20, Font.color <| Element.rgb 0.5 1.5 0.5 ]
-            [ controlsColumn
+            [ sidebarColumn
             , hexesColumn
             ]
         , -- displaying json errors for SectorData
