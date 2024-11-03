@@ -193,7 +193,15 @@ viewSystem system =
                     drawnStar =
                         Svg.g []
                             [ drawOrbit ( parentX, parentY ) (star.orbit * 20) "blue"
-                            , drawStar star ( starX, starY ) (star.mass * 50)
+                            , drawStar star
+                                ( starX, starY )
+                                (case star.mass of
+                                    Just mass ->
+                                        mass
+
+                                    Nothing ->
+                                        999999
+                                )
                             ]
 
                     -- orbitingBodies =

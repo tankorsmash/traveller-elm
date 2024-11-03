@@ -7,9 +7,15 @@ import Parser exposing ((|.), (|=), Parser)
 import Parser.Extras as Parser
 
 
+type alias ComplexOrbitData =
+    { zone : String
+    , orbit : Maybe Float
+    }
+
+
 type StellarOrbit
     = SimpleOrbit Float
-    | ComplexOrbit { zone : String, orbit : Float }
+    | ComplexOrbit ComplexOrbitData
 
 
 codec : Codec StellarOrbit
@@ -20,10 +26,17 @@ codec =
                 SimpleOrbit orbit ->
                     JsEncode.float orbit
 
-                ComplexOrbit complexData ->
+                ComplexOrbit complexOrbitData ->
                     JsEncode.object
-                        [ ( "zone", JsEncode.string complexData.zone )
-                        , ( "orbit", JsEncode.float complexData.orbit )
+                        [ ( "zone", JsEncode.string complexOrbitData.zone )
+                        , ( "orbit"
+                          , case complexOrbitData.orbit of
+                                Just orbitNum ->
+                                    JsEncode.float orbitNum
+
+                                Nothing ->
+                                    JsEncode.null
+                          )
                         ]
         )
         (JsDecode.oneOf
@@ -31,6 +44,6 @@ codec =
             , JsDecode.map2
                 (\zone_ orbit -> ComplexOrbit { zone = zone_, orbit = orbit })
                 (JsDecode.field "zone" JsDecode.string)
-                (JsDecode.field "orbit" JsDecode.float)
+                (JsDecode.field "orbit" (JsDecode.nullable JsDecode.float))
             ]
         )

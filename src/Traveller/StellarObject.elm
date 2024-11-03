@@ -101,14 +101,14 @@ type alias TerrestrialData =
     , hasRing : Bool
     , albedo : Float
     , density : Maybe Float
-    , greenhouse : Float
+    , greenhouse : Maybe Float
     , meanTemperature : Maybe Float
     , habitabilityRating : Maybe Int
     , orbitSequence : String
     , uwp : String
     , diameter : Float
-    , gravity : Float
-    , mass : Float
+    , gravity : Maybe Float
+    , mass : Maybe Float
     , escapeVelocity : Float
     , safeJumpTime : String
     }
@@ -121,7 +121,7 @@ type alias PlanetoidData =
     , effectiveHZCODeviation : Float
     , size : String
     , orbit : Float
-    , period : Float
+    , period : Maybe Float
     , composition : String
     , retrograde : Bool
     , trojanOffset : Maybe Float
@@ -137,7 +137,7 @@ type alias PlanetoidData =
     , hasRing : Bool
     , albedo : Float
     , density : Maybe Float
-    , greenhouse : Float
+    , greenhouse : Maybe Float
     , meanTemperature : Maybe Float
     , orbitSequence : String
     , uwp : String
@@ -146,8 +146,8 @@ type alias PlanetoidData =
     , mass : Maybe Float
     , escapeVelocity : Maybe Float
     , safeJumpTime : String
-    , -- maybe not required for Planetoid?
-      code : Maybe String
+    -- , -- maybe not required for Planetoid?
+    --   code : Maybe String
     }
 
 
@@ -158,7 +158,7 @@ type alias GasGiantData =
     , effectiveHZCODeviation : Maybe Float
     , code : Maybe String
     , diameter : Float
-    , mass : Float
+    , mass : (Maybe Float)
     , orbit : Float
     , moons : List Moon
     , hasRing : Bool
@@ -199,7 +199,7 @@ type alias StarDataConfig =
     , stellarType : String
     , subtype : Maybe Int
     , orbitType : Int
-    , mass : Float
+    , mass : Maybe Float
     , diameter : Float
     , temperature : Int
     , age : Float
@@ -260,9 +260,9 @@ codecGasGiantData =
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
-        |> Codec.field "code" .code (Codec.maybe Codec.string)
+        |> Codec.optionalField"code" .code (Codec.string)
         |> Codec.field "diameter" .diameter Codec.float
-        |> Codec.field "mass" .mass Codec.float
+        |> Codec.field "mass" .mass (Codec.nullable Codec.float)
         |> Codec.field "orbit" .orbit Codec.float
         |> Codec.field "moons" .moons (Codec.list Moon.codec)
         |> Codec.field "hasRing" .hasRing Codec.bool
@@ -299,14 +299,14 @@ codecTerrestrialData =
         |> Codec.field "hasRing" .hasRing Codec.bool
         |> Codec.field "albedo" .albedo Codec.float
         |> Codec.optionalField "density" .density Codec.float
-        |> Codec.field "greenhouse" .greenhouse Codec.float
+        |> Codec.optionalField "greenhouse" .greenhouse Codec.float
         |> Codec.field "meanTemperature" .meanTemperature (Codec.nullable Codec.float)
         |> Codec.optionalField "habitabilityRating" .habitabilityRating Codec.int
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
         |> Codec.field "uwp" .uwp Codec.string
         |> Codec.field "diameter" .diameter Codec.float
-        |> Codec.field "gravity" .gravity Codec.float
-        |> Codec.field "mass" .mass Codec.float
+        |> Codec.field "gravity" .gravity (Codec.nullable Codec.float)
+        |> Codec.field "mass" .mass (Codec.nullable Codec.float)
         |> Codec.field "escapeVelocity" .escapeVelocity Codec.float
         |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
         |> Codec.buildObject
@@ -321,7 +321,7 @@ codecPlanetoidData =
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
         |> Codec.field "size" .size Codec.string
         |> Codec.field "orbit" .orbit Codec.float
-        |> Codec.field "period" .period Codec.float
+        |> Codec.field "period" .period (Codec.nullable Codec.float)
         |> Codec.field "composition" .composition Codec.string
         |> Codec.field "retrograde" .retrograde Codec.bool
         |> Codec.field "trojanOffset" .trojanOffset (Codec.nullable Codec.float)
@@ -337,7 +337,7 @@ codecPlanetoidData =
         |> Codec.field "hasRing" .hasRing Codec.bool
         |> Codec.field "albedo" .albedo Codec.float
         |> Codec.optionalField "density" .density Codec.float
-        |> Codec.field "greenhouse" .greenhouse Codec.float
+        |> Codec.optionalField "greenhouse" .greenhouse Codec.float
         |> Codec.field "meanTemperature" .meanTemperature (Codec.nullable Codec.float)
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
         |> Codec.field "uwp" .uwp Codec.string
@@ -346,7 +346,7 @@ codecPlanetoidData =
         |> Codec.field "mass" .mass (Codec.nullable Codec.float)
         |> Codec.field "escapeVelocity" .escapeVelocity (Codec.nullable Codec.float)
         |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
-        |> Codec.optionalField "code" .code Codec.string
+        -- |> Codec.optionalField "code" .code Codec.string
         |> Codec.buildObject
 
 
@@ -372,7 +372,7 @@ codecStarData =
         |> Codec.field "stellarType" .stellarType Codec.string
         |> Codec.field "subtype" .subtype (Codec.nullable Codec.int)
         |> Codec.field "orbitType" .orbitType Codec.int
-        |> Codec.field "mass" .mass Codec.float
+        |> Codec.field "mass" .mass (Codec.nullable Codec.float)
         |> Codec.field "diameter" .diameter Codec.float
         |> Codec.field "temperature" .temperature Codec.int
         |> Codec.field "age" .age Codec.float
