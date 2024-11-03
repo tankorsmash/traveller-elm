@@ -622,6 +622,15 @@ renderStar (StarData starData) nestingLevel =
         calcNestedOffset newNestingLevel =
             toFloat <| newNestingLevel * 10
 
+        renderRawOrbit : Float -> Element.Element msg
+        renderRawOrbit orbit =
+            row []
+                [ monospaceText <| Round.round 2 orbit
+                , text " ("
+                , monospaceText <| Round.round 2 (orbit * 2.5)
+                , text ")"
+                ]
+
         renderGasGiant : Int -> GasGiantData -> Element.Element msg
         renderGasGiant newNestingLevel gasGiantData =
             row
@@ -629,9 +638,11 @@ renderStar (StarData starData) nestingLevel =
                 , Element.moveRight <| calcNestedOffset newNestingLevel
                 , Font.size 14
                 ]
-                [ monospaceText <| Round.round 4 gasGiantData.orbit
+                [ renderRawOrbit gasGiantData.orbit
                 , text gasGiantData.orbitSequence
                 , text (gasGiantData.code |> Maybe.withDefault "??")
+                , text "🛢"
+                , text <| "j: " ++ gasGiantData.safeJumpTime
                 ]
 
         renderTerrestrialPlanet : Int -> TerrestrialData -> Element.Element msg
@@ -641,7 +652,7 @@ renderStar (StarData starData) nestingLevel =
                 , Element.moveRight <| calcNestedOffset newNestingLevel
                 , Font.size 14
                 ]
-                [ monospaceText <| String.fromFloat terrestrialData.orbit
+                [ renderRawOrbit terrestrialData.orbit
                 , let
                     rawUwp =
                         terrestrialData.uwp
@@ -657,7 +668,8 @@ renderStar (StarData starData) nestingLevel =
                     Err _ ->
                         monospaceText <| rawUwp
                 , text terrestrialData.orbitSequence
-                , text "terrestrial data has no code"
+                , text "🌍"
+                , text <| "j: " ++ terrestrialData.safeJumpTime
                 ]
 
         renderPlanetoidBelt : Int -> PlanetoidBeltData -> Element.Element msg
@@ -667,7 +679,7 @@ renderStar (StarData starData) nestingLevel =
                 , Element.moveRight <| calcNestedOffset newNestingLevel
                 , Font.size 14
                 ]
-                [ monospaceText <| Round.round 4 planetoidBeltData.orbit
+                [ renderRawOrbit planetoidBeltData.orbit
                 , let
                     rawUwp =
                         planetoidBeltData.uwp
@@ -684,6 +696,8 @@ renderStar (StarData starData) nestingLevel =
                     Err _ ->
                         monospaceText <| rawUwp
                 , text planetoidBeltData.orbitSequence
+                , text "🗿"
+                , text <| "j: " ++ planetoidBeltData.safeJumpTime
                 ]
 
         renderPlanetoid : Int -> PlanetoidData -> Element.Element msg
@@ -693,7 +707,7 @@ renderStar (StarData starData) nestingLevel =
                 , Element.moveRight <| calcNestedOffset newNestingLevel
                 , Font.size 14
                 ]
-                [ monospaceText <| String.fromFloat planetoidData.orbit
+                [ renderRawOrbit planetoidData.orbit
                 , let
                     rawUwp =
                         planetoidData.uwp
@@ -709,14 +723,14 @@ renderStar (StarData starData) nestingLevel =
                     Err _ ->
                         monospaceText <| rawUwp
                 , text planetoidData.orbitSequence
-                , text <| "No code for planetoid"
+                , text "🌎"
+                , text <| "j: " ++ planetoidData.safeJumpTime
                 ]
 
         renderStellarObject : Int -> StellarObjectX -> Element.Element msg
         renderStellarObject newNestingLevel stellarObject =
             row
                 [ Element.spacing 8
-                , Element.moveRight <| calcNestedOffset newNestingLevel
                 , Font.size 14
                 ]
                 [ case stellarObject of
@@ -756,7 +770,7 @@ renderStar (StarData starData) nestingLevel =
                     renderStar compStarData (nestingLevel + 1)
                 )
             |> Maybe.withDefault Element.none
-        , column [] <| List.map (renderStellarObject <| nestingLevel) starData.stellarObjects
+        , column [] <| List.map (renderStellarObject <| nestingLevel + 1) starData.stellarObjects
         ]
 
 
