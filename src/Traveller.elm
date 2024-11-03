@@ -985,7 +985,7 @@ view model =
                     Html.toUnstyled
                     <|
                         -- use <pre> to preserve whitespace
-                        Html.pre [] [ Html.text error ]
+                        Html.pre [ Html.Styled.Attributes.css [ Css.overflow Css.hidden ] ] [ Html.text error ]
                 )
 
             _ ->
@@ -999,7 +999,7 @@ view model =
                        Html.toUnstyled
                  <|
                     -- use <pre> to preserve whitespace
-                    Html.pre [] [ Html.text error ]
+                    Html.pre [ Html.Styled.Attributes.css [ Css.overflow Css.hidden ] ] [ Html.text error ]
                 )
 
             _ ->
