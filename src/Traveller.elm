@@ -627,20 +627,19 @@ renderStar (StarData starData) nestingLevel =
         renderGasGiant newNestingLevel gasGiantData =
             row
                 [ Element.spacing 8
-                , Element.moveRight <| toFloat <| newNestingLevel * 20
+                , Element.moveRight <| toFloat <| newNestingLevel * 10
                 , Font.size 14
                 ]
-                [ monospaceText <| String.fromFloat gasGiantData.orbit
-                , text "gas giant"
+                [ monospaceText <| Round.round 4 gasGiantData.orbit
                 , text gasGiantData.orbitSequence
-                , text (gasGiantData.code |> Maybe.withDefault "no gas giant code")
+                , text (gasGiantData.code |> Maybe.withDefault "??")
                 ]
 
         renderTerrestrialPlanet : Int -> TerrestrialData -> Element.Element msg
         renderTerrestrialPlanet newNestingLevel terrestrialData =
             row
                 [ Element.spacing 8
-                , Element.moveRight <| toFloat <| newNestingLevel * 20
+                , Element.moveRight <| toFloat <| newNestingLevel * 10
                 , Font.size 14
                 ]
                 [ monospaceText <| String.fromFloat terrestrialData.orbit
@@ -666,10 +665,10 @@ renderStar (StarData starData) nestingLevel =
         renderPlanetoidBelt newNestingLevel planetoidBeltData =
             row
                 [ Element.spacing 8
-                , Element.moveRight <| toFloat <| newNestingLevel * 20
+                , Element.moveRight <| toFloat <| newNestingLevel * 10
                 , Font.size 14
                 ]
-                [ monospaceText <| String.fromFloat planetoidBeltData.orbit
+                [ monospaceText <| Round.round 4 planetoidBeltData.orbit
                 , let
                     rawUwp =
                         planetoidBeltData.uwp
@@ -678,14 +677,14 @@ renderStar (StarData starData) nestingLevel =
                     Ok uwpData ->
                         column []
                             [ monospaceText <| rawUwp
-                            , -- temporarily using Debug.toString
-                              monospaceText <| Debug.toString uwpData.size
+
+                            -- , -- temporarily using Debug.toString
+                            --   monospaceText <| Debug.toString uwpData.size
                             ]
 
                     Err _ ->
                         monospaceText <| rawUwp
                 , text planetoidBeltData.orbitSequence
-                , text "no code for pbelts"
                 ]
 
         renderPlanetoid : Int -> PlanetoidData -> Element.Element msg
