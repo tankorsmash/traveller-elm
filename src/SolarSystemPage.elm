@@ -79,7 +79,7 @@ viewSystem : SolarSystem -> Svg.Svg Msg
 viewSystem system =
     let
         { stars } =
-            system
+            Debug.todo "remove later system"
 
         ( width, stringWidth ) =
             500 |> (\x -> ( x, String.fromFloat x ))

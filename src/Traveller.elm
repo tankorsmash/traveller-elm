@@ -231,53 +231,57 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
           in
           case maybeSolarSystem of
             Just solarSystem ->
-                case solarSystem.stars of
-                    [] ->
-                        Html.text ""
+                --(StarData primaryStar) :: stars ->
+                let
+                    primaryPos =
+                        ( toFloat x, toFloat y )
 
-                    (StarData primaryStar) :: stars ->
-                        let
-                            primaryPos =
-                                ( toFloat x, toFloat y )
-                        in
-                        Svg.g
-                            []
-                            ((case primaryStar.companion of
-                                Just (StarData compStarData) ->
-                                    let
-                                        compStarPos =
-                                            Tuple.mapFirst (\x_ -> x_ - 5) primaryPos
-                                    in
-                                    Svg.g []
-                                        [ drawStar primaryPos 12 primaryStar
-                                        , drawStar compStarPos 6 compStarData
-                                        ]
+                    primaryStar =
+                        getStarDataConfig solarSystem.primaryStar
+                in
+                Svg.g
+                    []
+                    ((case primaryStar.companion of
+                        Just (StarData compStarData) ->
+                            let
+                                compStarPos =
+                                    Tuple.mapFirst (\x_ -> x_ - 5) primaryPos
+                            in
+                            Svg.g []
+                                [ drawStar primaryPos 12 primaryStar
+                                , drawStar compStarPos 6 compStarData
+                                ]
 
-                                Nothing ->
-                                    drawStar primaryPos 12 primaryStar
-                             )
-                                :: List.indexedMap
-                                    (\idx (StarData secondaryStarData) ->
-                                        let
-                                            secondaryStarPos =
-                                                rotatePoint idx primaryPos 60 20
-                                        in
-                                        case secondaryStarData.companion of
+                        Nothing ->
+                            drawStar primaryPos 12 primaryStar
+                     )
+                        :: List.indexedMap
+                            (\idx stellarObject ->
+                                let
+                                    secondaryStarPos =
+                                        rotatePoint idx primaryPos 60 20
+                                in
+                                case stellarObject of
+                                    Star (StarData star) ->
+                                        case star.companion of
                                             Just (StarData compStarData) ->
                                                 let
                                                     compStarPos =
                                                         Tuple.mapFirst (\x_ -> x_ - 5) secondaryStarPos
                                                 in
                                                 Svg.g []
-                                                    [ drawStar secondaryStarPos 7 secondaryStarData
+                                                    [ drawStar secondaryStarPos 7 star
                                                     , drawStar compStarPos 3 compStarData
                                                     ]
 
                                             Nothing ->
-                                                drawStar secondaryStarPos 7 secondaryStarData
-                                    )
-                                    stars
+                                                drawStar secondaryStarPos 7 star
+
+                                    _ ->
+                                        Html.text ""
                             )
+                            primaryStar.stellarObjects
+                    )
 
             Nothing ->
                 Html.text ""
