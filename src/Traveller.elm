@@ -45,7 +45,7 @@ import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.Parser as TravellerParser
 import Traveller.SectorData exposing (SISector, SectorData, SurveyIndexData, codecSectorData, codecSurveyIndexData)
 import Traveller.SolarSystem exposing (SolarSystem)
-import Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObject(..), TerrestrialData, getStarDataConfig, starColourRGB)
+import Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObject(..), TerrestrialData, getStarDataConfig, getStellarOrbit, starColourRGB)
 
 
 gasGiantSI =
@@ -782,6 +782,18 @@ renderStellarObject newNestingLevel stellarObject =
 
 renderStar : StarData -> Int -> Element.Element msg
 renderStar (StarData starData) nestingLevel =
+    let
+        inJumpShadow obj =
+            case starData.jumpShadow of
+                Just jumpShadow ->
+                    jumpShadow >= (getStellarOrbit obj).au
+
+                Nothing ->
+                    False
+
+        outsideJumpShadow obj =
+            not <| inJumpShadow obj
+    in
     column [ Element.moveRight <| toFloat <| nestingLevel * 10 ]
         [ el [ Font.size 16, Font.bold ] <|
             text <|
@@ -802,7 +814,16 @@ renderStar (StarData starData) nestingLevel =
                     renderStar compStarData (nestingLevel + 1)
                 )
             |> Maybe.withDefault Element.none
-        , column [] <| List.map (renderStellarObject <| nestingLevel + 1) starData.stellarObjects
+        , column [] <| List.map (renderStellarObject <| nestingLevel + 1) <| List.filter inJumpShadow starData.stellarObjects
+        , column [ Element.moveRight <| toFloat <| (nestingLevel + 1) * 10, Font.size 14, Font.bold, Element.centerX ]
+            [ case starData.jumpShadow of
+                Just jumpShadow ->
+                    text <| "----  " ++ (Round.round 2 <| jumpShadow) ++ "  ----"
+
+                Nothing ->
+                    text ""
+            ]
+        , column [] <| List.map (renderStellarObject <| nestingLevel + 1) <| List.filter outsideJumpShadow starData.stellarObjects
         ]
 
 

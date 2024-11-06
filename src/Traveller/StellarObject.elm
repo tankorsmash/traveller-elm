@@ -1,4 +1,4 @@
-module Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObject(..), TerrestrialData, codecStarData, codecStellarObject, getStarDataConfig, starColourRGB)
+module Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObject(..), TerrestrialData, codecStarData, codecStellarObject, getStarDataConfig, getStellarOrbit, starColourRGB)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -221,11 +221,43 @@ type alias StarDataConfig =
     , orbitSequence : String
     , safeJumpTime : String
     , au : Float
+    , jumpShadow : Maybe Float
     }
 
 
 type StarData
     = StarData StarDataConfig
+
+
+type alias StellarOrbit =
+    { orbitPosition : StellarPoint
+    , orbitType : Int
+    , orbit : Float
+    , au : Float
+    }
+
+
+extractStellarOrbit orbit =
+    { orbitPosition = orbit.orbitPosition, orbitType = orbit.orbitType, orbit = orbit.orbit, au = orbit.au }
+
+
+getStellarOrbit : StellarObject -> StellarOrbit
+getStellarOrbit stellarObject =
+    case stellarObject of
+        GasGiant giantData ->
+            extractStellarOrbit giantData
+
+        TerrestrialPlanet p ->
+            extractStellarOrbit p
+
+        PlanetoidBelt p ->
+            extractStellarOrbit p
+
+        Planetoid p ->
+            extractStellarOrbit p
+
+        Star (StarData s) ->
+            extractStellarOrbit s
 
 
 getStarDataConfig : StarData -> StarDataConfig
@@ -403,6 +435,7 @@ codecStarData =
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
         |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
         |> Codec.field "au" .au Codec.float
+        |> Codec.field "jumpShadow" .jumpShadow (Codec.nullable Codec.float)
         |> Codec.buildObject
         |> Codec.map StarData (\(StarData data) -> data)
 
