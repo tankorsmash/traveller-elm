@@ -97,7 +97,7 @@ type alias TerrestrialData =
     , compatibilityRating : Int
     , resourceRating : Int
     , nativeSophont : Bool
-    , extinctNativeSophont : Bool
+    , extinctSophont : Bool
     , hasRing : Bool
     , albedo : Float
     , density : Maybe Float
@@ -109,7 +109,7 @@ type alias TerrestrialData =
     , diameter : Float
     , gravity : Maybe Float
     , mass : Maybe Float
-    , escapeVelocity : Float
+    , escapeVelocity : Maybe Float
     , safeJumpTime : String
     , orbitType : Int
     , au : Float
@@ -135,7 +135,7 @@ type alias PlanetoidData =
     , compatibilityRating : Int
     , resourceRating : Int
     , nativeSophont : Bool
-    , extinctNativeSophont : Bool
+    , extinctSophont : Bool
     , hasRing : Bool
     , albedo : Float
     , density : Maybe Float
@@ -161,7 +161,7 @@ type alias GasGiantData =
     , inclination : Float
     , eccentricity : Float
     , effectiveHZCODeviation : Maybe Float
-    , code : Maybe String
+    , code : String
     , diameter : Float
     , mass : Maybe Float
     , orbit : Float
@@ -304,7 +304,7 @@ codecGasGiantData =
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
-        |> Codec.optionalField "code" .code Codec.string
+        |> Codec.field "code" .code Codec.string
         |> Codec.field "diameter" .diameter Codec.float
         |> Codec.field "mass" .mass (Codec.nullable Codec.float)
         |> Codec.field "orbit" .orbit Codec.float
@@ -341,7 +341,7 @@ codecTerrestrialData =
         |> Codec.field "compatibilityRating" .compatibilityRating Codec.int
         |> Codec.field "resourceRating" .resourceRating Codec.int
         |> Codec.field "nativeSophont" .nativeSophont Codec.bool
-        |> Codec.field "extinctNativeSophont" .extinctNativeSophont Codec.bool
+        |> Codec.field "extinctSophont" .extinctSophont Codec.bool
         |> Codec.field "hasRing" .hasRing Codec.bool
         |> Codec.field "albedo" .albedo Codec.float
         |> Codec.optionalField "density" .density Codec.float
@@ -353,7 +353,7 @@ codecTerrestrialData =
         |> Codec.field "diameter" .diameter Codec.float
         |> Codec.field "gravity" .gravity (Codec.nullable Codec.float)
         |> Codec.field "mass" .mass (Codec.nullable Codec.float)
-        |> Codec.field "escapeVelocity" .escapeVelocity Codec.float
+        |> Codec.field "escapeVelocity" .escapeVelocity (Codec.nullable Codec.float)
         |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
         |> Codec.field "orbitType" .orbitType Codec.int
         |> Codec.field "au" .au Codec.float
@@ -381,7 +381,7 @@ codecPlanetoidData =
         |> Codec.field "compatibilityRating" .compatibilityRating Codec.int
         |> Codec.field "resourceRating" .resourceRating Codec.int
         |> Codec.field "nativeSophont" .nativeSophont Codec.bool
-        |> Codec.field "extinctNativeSophont" .extinctNativeSophont Codec.bool
+        |> Codec.field "extinctSophont" .extinctSophont Codec.bool
         |> Codec.field "hasRing" .hasRing Codec.bool
         |> Codec.field "albedo" .albedo Codec.float
         |> Codec.optionalField "density" .density Codec.float

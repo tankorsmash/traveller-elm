@@ -650,7 +650,7 @@ renderGasGiant newNestingLevel gasGiantData =
         ]
         [ renderRawOrbit gasGiantData.au gasGiantData.orbit
         , text gasGiantData.orbitSequence
-        , text (gasGiantData.code |> Maybe.withDefault "??")
+        , text gasGiantData.code
         , text "🛢"
         , text <| "j: " ++ gasGiantData.safeJumpTime
         ]
@@ -664,6 +664,7 @@ renderTerrestrialPlanet newNestingLevel terrestrialData =
         , Font.size 14
         ]
         [ renderRawOrbit terrestrialData.au terrestrialData.orbit
+        , text terrestrialData.orbitSequence
         , let
             rawUwp =
                 terrestrialData.uwp
@@ -672,13 +673,10 @@ renderTerrestrialPlanet newNestingLevel terrestrialData =
             Ok uwpData ->
                 column []
                     [ monospaceText <| rawUwp
-                    , -- temporarily using Debug.toString
-                      monospaceText <| Debug.toString uwpData.size
                     ]
 
             Err _ ->
                 monospaceText <| rawUwp
-        , text terrestrialData.orbitSequence
         , text "🌍"
         , text <| "j: " ++ terrestrialData.safeJumpTime
         ]
