@@ -19,7 +19,7 @@ import Traveller.Moon exposing (Moon)
 import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.SectorData exposing (SectorData, codecSectorData)
 import Traveller.SolarSystem exposing (SolarSystem)
-import Traveller.StellarObject exposing (StarData(..), StarDataConfig, StellarObjectX(..))
+import Traveller.StellarObject exposing (StarData(..), StarDataConfig, StellarObject(..))
 
 
 type alias Model =
@@ -31,7 +31,7 @@ type alias Model =
 
 
 type HoveredBody
-    = HoveredPlanet StellarObjectX
+    = HoveredPlanet StellarObject
     | HoveredStar StarDataConfig
     | HoveredMoon Moon
     | NoHoveredBody

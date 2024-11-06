@@ -1,4 +1,4 @@
-module Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObjectX(..), TerrestrialData, codecStarData, codecStellarObject, getStarDataConfig, starColourRGB)
+module Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObject(..), TerrestrialData, codecStarData, codecStellarObject, getStarDataConfig, starColourRGB)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -213,7 +213,7 @@ type alias StarDataConfig =
     , orbit : Float
     , period : Float
     , baseline : Int
-    , stellarObjects : List StellarObjectX
+    , stellarObjects : List StellarObject
     , orbitSequence : String
     , safeJumpTime : String
     }
@@ -228,7 +228,7 @@ getStarDataConfig (StarData starDataConfig) =
     starDataConfig
 
 
-type StellarObjectX
+type StellarObject
     = GasGiant GasGiantData
     | TerrestrialPlanet TerrestrialData
     | PlanetoidBelt PlanetoidBeltData
@@ -359,7 +359,7 @@ codecPlanetoidData =
         |> Codec.buildObject
 
 
-decodeStellarObjectX : JsDecode.Decoder StellarObjectX
+decodeStellarObjectX : JsDecode.Decoder StellarObject
 decodeStellarObjectX =
     JsDecode.oneOf
         [ JsDecode.map GasGiant (Codec.decoder codecGasGiantData)
@@ -397,7 +397,7 @@ codecStarData =
         |> Codec.map StarData (\(StarData data) -> data)
 
 
-encodeStellarObjectX : StellarObjectX -> Codec.Value
+encodeStellarObjectX : StellarObject -> Codec.Value
 encodeStellarObjectX stellarObjectX =
     case stellarObjectX of
         GasGiant data ->
@@ -416,7 +416,7 @@ encodeStellarObjectX stellarObjectX =
             Codec.encodeToValue codecStarData data
 
 
-codecStellarObject : Codec StellarObjectX
+codecStellarObject : Codec StellarObject
 codecStellarObject =
     Codec.build
         encodeStellarObjectX

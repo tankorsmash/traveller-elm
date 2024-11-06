@@ -45,7 +45,7 @@ import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.Parser as TravellerParser
 import Traveller.SectorData exposing (SISector, SectorData, SurveyIndexData, codecSectorData, codecSurveyIndexData)
 import Traveller.SolarSystem exposing (SolarSystem)
-import Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObjectX(..), TerrestrialData, getStarDataConfig, starColourRGB)
+import Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObject(..), TerrestrialData, getStarDataConfig, starColourRGB)
 
 
 gasGiantSI =
@@ -161,7 +161,7 @@ hexagonPoints ( xOrigin, yOrigin ) size =
         |> String.join " "
 
 
-isStarOrbit : StellarObjectX -> Bool
+isStarOrbit : StellarObject -> Bool
 isStarOrbit obj =
     case obj of
         GasGiant gasGiantData ->
@@ -258,7 +258,7 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                     primaryStar =
                         getStarDataConfig solarSystem.primaryStar
 
-                    generateStar : Int -> StellarObjectX -> Svg Msg
+                    generateStar : Int -> StellarObject -> Svg Msg
                     generateStar idx stellarObject =
                         case stellarObject of
                             Star (StarData star) ->
@@ -756,7 +756,7 @@ renderPlanetoid newNestingLevel planetoidData =
         ]
 
 
-renderStellarObject : Int -> StellarObjectX -> Element.Element msg
+renderStellarObject : Int -> StellarObject -> Element.Element msg
 renderStellarObject newNestingLevel stellarObject =
     row
         [ Element.spacing 8
