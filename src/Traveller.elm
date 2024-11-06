@@ -778,7 +778,7 @@ travelTime kms mdrive useHours =
             Round.ceiling 0 minutes ++ "m"
 
     else
-        Round.floor 0 minutes ++ "d " ++ Round.ceiling 0 hours ++ "w"
+        Round.floor 0 hours ++ "d " ++ Round.ceiling 0 minutes ++ "w"
 
 
 
