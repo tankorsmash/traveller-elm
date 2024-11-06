@@ -112,6 +112,7 @@ type alias TerrestrialData =
     , escapeVelocity : Float
     , safeJumpTime : String
     , orbitType : Int
+    , au : Float
     }
 
 
@@ -148,6 +149,7 @@ type alias PlanetoidData =
     , escapeVelocity : Maybe Float
     , safeJumpTime : String
     , orbitType : Int
+    , au : Float
 
     -- , -- maybe not required for Planetoid?
     --   code : Maybe String
@@ -171,6 +173,7 @@ type alias GasGiantData =
     , orbitSequence : String
     , safeJumpTime : String
     , orbitType : Int
+    , au : Float
     }
 
 
@@ -192,6 +195,7 @@ type alias PlanetoidBeltData =
     , uwp : String
     , safeJumpTime : String
     , orbitType : Int
+    , au : Float
     }
 
 
@@ -216,6 +220,7 @@ type alias StarDataConfig =
     , stellarObjects : List StellarObject
     , orbitSequence : String
     , safeJumpTime : String
+    , au : Float
     }
 
 
@@ -256,6 +261,7 @@ codecPlanetoidBeltData =
         |> Codec.field "uwp" .uwp Codec.string
         |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
         |> Codec.field "orbitType" .orbitType Codec.int
+        |> Codec.field "au" .au Codec.float
         |> Codec.buildObject
 
 
@@ -278,6 +284,7 @@ codecGasGiantData =
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
         |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
         |> Codec.field "orbitType" .orbitType Codec.int
+        |> Codec.field "au" .au Codec.float
         |> Codec.buildObject
 
 
@@ -317,6 +324,7 @@ codecTerrestrialData =
         |> Codec.field "escapeVelocity" .escapeVelocity Codec.float
         |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
         |> Codec.field "orbitType" .orbitType Codec.int
+        |> Codec.field "au" .au Codec.float
         |> Codec.buildObject
 
 
@@ -356,6 +364,7 @@ codecPlanetoidData =
         |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
         |> Codec.field "orbitType" .orbitType Codec.int
         -- |> Codec.optionalField "code" .code Codec.string
+        |> Codec.field "au" .au Codec.float
         |> Codec.buildObject
 
 
@@ -393,6 +402,7 @@ codecStarData =
         |> Codec.field "stellarObjects" .stellarObjects (Codec.list (Codec.lazy (\_ -> codecStellarObject)))
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
         |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
+        |> Codec.field "au" .au Codec.float
         |> Codec.buildObject
         |> Codec.map StarData (\(StarData data) -> data)
 

@@ -648,7 +648,7 @@ renderGasGiant newNestingLevel gasGiantData =
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
         ]
-        [ renderRawOrbit gasGiantData.orbit
+        [ renderRawOrbit gasGiantData.au gasGiantData.orbit
         , text gasGiantData.orbitSequence
         , text (gasGiantData.code |> Maybe.withDefault "??")
         , text "🛢"
@@ -663,7 +663,7 @@ renderTerrestrialPlanet newNestingLevel terrestrialData =
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
         ]
-        [ renderRawOrbit terrestrialData.orbit
+        [ renderRawOrbit terrestrialData.au terrestrialData.orbit
         , let
             rawUwp =
                 terrestrialData.uwp
@@ -689,12 +689,12 @@ calcNestedOffset newNestingLevel =
     toFloat <| newNestingLevel * 10
 
 
-renderRawOrbit : Float -> Element.Element msg
-renderRawOrbit orbit =
+renderRawOrbit : Float -> Float -> Element.Element msg
+renderRawOrbit au orbit =
     row []
-        [ monospaceText <| Round.round 2 orbit
+        [ monospaceText <| Round.round 2 au
         , text " ("
-        , monospaceText <| Round.round 2 (orbit * 2.5)
+        , monospaceText <| Round.round 2 orbit
         , text ")"
         ]
 
@@ -706,7 +706,7 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData =
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
         ]
-        [ renderRawOrbit planetoidBeltData.orbit
+        [ renderRawOrbit planetoidBeltData.au planetoidBeltData.orbit
         , let
             rawUwp =
                 planetoidBeltData.uwp
@@ -735,7 +735,7 @@ renderPlanetoid newNestingLevel planetoidData =
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
         ]
-        [ renderRawOrbit planetoidData.orbit
+        [ renderRawOrbit planetoidData.au planetoidData.orbit
         , let
             rawUwp =
                 planetoidData.uwp
