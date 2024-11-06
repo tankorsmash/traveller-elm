@@ -161,6 +161,25 @@ hexagonPoints ( xOrigin, yOrigin ) size =
         |> String.join " "
 
 
+isStarOrbit : StellarObjectX -> Bool
+isStarOrbit obj =
+    case obj of
+        GasGiant gasGiantData ->
+            gasGiantData.orbitType < 10
+
+        TerrestrialPlanet terrestrialData ->
+            terrestrialData.orbitType < 10
+
+        PlanetoidBelt planetoidBeltData ->
+            planetoidBeltData.orbitType < 10
+
+        Planetoid planetoidData ->
+            planetoidData.orbitType < 10
+
+        Star (StarData starDataConfig) ->
+            starDataConfig.orbitType < 10
+
+
 viewHexDetailed : Maybe SolarSystem -> Int -> HexId -> Int -> HexOrigin -> Float -> Svg Msg
 viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size =
     let
@@ -239,33 +258,30 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                     primaryStar =
                         getStarDataConfig solarSystem.primaryStar
 
-                    generateStar : StellarObjectX -> ( Bool, Int -> Svg Msg )
-                    generateStar stellarObject =
+                    generateStar : Int -> StellarObjectX -> Svg Msg
+                    generateStar idx stellarObject =
                         case stellarObject of
                             Star (StarData star) ->
-                                ( True
-                                , \idx ->
-                                    let
-                                        secondaryStarPos =
-                                            rotatePoint idx primaryPos 60 20
-                                    in
-                                    case star.companion of
-                                        Just (StarData compStarData) ->
-                                            let
-                                                compStarPos =
-                                                    Tuple.mapFirst (\x_ -> x_ - 5) secondaryStarPos
-                                            in
-                                            Svg.g []
-                                                [ drawStar secondaryStarPos 7 star
-                                                , drawStar compStarPos 3 compStarData
-                                                ]
+                                let
+                                    secondaryStarPos =
+                                        rotatePoint idx primaryPos 60 20
+                                in
+                                case star.companion of
+                                    Just (StarData compStarData) ->
+                                        let
+                                            compStarPos =
+                                                Tuple.mapFirst (\x_ -> x_ - 5) secondaryStarPos
+                                        in
+                                        Svg.g []
+                                            [ drawStar secondaryStarPos 7 star
+                                            , drawStar compStarPos 3 compStarData
+                                            ]
 
-                                        Nothing ->
-                                            drawStar secondaryStarPos 7 star
-                                )
+                                    Nothing ->
+                                        drawStar secondaryStarPos 7 star
 
                             _ ->
-                                ( False, \idx -> Html.text "" )
+                                Html.text ""
                 in
                 Svg.g
                     []
@@ -283,19 +299,9 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                         Nothing ->
                             drawStar primaryPos 12 primaryStar
                      )
-                        :: (List.map
-                                generateStar
-                                primaryStar.stellarObjects
-                                |> List.foldl
-                                    (\( isStar, elemFunc ) ( idx, elems ) ->
-                                        if isStar then
-                                            ( idx + 1, elemFunc idx :: elems )
-
-                                        else
-                                            ( idx, elemFunc 0 :: elems )
-                                    )
-                                    ( 0, [] )
-                                |> Tuple.second
+                        :: (primaryStar.stellarObjects
+                                |> List.filter isStarOrbit
+                                |> List.indexedMap generateStar
                            )
                     )
 

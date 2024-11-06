@@ -111,6 +111,7 @@ type alias TerrestrialData =
     , mass : Maybe Float
     , escapeVelocity : Float
     , safeJumpTime : String
+    , orbitType : Int
     }
 
 
@@ -146,6 +147,7 @@ type alias PlanetoidData =
     , mass : Maybe Float
     , escapeVelocity : Maybe Float
     , safeJumpTime : String
+    , orbitType : Int
 
     -- , -- maybe not required for Planetoid?
     --   code : Maybe String
@@ -168,6 +170,7 @@ type alias GasGiantData =
     , period : Float
     , orbitSequence : String
     , safeJumpTime : String
+    , orbitType : Int
     }
 
 
@@ -188,6 +191,7 @@ type alias PlanetoidBeltData =
     , orbitSequence : String
     , uwp : String
     , safeJumpTime : String
+    , orbitType : Int
     }
 
 
@@ -251,6 +255,7 @@ codecPlanetoidBeltData =
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
         |> Codec.field "uwp" .uwp Codec.string
         |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
+        |> Codec.field "orbitType" .orbitType Codec.int
         |> Codec.buildObject
 
 
@@ -272,6 +277,7 @@ codecGasGiantData =
         |> Codec.field "period" .orbit Codec.float
         |> Codec.field "orbitSequence" .orbitSequence Codec.string
         |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
+        |> Codec.field "orbitType" .orbitType Codec.int
         |> Codec.buildObject
 
 
@@ -310,6 +316,7 @@ codecTerrestrialData =
         |> Codec.field "mass" .mass (Codec.nullable Codec.float)
         |> Codec.field "escapeVelocity" .escapeVelocity Codec.float
         |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
+        |> Codec.field "orbitType" .orbitType Codec.int
         |> Codec.buildObject
 
 
@@ -347,6 +354,7 @@ codecPlanetoidData =
         |> Codec.field "mass" .mass (Codec.nullable Codec.float)
         |> Codec.field "escapeVelocity" .escapeVelocity (Codec.nullable Codec.float)
         |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
+        |> Codec.field "orbitType" .orbitType Codec.int
         -- |> Codec.optionalField "code" .code Codec.string
         |> Codec.buildObject
 
