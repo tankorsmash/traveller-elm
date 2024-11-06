@@ -788,9 +788,6 @@ renderStar (StarData starData) nestingLevel =
 
                 Nothing ->
                     False
-
-        outsideJumpShadow obj =
-            not <| inJumpShadow obj
     in
     column [ Element.moveRight <| toFloat <| nestingLevel * 10 ]
         [ el [ Font.size 16, Font.bold ] <|
@@ -821,7 +818,7 @@ renderStar (StarData starData) nestingLevel =
                 Nothing ->
                     text ""
             ]
-        , column [] <| List.map (renderStellarObject <| nestingLevel + 1) <| List.filter outsideJumpShadow starData.stellarObjects
+        , column [] <| List.map (renderStellarObject <| nestingLevel + 1) <| List.filter (not << inJumpShadow) starData.stellarObjects
         ]
 
 
