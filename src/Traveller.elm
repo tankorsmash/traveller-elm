@@ -668,7 +668,7 @@ renderTravelTime comparePos orbitPosition =
             calcDistance2F comparePos ( orbitPosition.x, orbitPosition.y )
 
         travelTimeStr =
-            travelTime dist playerGravDrive True
+            travelTime dist playerGravDrive False
     in
     travelTimeStr
 
@@ -747,10 +747,10 @@ travelTime kms mdrive useHours =
             if useHours then
                 let
                     minutes_ =
-                        seconds / 60
+                        toFloat <| ceiling <| seconds / 60
 
                     hours_ =
-                        minutes_ / 60
+                        toFloat <| floor <| minutes_ / 60
 
                     minutes__ =
                         minutes_ - hours_ * 60
@@ -760,10 +760,10 @@ travelTime kms mdrive useHours =
             else
                 let
                     watches =
-                        seconds / 60608
+                        toFloat <| ceiling <| seconds / 60608
 
                     days =
-                        watches / 3
+                        toFloat <| floor <| watches / 3
 
                     watches_ =
                         watches - days * 3
