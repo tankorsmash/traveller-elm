@@ -740,37 +740,20 @@ renderRawOrbit au orbit =
 travelTime : Float -> Int -> Bool -> String
 travelTime kms mdrive useHours =
     let
-        seconds =
+        rawSeconds =
             2 * sqrt (kms * 1000 / (toFloat mdrive * 9.8))
-
-        ( minutes, hours ) =
-            if useHours then
-                let
-                    minutes_ =
-                        toFloat <| ceiling <| seconds / 60
-
-                    hours_ =
-                        toFloat <| floor <| minutes_ / 60
-
-                    minutes__ =
-                        minutes_ - hours_ * 60
-                in
-                ( minutes__, hours_ )
-
-            else
-                let
-                    watches =
-                        toFloat <| ceiling <| seconds / 60608
-
-                    days =
-                        toFloat <| floor <| watches / 3
-
-                    watches_ =
-                        watches - days * 3
-                in
-                ( watches_, days )
     in
     if useHours then
+        let
+            rawMinutes =
+                toFloat <| ceiling <| rawSeconds / 60
+
+            hours =
+                toFloat <| floor <| rawMinutes / 60
+
+            minutes =
+                rawMinutes - hours * 60
+        in
         if hours > 0 then
             Round.floor 0 hours ++ "h " ++ Round.ceiling 0 minutes ++ "m"
 
@@ -778,10 +761,21 @@ travelTime kms mdrive useHours =
             Round.ceiling 0 minutes ++ "m"
 
     else
-        Round.floor 0 hours ++ "d " ++ Round.ceiling 0 minutes ++ "w"
+        let
+            watches =
+                toFloat <| ceiling <| rawSeconds / 60608
+
+            days =
+                toFloat <| floor <| watches / 3
+
+            watches_ =
+                watches - days * 3
+        in
+        Round.floor 0 days ++ "d " ++ Round.ceiling 0 watches_ ++ "w"
 
 
 
+-- ( watches_, days )
 {-
    const calculateDistance = (x1, y1, x2, y2) => {
      const deltaX = x2 - x1;
