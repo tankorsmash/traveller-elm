@@ -705,6 +705,7 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData =
         , Font.size 14
         ]
         [ renderRawOrbit planetoidBeltData.au planetoidBeltData.orbit
+        , text planetoidBeltData.orbitSequence
         , let
             rawUwp =
                 planetoidBeltData.uwp
@@ -720,7 +721,6 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData =
 
             Err _ ->
                 monospaceText <| rawUwp
-        , text planetoidBeltData.orbitSequence
         , text "🗿"
         , text <| "j: " ++ planetoidBeltData.safeJumpTime
         ]
