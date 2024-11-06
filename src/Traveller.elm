@@ -4,6 +4,8 @@ import Browser.Dom
 import Browser.Events
 import Browser.Navigation
 import Codec
+import Color
+import Color.Manipulate
 import Css
 import Dict
 import Element
@@ -859,11 +861,17 @@ renderPlanetoid comparePos newNestingLevel planetoidData =
         ]
 
 
+convertColor : Color.Color -> Element.Color
+convertColor color =
+    Element.fromRgb <| Color.toRgba <| color
+
+
 renderStellarObject : ( Float, Float ) -> Int -> StellarObject -> Element.Element msg
 renderStellarObject comparePos newNestingLevel stellarObject =
     row
         [ Element.spacing 8
         , Font.size 14
+        -- , Background.color <| convertColor <| Color.Manipulate.darken 0.02 <| Color.rgb255 33 37 41
         ]
         [ case stellarObject of
             GasGiant gasGiantData ->
@@ -879,7 +887,7 @@ renderStellarObject comparePos newNestingLevel stellarObject =
                 renderPlanetoid comparePos newNestingLevel planetoidData
 
             Star starDataConfig ->
-                renderStar comparePos starDataConfig (newNestingLevel + 1)
+                renderStar comparePos starDataConfig newNestingLevel
         ]
 
 
@@ -893,12 +901,14 @@ renderStar comparePos (StarData starData) nestingLevel =
 
                 Nothing ->
                     False
+
+        nextNestingLevel =
+            nestingLevel + 1
     in
-    column [ Element.moveRight <| toFloat <| nestingLevel * 10 ]
+    column [ Element.moveRight <| toFloat <| nestingLevel * 5 ]
         [ el [ Font.size 16, Font.bold ] <|
             text <|
-                (List.repeat nestingLevel "↳" |> String.join "")
-                    ++ starData.stellarType
+                starData.stellarType
                     ++ (case starData.subtype of
                             Just num ->
                                 String.fromInt num
@@ -911,19 +921,28 @@ renderStar comparePos (StarData starData) nestingLevel =
         , starData.companion
             |> Maybe.map
                 (\compStarData ->
-                    renderStar comparePos compStarData (nestingLevel + 1)
+                    renderStar comparePos compStarData nextNestingLevel
                 )
             |> Maybe.withDefault Element.none
-        , column [] <| List.map (renderStellarObject comparePos <| nestingLevel + 1) <| List.filter inJumpShadow starData.stellarObjects
-        , column [ Element.moveRight <| toFloat <| (nestingLevel + 1) * 10, Font.size 14, Font.bold, Element.centerX ]
-            [ case starData.jumpShadow of
-                Just jumpShadow ->
-                    text <| "----  " ++ (Round.round 2 <| jumpShadow) ++ "  ----"
+        , column []
+            [ starData.stellarObjects
+                |> List.filter inJumpShadow
+                |> List.map (renderStellarObject comparePos nextNestingLevel)
+                |> column []
+            , -- jump shadow
+              column [ Font.size 14, Font.bold, Element.centerX ]
+                [ case starData.jumpShadow of
+                    Just jumpShadow ->
+                        text <| "----  " ++ Round.round 2 jumpShadow ++ "  ----"
 
-                Nothing ->
-                    text ""
+                    Nothing ->
+                        text ""
+                ]
+            , starData.stellarObjects
+                |> List.filter (not << inJumpShadow)
+                |> List.map (renderStellarObject comparePos nextNestingLevel)
+                |> column []
             ]
-        , column [] <| List.map (renderStellarObject comparePos <| nestingLevel + 1) <| List.filter (not << inJumpShadow) starData.stellarObjects
         ]
 
 
