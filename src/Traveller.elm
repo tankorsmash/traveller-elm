@@ -43,6 +43,7 @@ import Task
 import Traveller.HexId as HexId exposing (HexId, RawHexId)
 import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.Parser as TravellerParser
+import Traveller.Point exposing (StellarPoint)
 import Traveller.SectorData exposing (SISector, SectorData, SurveyIndexData, codecSectorData, codecSurveyIndexData)
 import Traveller.SolarSystem exposing (SolarSystem)
 import Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObject(..), TerrestrialData, getStarDataConfig, getStellarOrbit, starColourRGB)
@@ -641,14 +642,15 @@ monospaceText someString =
     text someString |> el [ Font.family [ Font.monospace ] ]
 
 
-renderGasGiant : Int -> GasGiantData -> Element.Element msg
-renderGasGiant newNestingLevel gasGiantData =
+renderGasGiant : ( Float, Float ) -> Int -> GasGiantData -> Element.Element msg
+renderGasGiant comparePos newNestingLevel gasGiantData =
     row
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
         ]
         [ renderRawOrbit gasGiantData.au gasGiantData.orbit
+        , text <| renderTravelTime comparePos gasGiantData.orbitPosition
         , text gasGiantData.orbitSequence
         , text gasGiantData.code
         , text "🛢"
@@ -656,14 +658,30 @@ renderGasGiant newNestingLevel gasGiantData =
         ]
 
 
-renderTerrestrialPlanet : Int -> TerrestrialData -> Element.Element msg
-renderTerrestrialPlanet newNestingLevel terrestrialData =
+renderTravelTime : ( Float, Float ) -> StellarPoint -> String
+renderTravelTime comparePos orbitPosition =
+    let
+        playerGravDrive =
+            4
+
+        dist =
+            calcDistance2F comparePos ( orbitPosition.x, orbitPosition.y )
+
+        travelTimeStr =
+            travelTime dist playerGravDrive True
+    in
+    travelTimeStr
+
+
+renderTerrestrialPlanet : ( Float, Float ) -> Int -> TerrestrialData -> Element.Element msg
+renderTerrestrialPlanet comparePos newNestingLevel terrestrialData =
     row
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
         ]
         [ renderRawOrbit terrestrialData.au terrestrialData.orbit
+        , text <| renderTravelTime comparePos terrestrialData.orbitPosition
         , text terrestrialData.orbitSequence
         , let
             rawUwp =
@@ -697,14 +715,115 @@ renderRawOrbit au orbit =
         ]
 
 
-renderPlanetoidBelt : Int -> PlanetoidBeltData -> Element.Element msg
-renderPlanetoidBelt newNestingLevel planetoidBeltData =
+
+{-
+   const travelTime = (kms, mdrive, useHours) => {
+     const seconds = 2 * Math.sqrt(kms1000/(mdrive9.8));
+     if (useHours) {
+       let minutes = Math.ceil(seconds / 60);
+       let hours = Math.floor(minutes/60);
+       minutes -= hours60;
+       if (hours > 0)
+         return ${hours}h ${minutes}m;
+       else
+         return ${minutes}m;
+     } else {
+       let watches = Math.ceil(seconds/(60608));
+       let days = Math.floor(watches/3);
+       watches -= days3
+       return ${days}d ${watches}w;
+     }
+   }
+-}
+
+
+travelTime : Float -> Int -> Bool -> String
+travelTime kms mdrive useHours =
+    let
+        seconds =
+            2 * sqrt (kms * 1000 / (toFloat mdrive * 9.8))
+
+        ( minutes, hours ) =
+            if useHours then
+                let
+                    minutes_ =
+                        seconds / 60
+
+                    hours_ =
+                        minutes_ / 60
+
+                    minutes__ =
+                        minutes_ - hours_ * 60
+                in
+                ( minutes__, hours_ )
+
+            else
+                let
+                    watches =
+                        seconds / 60608
+
+                    days =
+                        watches / 3
+
+                    watches_ =
+                        watches - days * 3
+                in
+                ( watches_, days )
+    in
+    if useHours then
+        if hours > 0 then
+            Round.floor 0 hours ++ "h " ++ Round.ceiling 0 minutes ++ "m"
+
+        else
+            Round.ceiling 0 minutes ++ "m"
+
+    else
+        Round.floor 0 minutes ++ "d " ++ Round.ceiling 0 hours ++ "w"
+
+
+
+{-
+   const calculateDistance = (x1, y1, x2, y2) => {
+     const deltaX = x2 - x1;
+     const deltaY = y2 - y1;
+
+     const distanceSquared = deltaX * deltaX + deltaY * deltaY;
+
+     const distance = Math.sqrt(distanceSquared);
+
+     return distance;
+   }
+
+-}
+
+
+calcDistance2F : ( Float, Float ) -> ( Float, Float ) -> Float
+calcDistance2F ( x1, y1 ) ( x2, y2 ) =
+    let
+        deltaX =
+            x2 - x1
+
+        deltaY =
+            y2 - y1
+
+        distanceSquared =
+            deltaX * deltaX + deltaY * deltaY
+
+        distance =
+            sqrt distanceSquared
+    in
+    distance
+
+
+renderPlanetoidBelt : ( Float, Float ) -> Int -> PlanetoidBeltData -> Element.Element msg
+renderPlanetoidBelt comparePos newNestingLevel planetoidBeltData =
     row
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
         ]
         [ renderRawOrbit planetoidBeltData.au planetoidBeltData.orbit
+        , text <| renderTravelTime comparePos planetoidBeltData.orbitPosition
         , text planetoidBeltData.orbitSequence
         , let
             rawUwp =
@@ -712,12 +831,7 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData =
           in
           case Parser.run TravellerParser.uwp rawUwp of
             Ok uwpData ->
-                column []
-                    [ monospaceText <| rawUwp
-
-                    -- , -- temporarily using Debug.toString
-                    --   monospaceText <| Debug.toString uwpData.size
-                    ]
+                column [] [ monospaceText <| rawUwp ]
 
             Err _ ->
                 monospaceText <| rawUwp
@@ -726,25 +840,22 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData =
         ]
 
 
-renderPlanetoid : Int -> PlanetoidData -> Element.Element msg
-renderPlanetoid newNestingLevel planetoidData =
+renderPlanetoid : ( Float, Float ) -> Int -> PlanetoidData -> Element.Element msg
+renderPlanetoid comparePos newNestingLevel planetoidData =
     row
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
         ]
         [ renderRawOrbit planetoidData.au planetoidData.orbit
+        , text <| renderTravelTime comparePos planetoidData.orbitPosition
         , let
             rawUwp =
                 planetoidData.uwp
           in
           case Parser.run TravellerParser.uwp rawUwp of
             Ok uwpData ->
-                column []
-                    [ monospaceText <| planetoidData.uwp
-                    , -- temporarily using Debug.toString
-                      monospaceText <| Debug.toString uwpData.size
-                    ]
+                column [] [ monospaceText <| planetoidData.uwp ]
 
             Err _ ->
                 monospaceText <| rawUwp
@@ -754,32 +865,32 @@ renderPlanetoid newNestingLevel planetoidData =
         ]
 
 
-renderStellarObject : Int -> StellarObject -> Element.Element msg
-renderStellarObject newNestingLevel stellarObject =
+renderStellarObject : ( Float, Float ) -> Int -> StellarObject -> Element.Element msg
+renderStellarObject comparePos newNestingLevel stellarObject =
     row
         [ Element.spacing 8
         , Font.size 14
         ]
         [ case stellarObject of
             GasGiant gasGiantData ->
-                renderGasGiant newNestingLevel gasGiantData
+                renderGasGiant comparePos newNestingLevel gasGiantData
 
             TerrestrialPlanet terrestrialData ->
-                renderTerrestrialPlanet newNestingLevel terrestrialData
+                renderTerrestrialPlanet comparePos newNestingLevel terrestrialData
 
             PlanetoidBelt planetoidBeltData ->
-                renderPlanetoidBelt newNestingLevel planetoidBeltData
+                renderPlanetoidBelt comparePos newNestingLevel planetoidBeltData
 
             Planetoid planetoidData ->
-                renderPlanetoid newNestingLevel planetoidData
+                renderPlanetoid comparePos newNestingLevel planetoidData
 
             Star starDataConfig ->
-                renderStar starDataConfig (newNestingLevel + 1)
+                renderStar comparePos starDataConfig (newNestingLevel + 1)
         ]
 
 
-renderStar : StarData -> Int -> Element.Element msg
-renderStar (StarData starData) nestingLevel =
+renderStar : ( Float, Float ) -> StarData -> Int -> Element.Element msg
+renderStar comparePos (StarData starData) nestingLevel =
     let
         inJumpShadow obj =
             case starData.jumpShadow of
@@ -806,10 +917,10 @@ renderStar (StarData starData) nestingLevel =
         , starData.companion
             |> Maybe.map
                 (\compStarData ->
-                    renderStar compStarData (nestingLevel + 1)
+                    renderStar comparePos compStarData (nestingLevel + 1)
                 )
             |> Maybe.withDefault Element.none
-        , column [] <| List.map (renderStellarObject <| nestingLevel + 1) <| List.filter inJumpShadow starData.stellarObjects
+        , column [] <| List.map (renderStellarObject comparePos <| nestingLevel + 1) <| List.filter inJumpShadow starData.stellarObjects
         , column [ Element.moveRight <| toFloat <| (nestingLevel + 1) * 10, Font.size 14, Font.bold, Element.centerX ]
             [ case starData.jumpShadow of
                 Just jumpShadow ->
@@ -818,7 +929,7 @@ renderStar (StarData starData) nestingLevel =
                 Nothing ->
                     text ""
             ]
-        , column [] <| List.map (renderStellarObject <| nestingLevel + 1) <| List.filter (not << inJumpShadow) starData.stellarObjects
+        , column [] <| List.map (renderStellarObject comparePos <| nestingLevel + 1) <| List.filter (not << inJumpShadow) starData.stellarObjects
         ]
 
 
@@ -826,7 +937,11 @@ viewSystemDetailsSidebar : ( HexId, Int ) -> Maybe HexOrigin -> SolarSystem -> E
 viewSystemDetailsSidebar ( viewingHexId, si ) maybeViewingHexOrigin solarSystem =
     column [ Element.spacing 10 ] <|
         [ -- render the nested chart of the system
-          renderStar solarSystem.primaryStar 0
+          let
+            comparePos =
+                ( 0, 0 )
+          in
+          renderStar comparePos solarSystem.primaryStar 0
         , -- the button to load the solar system
           Input.button
             [ Background.color <| rgb 0.5 1.5 0.5
