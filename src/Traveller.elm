@@ -255,32 +255,46 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                         Nothing ->
                             drawStar primaryPos 12 primaryStar
                      )
-                        :: List.indexedMap
-                            (\idx stellarObject ->
-                                let
-                                    secondaryStarPos =
-                                        rotatePoint idx primaryPos 60 20
-                                in
-                                case stellarObject of
-                                    Star (StarData star) ->
-                                        case star.companion of
-                                            Just (StarData compStarData) ->
+                        :: (List.map
+                                (\stellarObject ->
+                                    case stellarObject of
+                                        Star (StarData star) ->
+                                            ( True
+                                            , \idx ->
                                                 let
-                                                    compStarPos =
-                                                        Tuple.mapFirst (\x_ -> x_ - 5) secondaryStarPos
+                                                    secondaryStarPos =
+                                                        rotatePoint idx primaryPos 60 20
                                                 in
-                                                Svg.g []
-                                                    [ drawStar secondaryStarPos 7 star
-                                                    , drawStar compStarPos 3 compStarData
-                                                    ]
+                                                case star.companion of
+                                                    Just (StarData compStarData) ->
+                                                        let
+                                                            compStarPos =
+                                                                Tuple.mapFirst (\x_ -> x_ - 5) secondaryStarPos
+                                                        in
+                                                        Svg.g []
+                                                            [ drawStar secondaryStarPos 7 star
+                                                            , drawStar compStarPos 3 compStarData
+                                                            ]
 
-                                            Nothing ->
-                                                drawStar secondaryStarPos 7 star
+                                                    Nothing ->
+                                                        drawStar secondaryStarPos 7 star
+                                            )
 
-                                    _ ->
-                                        Html.text ""
-                            )
-                            primaryStar.stellarObjects
+                                        _ ->
+                                            ( False, \idx -> Html.text "" )
+                                )
+                                primaryStar.stellarObjects
+                                |> List.foldl
+                                    (\( isStar, elemFunc ) ( idx, elems ) ->
+                                        if isStar then
+                                            ( idx + 1, elemFunc idx :: elems )
+
+                                        else
+                                            ( idx, elemFunc 0 :: elems )
+                                    )
+                                    ( 0, [] )
+                                |> Tuple.second
+                           )
                     )
 
             Nothing ->
