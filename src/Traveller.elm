@@ -871,7 +871,7 @@ renderStellarObject comparePos newNestingLevel stellarObject =
     row
         [ Element.spacing 8
         , Font.size 14
-        -- , Background.color <| convertColor <| Color.Manipulate.darken 0.02 <| Color.rgb255 33 37 41
+        , Element.width Element.fill
         ]
         [ case stellarObject of
             GasGiant gasGiantData ->
@@ -887,7 +887,7 @@ renderStellarObject comparePos newNestingLevel stellarObject =
                 renderPlanetoid comparePos newNestingLevel planetoidData
 
             Star starDataConfig ->
-                renderStar comparePos starDataConfig newNestingLevel
+                el [ Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <| renderStar comparePos starDataConfig newNestingLevel
         ]
 
 
@@ -905,7 +905,18 @@ renderStar comparePos (StarData starData) nestingLevel =
         nextNestingLevel =
             nestingLevel + 1
     in
-    column [ Element.moveRight <| toFloat <| nestingLevel * 5 ]
+    column
+        [ Color.rgba (33 / 255.0) (37 / 255.0) (41 / 255.0) 0.15
+            |> Color.Manipulate.darken 0.4
+            |> convertColor
+            |> Background.color
+        , Element.width Element.fill
+        , Element.moveRight <| toFloat <| nestingLevel * 5
+
+        -- , Element.paddingEach {top=10, left=5, right=5, bottom=10}
+        , Element.padding 10
+        , Border.rounded 10
+        ]
         [ el [ Font.size 16, Font.bold ] <|
             text <|
                 starData.stellarType
