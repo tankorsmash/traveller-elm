@@ -238,6 +238,34 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
 
                     primaryStar =
                         getStarDataConfig solarSystem.primaryStar
+
+                    generateStar : StellarObjectX -> ( Bool, Int -> Svg Msg )
+                    generateStar stellarObject =
+                        case stellarObject of
+                            Star (StarData star) ->
+                                ( True
+                                , \idx ->
+                                    let
+                                        secondaryStarPos =
+                                            rotatePoint idx primaryPos 60 20
+                                    in
+                                    case star.companion of
+                                        Just (StarData compStarData) ->
+                                            let
+                                                compStarPos =
+                                                    Tuple.mapFirst (\x_ -> x_ - 5) secondaryStarPos
+                                            in
+                                            Svg.g []
+                                                [ drawStar secondaryStarPos 7 star
+                                                , drawStar compStarPos 3 compStarData
+                                                ]
+
+                                        Nothing ->
+                                            drawStar secondaryStarPos 7 star
+                                )
+
+                            _ ->
+                                ( False, \idx -> Html.text "" )
                 in
                 Svg.g
                     []
@@ -256,33 +284,7 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                             drawStar primaryPos 12 primaryStar
                      )
                         :: (List.map
-                                (\stellarObject ->
-                                    case stellarObject of
-                                        Star (StarData star) ->
-                                            ( True
-                                            , \idx ->
-                                                let
-                                                    secondaryStarPos =
-                                                        rotatePoint idx primaryPos 60 20
-                                                in
-                                                case star.companion of
-                                                    Just (StarData compStarData) ->
-                                                        let
-                                                            compStarPos =
-                                                                Tuple.mapFirst (\x_ -> x_ - 5) secondaryStarPos
-                                                        in
-                                                        Svg.g []
-                                                            [ drawStar secondaryStarPos 7 star
-                                                            , drawStar compStarPos 3 compStarData
-                                                            ]
-
-                                                    Nothing ->
-                                                        drawStar secondaryStarPos 7 star
-                                            )
-
-                                        _ ->
-                                            ( False, \idx -> Html.text "" )
-                                )
+                                generateStar
                                 primaryStar.stellarObjects
                                 |> List.foldl
                                     (\( isStar, elemFunc ) ( idx, elems ) ->
