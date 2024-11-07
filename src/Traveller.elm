@@ -651,7 +651,7 @@ renderGasGiant comparePos newNestingLevel gasGiantData =
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
         ]
-        [ renderRawOrbit gasGiantData.au gasGiantData.orbit
+        [ renderRawOrbit gasGiantData.au
         , text <| renderTravelTime comparePos gasGiantData.orbitPosition
         , text gasGiantData.orbitSequence
         , text gasGiantData.code
@@ -682,7 +682,7 @@ renderTerrestrialPlanet comparePos newNestingLevel terrestrialData =
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
         ]
-        [ renderRawOrbit terrestrialData.au terrestrialData.orbit
+        [ renderRawOrbit terrestrialData.au
         , text <| renderTravelTime comparePos terrestrialData.orbitPosition
         , text terrestrialData.orbitSequence
         , let
@@ -707,13 +707,10 @@ calcNestedOffset newNestingLevel =
     toFloat <| newNestingLevel * 10
 
 
-renderRawOrbit : Float -> Float -> Element.Element msg
-renderRawOrbit au orbit =
+renderRawOrbit : Float -> Element.Element msg
+renderRawOrbit au =
     row []
         [ monospaceText <| Round.round 2 au
-        , text " ("
-        , monospaceText <| Round.round 2 orbit
-        , text ")"
         ]
 
 
@@ -818,7 +815,7 @@ renderPlanetoidBelt comparePos newNestingLevel planetoidBeltData =
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
         ]
-        [ renderRawOrbit planetoidBeltData.au planetoidBeltData.orbit
+        [ renderRawOrbit planetoidBeltData.au
         , text <| renderTravelTime comparePos planetoidBeltData.orbitPosition
         , text planetoidBeltData.orbitSequence
         , let
@@ -843,7 +840,7 @@ renderPlanetoid comparePos newNestingLevel planetoidData =
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
         ]
-        [ renderRawOrbit planetoidData.au planetoidData.orbit
+        [ renderRawOrbit planetoidData.au
         , text <| renderTravelTime comparePos planetoidData.orbitPosition
         , let
             rawUwp =
