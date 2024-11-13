@@ -25,6 +25,7 @@ import Element
         )
 import Element.Background as Background
 import Element.Border as Border
+import Element.Events
 import Element.Font as Font
 import Element.Input as Input
 import Html.Styled as Html exposing (Html)
@@ -75,6 +76,7 @@ type alias Model =
     , viewport : Maybe Browser.Dom.Viewport
     , hexmapViewport : Maybe (Result Browser.Dom.Error Browser.Dom.Viewport)
     , surveyIndexData : RemoteData Http.Error SurveyIndexData
+    , selectedStellarObject : Maybe StellarObject
     }
 
 
@@ -97,6 +99,7 @@ type Msg
     | GotHexMapViewport (Result Browser.Dom.Error Browser.Dom.Viewport)
     | GotResize Int Int
     | GoToSolarSystemPage HexId
+    | PlanetClicked StellarObject
 
 
 type alias HexOrigin =
@@ -121,6 +124,7 @@ init key =
       , viewport = Nothing
       , hexmapViewport = Nothing
       , key = key
+      , selectedStellarObject = Nothing
       }
     , Cmd.batch
         [ sendSectorRequest
@@ -645,46 +649,82 @@ monospaceText someString =
     text someString |> el [ Font.family [ Font.monospace ] ]
 
 
-renderGasGiant : ( Float, Float ) -> Int -> GasGiantData -> Element.Element msg
-renderGasGiant comparePos newNestingLevel gasGiantData =
+renderGasGiant : Int -> GasGiantData -> Maybe StellarObject -> Element.Element Msg
+renderGasGiant newNestingLevel gasGiantData selectedStellarObject =
+    let
+        planet =
+            GasGiant gasGiantData
+    in
     row
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
+        , Element.Events.onClick <| PlanetClicked planet
         ]
-        [ renderRawOrbit gasGiantData.au
-        , text <| renderTravelTime comparePos gasGiantData.orbitPosition
+        [ text <| renderArrow planet selectedStellarObject
+        , renderRawOrbit gasGiantData.au
         , text gasGiantData.orbitSequence
         , text gasGiantData.code
         , text "🛢"
         , text <| "j: " ++ gasGiantData.safeJumpTime
+        , text <| renderTravelTime planet selectedStellarObject
         ]
 
 
-renderTravelTime : ( Float, Float ) -> StellarPoint -> String
-renderTravelTime comparePos orbitPosition =
+renderArrow : StellarObject -> Maybe StellarObject -> String
+renderArrow self selected =
+    if Just self == selected then
+        ">"
+
+    else
+        ""
+
+
+renderTravelTime : StellarObject -> Maybe StellarObject -> String
+renderTravelTime destination origin =
     let
         playerGravDrive =
             4
 
-        dist =
-            calcDistance2F comparePos ( orbitPosition.x, orbitPosition.y )
-
         travelTimeStr =
-            travelTime dist playerGravDrive False
+            case origin of
+                Just obj ->
+                    if obj /= destination then
+                        let
+                            destPosition =
+                                (getStellarOrbit destination).orbitPosition
+
+                            objPosition =
+                                (getStellarOrbit obj).orbitPosition
+
+                            dist =
+                                calcDistance2F destPosition objPosition
+                        in
+                        travelTime dist playerGravDrive False
+
+                    else
+                        ""
+
+                Nothing ->
+                    ""
     in
     travelTimeStr
 
 
-renderTerrestrialPlanet : ( Float, Float ) -> Int -> TerrestrialData -> Element.Element msg
-renderTerrestrialPlanet comparePos newNestingLevel terrestrialData =
+renderTerrestrialPlanet : Int -> TerrestrialData -> Maybe StellarObject -> Element.Element Msg
+renderTerrestrialPlanet newNestingLevel terrestrialData selectedStellarObject =
+    let
+        planet =
+            TerrestrialPlanet terrestrialData
+    in
     row
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
+        , Element.Events.onClick <| PlanetClicked planet
         ]
-        [ renderRawOrbit terrestrialData.au
-        , text <| renderTravelTime comparePos terrestrialData.orbitPosition
+        [ text <| renderArrow planet selectedStellarObject
+        , renderRawOrbit terrestrialData.au
         , text terrestrialData.orbitSequence
         , let
             rawUwp =
@@ -700,6 +740,8 @@ renderTerrestrialPlanet comparePos newNestingLevel terrestrialData =
                 monospaceText <| rawUwp
         , text "🌍"
         , text <| "j: " ++ terrestrialData.safeJumpTime
+        , text <|
+            renderTravelTime planet selectedStellarObject
         ]
 
 
@@ -791,14 +833,14 @@ travelTime kms mdrive useHours =
 -}
 
 
-calcDistance2F : ( Float, Float ) -> ( Float, Float ) -> Float
-calcDistance2F ( x1, y1 ) ( x2, y2 ) =
+calcDistance2F : StellarPoint -> StellarPoint -> Float
+calcDistance2F p1 p2 =
     let
         deltaX =
-            x2 - x1
+            p1.x - p2.x
 
         deltaY =
-            y2 - y1
+            p1.y - p2.y
 
         distanceSquared =
             deltaX * deltaX + deltaY * deltaY
@@ -809,15 +851,20 @@ calcDistance2F ( x1, y1 ) ( x2, y2 ) =
     distance
 
 
-renderPlanetoidBelt : ( Float, Float ) -> Int -> PlanetoidBeltData -> Element.Element msg
-renderPlanetoidBelt comparePos newNestingLevel planetoidBeltData =
+renderPlanetoidBelt : Int -> PlanetoidBeltData -> Maybe StellarObject -> Element.Element Msg
+renderPlanetoidBelt newNestingLevel planetoidBeltData selectedStellarObject =
+    let
+        belt =
+            PlanetoidBelt planetoidBeltData
+    in
     row
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
+        , Element.Events.onClick <| PlanetClicked belt
         ]
-        [ renderRawOrbit planetoidBeltData.au
-        , text <| renderTravelTime comparePos planetoidBeltData.orbitPosition
+        [ text <| renderArrow belt selectedStellarObject
+        , renderRawOrbit planetoidBeltData.au
         , text planetoidBeltData.orbitSequence
         , let
             rawUwp =
@@ -831,18 +878,24 @@ renderPlanetoidBelt comparePos newNestingLevel planetoidBeltData =
                 monospaceText <| rawUwp
         , text "🗿"
         , text <| "j: " ++ planetoidBeltData.safeJumpTime
+        , text <| renderTravelTime belt selectedStellarObject
         ]
 
 
-renderPlanetoid : ( Float, Float ) -> Int -> PlanetoidData -> Element.Element msg
-renderPlanetoid comparePos newNestingLevel planetoidData =
+renderPlanetoid : Int -> PlanetoidData -> Maybe StellarObject -> Element.Element Msg
+renderPlanetoid newNestingLevel planetoidData selectedStellarObject =
+    let
+        planet =
+            Planetoid planetoidData
+    in
     row
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
+        , Element.Events.onClick <| PlanetClicked planet
         ]
-        [ renderRawOrbit planetoidData.au
-        , text <| renderTravelTime comparePos planetoidData.orbitPosition
+        [ text <| renderArrow planet selectedStellarObject
+        , renderRawOrbit planetoidData.au
         , let
             rawUwp =
                 planetoidData.uwp
@@ -856,6 +909,7 @@ renderPlanetoid comparePos newNestingLevel planetoidData =
         , text planetoidData.orbitSequence
         , text "🌎"
         , text <| "j: " ++ planetoidData.safeJumpTime
+        , text <| renderTravelTime planet selectedStellarObject
         ]
 
 
@@ -864,8 +918,8 @@ convertColor color =
     Element.fromRgb <| Color.toRgba <| color
 
 
-renderStellarObject : ( Float, Float ) -> Int -> StellarObject -> Element.Element msg
-renderStellarObject comparePos newNestingLevel stellarObject =
+renderStellarObject : ( Float, Float ) -> Int -> StellarObject -> Maybe StellarObject -> Element.Element Msg
+renderStellarObject comparePos newNestingLevel stellarObject selectedStellarObject =
     row
         [ Element.spacing 8
         , Font.size 14
@@ -873,24 +927,24 @@ renderStellarObject comparePos newNestingLevel stellarObject =
         ]
         [ case stellarObject of
             GasGiant gasGiantData ->
-                renderGasGiant comparePos newNestingLevel gasGiantData
+                renderGasGiant newNestingLevel gasGiantData selectedStellarObject
 
             TerrestrialPlanet terrestrialData ->
-                renderTerrestrialPlanet comparePos newNestingLevel terrestrialData
+                renderTerrestrialPlanet newNestingLevel terrestrialData selectedStellarObject
 
             PlanetoidBelt planetoidBeltData ->
-                renderPlanetoidBelt comparePos newNestingLevel planetoidBeltData
+                renderPlanetoidBelt newNestingLevel planetoidBeltData selectedStellarObject
 
             Planetoid planetoidData ->
-                renderPlanetoid comparePos newNestingLevel planetoidData
+                renderPlanetoid newNestingLevel planetoidData selectedStellarObject
 
             Star starDataConfig ->
-                el [ Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <| renderStar comparePos starDataConfig newNestingLevel
+                el [ Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <| renderStar comparePos starDataConfig newNestingLevel selectedStellarObject
         ]
 
 
-renderStar : ( Float, Float ) -> StarData -> Int -> Element.Element msg
-renderStar comparePos (StarData starData) nestingLevel =
+renderStar : ( Float, Float ) -> StarData -> Int -> Maybe StellarObject -> Element.Element Msg
+renderStar comparePos (StarData starData) nestingLevel selectedStellarObject =
     let
         inJumpShadow obj =
             case starData.jumpShadow of
@@ -930,13 +984,13 @@ renderStar comparePos (StarData starData) nestingLevel =
         , starData.companion
             |> Maybe.map
                 (\compStarData ->
-                    renderStar comparePos compStarData nextNestingLevel
+                    renderStar comparePos compStarData nextNestingLevel selectedStellarObject
                 )
             |> Maybe.withDefault Element.none
         , column []
             [ starData.stellarObjects
                 |> List.filter inJumpShadow
-                |> List.map (renderStellarObject comparePos nextNestingLevel)
+                |> List.map (\so -> renderStellarObject comparePos nextNestingLevel so selectedStellarObject)
                 |> column []
             , -- jump shadow
               column [ Font.size 14, Font.bold, Element.centerX ]
@@ -949,21 +1003,21 @@ renderStar comparePos (StarData starData) nestingLevel =
                 ]
             , starData.stellarObjects
                 |> List.filter (not << inJumpShadow)
-                |> List.map (renderStellarObject comparePos nextNestingLevel)
+                |> List.map (\so -> renderStellarObject comparePos nextNestingLevel so selectedStellarObject)
                 |> column []
             ]
         ]
 
 
-viewSystemDetailsSidebar : ( HexId, Int ) -> Maybe HexOrigin -> SolarSystem -> Element Msg
-viewSystemDetailsSidebar ( viewingHexId, si ) maybeViewingHexOrigin solarSystem =
+viewSystemDetailsSidebar : ( HexId, Int ) -> Maybe HexOrigin -> SolarSystem -> Maybe StellarObject -> Element Msg
+viewSystemDetailsSidebar ( viewingHexId, si ) maybeViewingHexOrigin solarSystem selectedStellarObject =
     column [ Element.spacing 10 ] <|
         [ -- render the nested chart of the system
           let
             comparePos =
                 ( 0, 0 )
           in
-          renderStar comparePos solarSystem.primaryStar 0
+          renderStar comparePos solarSystem.primaryStar 0 selectedStellarObject
         , -- the button to load the solar system
           Input.button
             [ Background.color <| rgb 0.5 1.5 0.5
@@ -1006,7 +1060,7 @@ view : Model -> Element.Element Msg
 view model =
     let
         sidebarColumn =
-            column [ centerX ]
+            column [ centerX, Element.width <| Element.px 400 ]
                 [ text <|
                     "Welcome to the Traveller app!"
                 , text <|
@@ -1089,6 +1143,7 @@ view model =
                                             ( viewingHexId, si )
                                             model.viewingHexOrigin
                                             solarSystem
+                                            model.selectedStellarObject
 
                                     Nothing ->
                                         text "No solar system data found in dict"
@@ -1163,7 +1218,7 @@ view model =
                             Html.toUnstyled <| Html.text "Have sector data and viewport, but failed to load survey index data"
                 ]
     in
-    column [ centerX, centerY ]
+    column []
         [ row [ Font.size 20, Font.color <| Element.rgb 0.5 1.5 0.5 ]
             [ sidebarColumn
             , hexesColumn
@@ -1416,4 +1471,9 @@ update msg model =
         GoToSolarSystemPage hexId ->
             ( model
             , Browser.Navigation.pushUrl model.key <| "/view_system?hexid=" ++ hexId.raw
+            )
+
+        PlanetClicked stellarObject ->
+            ( { model | selectedStellarObject = Just stellarObject }
+            , Cmd.none
             )
