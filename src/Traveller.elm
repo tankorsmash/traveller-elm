@@ -969,18 +969,25 @@ renderStar comparePos (StarData starData) nestingLevel selectedStellarObject =
         , Element.padding 10
         , Border.rounded 10
         ]
-        [ el [ Font.size 16, Font.bold ] <|
-            text <|
-                starData.stellarType
-                    ++ (case starData.subtype of
-                            Just num ->
-                                String.fromInt num
+        [ row []
+            [ if starData.orbitPosition.x == 0 && starData.orbitPosition.y == 0 then
+                text <| ""
 
-                            Nothing ->
-                                ""
-                       )
-                    ++ " "
-                    ++ starData.stellarClass
+              else
+                renderRawOrbit starData.au
+            , el [ Font.size 16, Font.bold ] <|
+                text <|
+                    starData.stellarType
+                        ++ (case starData.subtype of
+                                Just num ->
+                                    String.fromInt num
+
+                                Nothing ->
+                                    ""
+                           )
+                        ++ " "
+                        ++ starData.stellarClass
+            ]
         , starData.companion
             |> Maybe.map
                 (\compStarData ->
@@ -1464,6 +1471,7 @@ update msg model =
                 | viewingHexId = Just ( hexId, si )
                 , viewingHexOrigin = Just ( ox, oy )
                 , offset = Debug.log "new offset" newOffsetPct
+                , selectedStellarObject = Nothing
               }
             , Cmd.none
             )
