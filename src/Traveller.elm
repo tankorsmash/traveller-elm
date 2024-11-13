@@ -193,7 +193,7 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
         hasStar =
             case maybeSolarSystem of
                 Just solarSystem ->
-                    True
+                    si > 0
 
                 Nothing ->
                     False
@@ -256,8 +256,8 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                     ]
                     []
           in
-          case maybeSolarSystem of
-            Just solarSystem ->
+          case ( maybeSolarSystem, hasStar ) of
+            ( Just solarSystem, True ) ->
                 --(StarData primaryStar) :: stars ->
                 let
                     primaryPos =
@@ -313,10 +313,10 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                            )
                     )
 
-            Nothing ->
+            _ ->
                 Html.text ""
-        , case maybeSolarSystem of
-            Just solarSystem ->
+        , case ( maybeSolarSystem, hasStar ) of
+            ( Just solarSystem, True ) ->
                 Svg.g []
                     [ -- hex index
                       Svg.text_
@@ -372,7 +372,13 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                         )
                     ]
 
-            Nothing ->
+            ( Just solarSystem, False ) ->
+                Svg.text ""
+
+            ( Nothing, True ) ->
+                Svg.text ""
+
+            ( Nothing, False ) ->
                 Svg.text ""
         ]
 
@@ -443,14 +449,14 @@ calcOrigin hexSize row col =
 viewHex :
     Browser.Dom.Viewport
     -> Float
-    -> ( SectorData, Dict.Dict Int SolarSystem, Maybe SISector )
+    -> ( SectorData, Dict.Dict Int SolarSystem )
     -> ( Float, Float )
     -> ( Float, Float )
-    -> ( Int, Int )
+    -> ( Int, Int, Int )
     -> HexOrigin
     -> HexId
     -> ( Maybe (Svg Msg), Int )
-viewHex widestViewport hexSize ( sectorData, solarSystemDict, maybeSISector ) ( horizOffsetPct, vertOffsetPct ) ( viewportWidth, viewportHeight ) ( colIdx, rowIdx ) ( ox, oy ) playerHexId =
+viewHex widestViewport hexSize ( sectorData, solarSystemDict ) ( horizOffsetPct, vertOffsetPct ) ( viewportWidth, viewportHeight ) ( colIdx, rowIdx, systemSI ) ( ox, oy ) playerHexId =
     let
         idx =
             (rowIdx + 1) + (colIdx + 1) * 100
@@ -485,18 +491,7 @@ viewHex widestViewport hexSize ( sectorData, solarSystemDict, maybeSISector ) ( 
             if not (outsideX || outsideY) then
                 Just
                     (viewHexDetailed solarSystem
-                        (case maybeSISector of
-                            Just siSector ->
-                                case Dict.get (String.padLeft 4 '0' <| String.fromInt idx) siSector.hexes of
-                                    Just si2 ->
-                                        si2
-
-                                    Nothing ->
-                                        0
-
-                            Nothing ->
-                                0
-                        )
+                        systemSI
                         playerHexId
                         idx
                         ( ox, oy )
@@ -514,11 +509,22 @@ viewHex widestViewport hexSize ( sectorData, solarSystemDict, maybeSISector ) ( 
 viewHexes : Maybe ( Int, Int ) -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport } -> ( SectorData, Dict.Dict Int SolarSystem ) -> SurveyIndexData -> ( Float, Float ) -> HexId -> Float -> Html Msg
 viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict ) surveyIndexData ( horizOffset, vertOffset ) playerHexId hexSize =
     let
-        maybeSISector : Maybe SISector
-        maybeSISector =
-            surveyIndexData
-                |> List.filter (\sector -> sector.x == sectorData.x && sector.y == sectorData.y)
-                |> List.head
+        hexKey : Int -> String
+        hexKey hexId =
+            String.fromInt sectorData.x
+                ++ "."
+                ++ String.fromInt sectorData.y
+                ++ "."
+                ++ (String.padLeft 4 '0' <| String.fromInt hexId)
+
+        systemSI : Int -> Int -> Int
+        systemSI hexX hexY =
+            let
+                idx =
+                    (hexY + 1) + (hexX + 1) * 100
+            in
+            Dict.get (hexKey idx) surveyIndexData
+                |> Maybe.withDefault 0
 
         viewportHeightIsh =
             screenVp.viewport.height * 0.9
@@ -552,10 +558,10 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
                         viewHex
                             widestViewport
                             hexSize
-                            ( sectorData, solarSystemDict, maybeSISector )
+                            ( sectorData, solarSystemDict )
                             ( horizOffset, vertOffset )
                             ( viewportWidthIsh, viewportHeightIsh )
-                            ( colIdx, rowIdx )
+                            ( colIdx, rowIdx, systemSI colIdx rowIdx )
                             hexOrigin
                             playerHexId
                     )
@@ -1284,7 +1290,7 @@ sendSurveyIndexRequest =
                 |> Codec.decoder
     in
     Http.get
-        { url = "https://radiofreewaba.net/deepnight/surveyIndexes.json"
+        { url = "/public/surveyIndex.json"
         , expect = Http.expectJson DownloadedSurveyIndexJson surveyIndexParser
         }
 

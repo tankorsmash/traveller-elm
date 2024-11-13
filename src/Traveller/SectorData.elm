@@ -59,9 +59,9 @@ codecSISector =
 
 
 type alias SurveyIndexData =
-    List SISector
+    Dict String Int
 
 
 codecSurveyIndexData : Codec.Codec SurveyIndexData
 codecSurveyIndexData =
-    Codec.list codecSISector
+    Codec.dict Codec.int
