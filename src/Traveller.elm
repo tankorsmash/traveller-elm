@@ -225,6 +225,7 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
     Svg.g
         [ SvgEvents.onMouseOver (HoveringHex (HexId.createFromInt hexIdx))
         , SvgEvents.onClick (ViewingHex ( HexId.createFromInt hexIdx, si ))
+        , SvgAttrs.style "cursor: pointer;"
         ]
         [ -- background hex
           Svg.polygon
