@@ -100,7 +100,7 @@ type Msg
     | ZoomScaleChanged Float
     | DownloadSurveyIndexJson
     | DownloadedSurveyIndexJson (Result Http.Error SurveyIndexData)
-    | DownloadSectorJson
+    | DownloadSolarSystems
     | DownloadedSolarSystems (Result Http.Error (List SolarSystem))
     | OffsetChanged OffsetDirection Float
     | HoveringHex HexId
@@ -109,7 +109,7 @@ type Msg
     | GotHexMapViewport (Result Browser.Dom.Error Browser.Dom.Viewport)
     | GotResize Int Int
     | GoToSolarSystemPage HexId
-    | PlanetClicked StellarObject
+    | FocusInSidebar StellarObject
 
 
 type alias HexOrigin =
@@ -688,7 +688,7 @@ renderGasGiant newNestingLevel gasGiantData selectedStellarObject =
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
-        , Element.Events.onClick <| PlanetClicked planet
+        , Element.Events.onClick <| FocusInSidebar planet
         ]
         [ text <| renderArrow planet selectedStellarObject
         , renderRawOrbit gasGiantData.au
@@ -750,7 +750,7 @@ renderTerrestrialPlanet newNestingLevel terrestrialData selectedStellarObject =
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
-        , Element.Events.onClick <| PlanetClicked planet
+        , Element.Events.onClick <| FocusInSidebar planet
         ]
         [ text <| renderArrow planet selectedStellarObject
         , renderRawOrbit terrestrialData.au
@@ -890,7 +890,7 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData selectedStellarObject =
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
-        , Element.Events.onClick <| PlanetClicked belt
+        , Element.Events.onClick <| FocusInSidebar belt
         ]
         [ text <| renderArrow belt selectedStellarObject
         , renderRawOrbit planetoidBeltData.au
@@ -921,7 +921,7 @@ renderPlanetoid newNestingLevel planetoidData selectedStellarObject =
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
-        , Element.Events.onClick <| PlanetClicked planet
+        , Element.Events.onClick <| FocusInSidebar planet
         ]
         [ text <| renderArrow planet selectedStellarObject
         , renderRawOrbit planetoidData.au
@@ -1339,7 +1339,7 @@ update msg model =
         ZoomScaleChanged newScale ->
             ( { model | hexScale = newScale }, Cmd.none )
 
-        DownloadSectorJson ->
+        DownloadSolarSystems ->
             ( model
             , sendSectorRequest model.upperLeftHex model.lowerRightHex
             )
@@ -1521,7 +1521,7 @@ update msg model =
             , Browser.Navigation.pushUrl model.key <| "/view_system?hexid=" ++ hexId.raw
             )
 
-        PlanetClicked stellarObject ->
+        FocusInSidebar stellarObject ->
             ( { model | selectedStellarObject = Just stellarObject }
             , Cmd.none
             )
