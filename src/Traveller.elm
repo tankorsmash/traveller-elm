@@ -43,7 +43,7 @@ import Svg.Styled.Attributes as SvgAttrs exposing (fill, points, viewBox)
 import Svg.Styled.Events as SvgEvents
 import Svg.Styled.Lazy
 import Task
-import Traveller.HexId as HexId exposing (HexId, RawHexId, hexToCoords)
+import Traveller.HexId as HexId exposing (HexId, RawHexId, hexToRowCol)
 import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
@@ -577,7 +577,7 @@ viewHexes upperLeftHex viewingHexOrigin { screenVp, hexmapVp } solarSystemDict (
                     hexmapViewport
 
         ( hexYOffset, hexXOffset ) =
-            hexToCoords upperLeftHex.hexId
+            hexToRowCol upperLeftHex.hexId
 
         viewHexRow : Int -> List ( Maybe (Svg Msg), Int )
         viewHexRow rowIdx =
@@ -1070,21 +1070,19 @@ viewSystemDetailsSidebar ( viewingHexId, si ) maybeViewingHexOrigin solarSystem 
 calcDistance : HexId -> HexId -> Int
 calcDistance hex1 hex2 =
     let
-        ( x1, y1 ) =
-            hexToCoords hex1
+        ( y1, x1 ) =
+            hexToRowCol hex1
 
-        ( x2, y2 ) =
-            hexToCoords hex2
-
-        colDiff =
-            abs (x1 - x2)
+        ( y2, x2 ) =
+            hexToRowCol hex2
 
         rowDiff =
             abs (y1 - y2)
+
+        colDiff =
+            abs (x1 - x2)
     in
-    -- wrong abs (x1 - x2) + abs (y1 - y2)
-    -- this is still wrong but its closer lol, ty gpt
-    max colDiff rowDiff + (min colDiff rowDiff // 2)
+    max rowDiff colDiff + (min rowDiff colDiff // 2)
 
 
 view : Model -> Element.Element Msg
@@ -1275,12 +1273,12 @@ sendSectorRequest upperLeft lowerRight =
                 [ "deepnight", "data", "solarsystems" ]
                 [ Url.Builder.int "ulsx" upperLeft.sectorX
                 , Url.Builder.int "ulsy" upperLeft.sectorY
-                , Url.Builder.int "ulhx" <| Tuple.second <| hexToCoords upperLeft.hexId
-                , Url.Builder.int "ulhy" <| Tuple.first <| hexToCoords upperLeft.hexId
+                , Url.Builder.int "ulhx" <| Tuple.second <| hexToRowCol upperLeft.hexId
+                , Url.Builder.int "ulhy" <| Tuple.first <| hexToRowCol upperLeft.hexId
                 , Url.Builder.int "lrsx" lowerRight.sectorX
                 , Url.Builder.int "lrsy" lowerRight.sectorY
-                , Url.Builder.int "lrhx" <| Tuple.second <| hexToCoords lowerRight.hexId
-                , Url.Builder.int "lrhy" <| Tuple.first <| hexToCoords lowerRight.hexId
+                , Url.Builder.int "lrhx" <| Tuple.second <| hexToRowCol lowerRight.hexId
+                , Url.Builder.int "lrhy" <| Tuple.first <| hexToRowCol lowerRight.hexId
                 ]
     in
     Http.get
