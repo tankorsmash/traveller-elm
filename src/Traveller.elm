@@ -1511,7 +1511,6 @@ update msg model =
             ( { model
                 | viewingHexId = Just ( hexId, si )
                 , viewingHexOrigin = Just ( ox, oy )
-                , offset = Debug.log "new offset" newOffsetPct
                 , selectedStellarObject = Nothing
               }
             , Cmd.none
