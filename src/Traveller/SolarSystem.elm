@@ -11,6 +11,7 @@ type alias SolarSystem =
     , gasGiants : Int
     , planetoidBelts : Int
     , terrestrialPlanets : Int
+    , surveyIndex : Int
     }
 
 
@@ -21,6 +22,7 @@ type alias RawSolarSystem =
     , gasGiants : Int
     , planetoidBelts : Int
     , terrestrialPlanets : Int
+    , surveyIndex : Int
     }
 
 
@@ -40,6 +42,7 @@ rawToFinal rawSolarSystem =
     , gasGiants = rawSolarSystem.gasGiants
     , planetoidBelts = rawSolarSystem.planetoidBelts
     , terrestrialPlanets = rawSolarSystem.terrestrialPlanets
+    , surveyIndex = rawSolarSystem.surveyIndex
     }
 
 
@@ -58,6 +61,7 @@ finalToRaw solarSystem =
     , gasGiants = solarSystem.gasGiants
     , planetoidBelts = solarSystem.planetoidBelts
     , terrestrialPlanets = solarSystem.terrestrialPlanets
+    , surveyIndex = solarSystem.surveyIndex
     }
 
 
@@ -70,4 +74,5 @@ rawCodec =
         |> Codec.field "gas_giant_count" .gasGiants Codec.int
         |> Codec.field "planetoid_belt_count" .planetoidBelts Codec.int
         |> Codec.field "terrestrial_planet_count" .terrestrialPlanets Codec.int
+        |> Codec.field "survey_index" .surveyIndex Codec.int
         |> Codec.buildObject

@@ -198,13 +198,21 @@ isStarOrbit obj =
             starDataConfig.orbitType < 10
 
 
-viewHexDetailed : Maybe SolarSystem -> Int -> HexId -> Int -> HexOrigin -> Float -> Svg Msg
-viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size =
+viewHexDetailed : Maybe SolarSystem -> HexId -> Int -> HexOrigin -> Float -> Svg Msg
+viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
     let
+        si =
+            case maybeSolarSystem of
+                Just solarSystem ->
+                    solarSystem.surveyIndex
+
+                Nothing ->
+                    0
+
         hasStar =
             case maybeSolarSystem of
                 Just solarSystem ->
-                    si > 0
+                    solarSystem.surveyIndex > 0
 
                 Nothing ->
                     False
@@ -472,11 +480,11 @@ viewHex :
     -> Dict.Dict Int SolarSystem
     -> ( Float, Float )
     -> ( Float, Float )
-    -> ( Int, Int, Int )
+    -> ( Int, Int )
     -> HexOrigin
     -> HexId
     -> ( Maybe (Svg Msg), Int )
-viewHex widestViewport hexSize solarSystemDict ( horizOffsetPct, vertOffsetPct ) ( viewportWidth, viewportHeight ) ( colIdx, rowIdx, systemSI ) ( ox, oy ) playerHexId =
+viewHex widestViewport hexSize solarSystemDict ( horizOffsetPct, vertOffsetPct ) ( viewportWidth, viewportHeight ) ( colIdx, rowIdx ) ( ox, oy ) playerHexId =
     let
         idx =
             (rowIdx + 1) + (colIdx + 1) * 100
@@ -511,7 +519,6 @@ viewHex widestViewport hexSize solarSystemDict ( horizOffsetPct, vertOffsetPct )
             if not (outsideX || outsideY) then
                 Just
                     (viewHexDetailed solarSystem
-                        systemSI
                         playerHexId
                         idx
                         ( ox, oy )
@@ -537,15 +544,6 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } solarSystemDict surveyIndexDat
             --    ++ "."
             --    ++ (String.padLeft 4 '0' <| String.fromInt hexId)
             String.padLeft 4 '0' <| String.fromInt hexId
-
-        systemSI : Int -> Int -> Int
-        systemSI hexX hexY =
-            let
-                idx =
-                    (hexY + 1) + (hexX + 1) * 100
-            in
-            Dict.get (hexKey idx) surveyIndexData
-                |> Maybe.withDefault 10
 
         viewportHeightIsh =
             screenVp.viewport.height * 0.9
@@ -582,7 +580,7 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } solarSystemDict surveyIndexDat
                             solarSystemDict
                             ( horizOffset, vertOffset )
                             ( viewportWidthIsh, viewportHeightIsh )
-                            ( colIdx, rowIdx, systemSI colIdx rowIdx )
+                            ( colIdx, rowIdx )
                             hexOrigin
                             playerHexId
                     )
