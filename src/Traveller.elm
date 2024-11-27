@@ -43,7 +43,7 @@ import Svg.Styled.Attributes as SvgAttrs exposing (fill, points, viewBox)
 import Svg.Styled.Events as SvgEvents
 import Svg.Styled.Lazy
 import Task
-import Traveller.HexId as HexId exposing (HexId, RawHexId, hexToRowCol)
+import Traveller.HexId as HexId exposing (HexId, RawHexId)
 import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
@@ -577,7 +577,7 @@ viewHexes upperLeftHex viewingHexOrigin { screenVp, hexmapVp } solarSystemDict (
                     hexmapViewport
 
         ( hexYOffset, hexXOffset ) =
-            hexToRowCol upperLeftHex.hexId
+            HexId.toRowCol upperLeftHex.hexId
 
         viewHexRow : Int -> List ( Maybe (Svg Msg), Int )
         viewHexRow rowIdx =
@@ -1071,10 +1071,10 @@ calcDistance : HexId -> HexId -> Int
 calcDistance hex1 hex2 =
     let
         ( y1, x1 ) =
-            hexToRowCol hex1
+            HexId.toRowCol hex1
 
         ( y2, x2 ) =
-            hexToRowCol hex2
+            HexId.toRowCol hex2
 
         rowDiff =
             abs (y1 - y2)
@@ -1273,12 +1273,12 @@ sendSectorRequest upperLeft lowerRight =
                 [ "deepnight", "data", "solarsystems" ]
                 [ Url.Builder.int "ulsx" upperLeft.sectorX
                 , Url.Builder.int "ulsy" upperLeft.sectorY
-                , Url.Builder.int "ulhx" <| Tuple.second <| hexToRowCol upperLeft.hexId
-                , Url.Builder.int "ulhy" <| Tuple.first <| hexToRowCol upperLeft.hexId
+                , Url.Builder.int "ulhx" <| Tuple.second <| HexId.toRowCol upperLeft.hexId
+                , Url.Builder.int "ulhy" <| Tuple.first <| HexId.toRowCol upperLeft.hexId
                 , Url.Builder.int "lrsx" lowerRight.sectorX
                 , Url.Builder.int "lrsy" lowerRight.sectorY
-                , Url.Builder.int "lrhx" <| Tuple.second <| hexToRowCol lowerRight.hexId
-                , Url.Builder.int "lrhy" <| Tuple.first <| hexToRowCol lowerRight.hexId
+                , Url.Builder.int "lrhx" <| Tuple.second <| HexId.toRowCol lowerRight.hexId
+                , Url.Builder.int "lrhy" <| Tuple.first <| HexId.toRowCol lowerRight.hexId
                 ]
     in
     Http.get

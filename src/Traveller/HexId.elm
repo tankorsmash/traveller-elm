@@ -1,4 +1,4 @@
-module Traveller.HexId exposing (HexId, RawHexId, codecHexId, createFromInt, hexId, hexToCoords, hexToRowCol)
+module Traveller.HexId exposing (HexId, RawHexId, codecHexId, createFromInt, hexId, toXY, toRowCol)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -7,8 +7,8 @@ import Parser exposing ((|.), (|=), Parser)
 import Parser.Extras as Parser
 
 
-hexToRowCol : HexId -> ( Int, Int )
-hexToRowCol hexId_ =
+toRowCol : HexId -> ( Int, Int )
+toRowCol hexId_ =
     let
         row =
             modBy 100 hexId_.value
@@ -19,11 +19,11 @@ hexToRowCol hexId_ =
     ( row, col )
 
 
-hexToCoords : HexId -> { x : Int, y : Int }
-hexToCoords hexId_ =
+toXY : HexId -> { x : Int, y : Int }
+toXY hexId_ =
     let
         ( row, col ) =
-            hexToRowCol hexId_
+            toRowCol hexId_
     in
     { x = col, y = row }
 
