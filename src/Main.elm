@@ -2,34 +2,20 @@ port module Main exposing (main)
 
 import Browser
 import Browser.Navigation as Nav
-import Chart.Item as CI
-import Codec
 import Dialog
-import Dict exposing (Dict)
-import Element exposing (Element)
-import Element.Background as Background
-import Element.Border as Border
-import Element.Events as Events
-import Element.Input as Input
-import Element.Lazy
-import Element.Region exposing (description)
-import Html exposing (Html, a, b, button, div, h1, hr, li, span, text, ul)
-import Html.Attributes exposing (class, href, style)
-import Html.Events exposing (onClick)
+import Element
+import Html exposing (Html, a, div, text)
+import Html.Attributes exposing (class, href)
+import Html.Events
 import Http exposing (Error(..))
-import Json.Decode
 import Json.Encode
-import List
-import List.Extra as List
 import Maybe.Extra as Maybe
-import Random
-import Random.List
 import RemoteData exposing (RemoteData(..))
 import SolarSystemPage
 import Traveller
 import Traveller.HexId as HexId
 import Url
-import Url.Parser exposing ((</>), Parser, int, map, oneOf, s, string, top)
+import Url.Parser exposing ((</>), Parser, map, oneOf, s, top)
 import Url.Parser.Query
 
 

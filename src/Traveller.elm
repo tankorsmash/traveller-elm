@@ -217,13 +217,6 @@ viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
                 Nothing ->
                     False
 
-        ifStarOrNot trueValue falseValue =
-            if hasStar then
-                trueValue
-
-            else
-                falseValue
-
         scaleAttr : Int -> Float
         scaleAttr default =
             toFloat default * min 1 (size / defaultHexSize)
