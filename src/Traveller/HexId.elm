@@ -1,10 +1,22 @@
-module Traveller.HexId exposing (HexId, RawHexId, codecHexId, createFromInt, hexId)
+module Traveller.HexId exposing (HexId, RawHexId, codecHexId, createFromInt, hexId, hexToCoords)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
 import Json.Encode as JsEncode
 import Parser exposing ((|.), (|=), Parser)
 import Parser.Extras as Parser
+
+
+hexToCoords : HexId -> ( Int, Int )
+hexToCoords hexId_ =
+    let
+        row =
+            modBy 100 hexId_.value
+
+        col =
+            hexId_.value // 100
+    in
+    ( row, col )
 
 
 {-| needs to be a plain int for hashing in a Dict, otherwise we'd use full HexIds

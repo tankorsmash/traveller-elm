@@ -43,7 +43,7 @@ import Svg.Styled.Attributes as SvgAttrs exposing (fill, points, viewBox)
 import Svg.Styled.Events as SvgEvents
 import Svg.Styled.Lazy
 import Task
-import Traveller.HexId as HexId exposing (HexId, RawHexId)
+import Traveller.HexId as HexId exposing (HexId, RawHexId, hexToCoords)
 import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
@@ -123,23 +123,27 @@ subscriptions model =
 
 init : Browser.Navigation.Key -> ( Model, Cmd Msg )
 init key =
-    ( { hexScale = defaultHexSize
-      , solarSystems = RemoteData.NotAsked
-      , surveyIndexData = RemoteData.NotAsked
-      , offset = ( 0.0, 0.0 )
-      , playerHex = HexId.createFromInt 135
-      , hoveringHex = Nothing
-      , viewingHexId = Nothing
-      , viewingHexOrigin = Nothing
-      , viewport = Nothing
-      , hexmapViewport = Nothing
-      , key = key
-      , selectedStellarObject = Nothing
-      , upperLeftHex = { sectorX = -10, sectorY = -2, hexId = HexId.createFromInt 2213 }
-      , lowerRightHex = { sectorX = -10, sectorY = -2, hexId = HexId.createFromInt 3234 }
-      }
+    let
+        model =
+            { hexScale = defaultHexSize
+            , solarSystems = RemoteData.NotAsked
+            , surveyIndexData = RemoteData.NotAsked
+            , offset = ( 0.0, 0.0 )
+            , playerHex = HexId.createFromInt 135
+            , hoveringHex = Nothing
+            , viewingHexId = Nothing
+            , viewingHexOrigin = Nothing
+            , viewport = Nothing
+            , hexmapViewport = Nothing
+            , key = key
+            , selectedStellarObject = Nothing
+            , upperLeftHex = { sectorX = -10, sectorY = -2, hexId = HexId.createFromInt 2213 }
+            , lowerRightHex = { sectorX = -10, sectorY = -2, hexId = HexId.createFromInt 3234 }
+            }
+    in
+    ( model
     , Cmd.batch
-        [ sendSectorRequest
+        [ sendSectorRequest model.upperLeftHex model.lowerRightHex
         , sendSurveyIndexRequest
         , Browser.Dom.getViewport
             |> Task.perform GotViewport
@@ -488,7 +492,7 @@ viewHex :
 viewHex widestViewport hexSize solarSystemDict ( horizOffsetPct, vertOffsetPct ) ( viewportWidth, viewportHeight ) ( colIdx, rowIdx ) ( ox, oy ) playerHexId =
     let
         idx =
-            (rowIdx + 1) + (colIdx + 1) * 100
+            rowIdx + colIdx * 100
 
         ( fox, foy ) =
             ( toFloat ox, toFloat oy )
@@ -534,8 +538,16 @@ viewHex widestViewport hexSize solarSystemDict ( horizOffsetPct, vertOffsetPct )
 
 {-| View all the hexes in the system
 -}
-viewHexes : Maybe ( Int, Int ) -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport } -> Dict.Dict Int SolarSystem -> SurveyIndexData -> ( Float, Float ) -> HexId -> Float -> Html Msg
-viewHexes viewingHexOrigin { screenVp, hexmapVp } solarSystemDict surveyIndexData ( horizOffset, vertOffset ) playerHexId hexSize =
+viewHexes :
+    HexAddress
+    -> Maybe ( Int, Int )
+    -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport }
+    -> Dict.Dict Int SolarSystem
+    -> ( Float, Float )
+    -> HexId
+    -> Float
+    -> Html Msg
+viewHexes upperLeftHex viewingHexOrigin { screenVp, hexmapVp } solarSystemDict ( horizOffset, vertOffset ) playerHexId hexSize =
     let
         hexKey : Int -> String
         hexKey hexId =
@@ -569,6 +581,9 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } solarSystemDict surveyIndexDat
                 Just hexmapViewport ->
                     hexmapViewport
 
+        ( hexYOffset, hexXOffset ) =
+            hexToCoords upperLeftHex.hexId
+
         viewHexRow : Int -> List ( Maybe (Svg Msg), Int )
         viewHexRow rowIdx =
             List.range 0 numHexCols
@@ -581,7 +596,7 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } solarSystemDict surveyIndexDat
                             solarSystemDict
                             ( horizOffset, vertOffset )
                             ( viewportWidthIsh, viewportHeightIsh )
-                            ( colIdx, rowIdx )
+                            ( colIdx + hexXOffset, rowIdx + hexYOffset )
                             hexOrigin
                             playerHexId
                     )
@@ -654,18 +669,6 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } solarSystemDict surveyIndexDat
                         ++ stringHeight
                 ]
            )
-
-
-hexToCoords : HexId -> ( Int, Int )
-hexToCoords hexId =
-    let
-        row =
-            hexId.value // numHexCols
-
-        col =
-            modBy numHexCols hexId.value
-    in
-    ( row, col )
 
 
 {-| Builds a monospace text element
@@ -1195,6 +1198,7 @@ view model =
                     case ( model.solarSystems, model.viewport, model.surveyIndexData ) of
                         ( RemoteData.Success solarSystems, Just viewport, RemoteData.Success surveyIndexData ) ->
                             viewHexes
+                                model.upperLeftHex
                                 model.viewingHexOrigin
                                 (case model.hexmapViewport of
                                     Nothing ->
@@ -1213,7 +1217,6 @@ view model =
                                         { screenVp = viewport, hexmapVp = Nothing }
                                 )
                                 solarSystems
-                                surveyIndexData
                                 model.offset
                                 model.playerHex
                                 model.hexScale
@@ -1287,8 +1290,8 @@ view model =
         ]
 
 
-sendSectorRequest : Cmd Msg
-sendSectorRequest =
+sendSectorRequest : HexAddress -> HexAddress -> Cmd Msg
+sendSectorRequest upperLeft lowerRight =
     let
         solarSystemsParser : JsDecode.Decoder (List SolarSystem)
         solarSystemsParser =
@@ -1298,14 +1301,14 @@ sendSectorRequest =
         url =
             Url.Builder.crossOrigin "https://radiofreewaba.net"
                 [ "deepnight", "data", "solarsystems" ]
-                [ Url.Builder.int "ulsx" -10
-                , Url.Builder.int "ulsy" -2
-                , Url.Builder.int "ulhx" 1
-                , Url.Builder.int "ulhy" 1
-                , Url.Builder.int "lrsx" -10
-                , Url.Builder.int "lrsy" -2
-                , Url.Builder.int "lrhx" 32
-                , Url.Builder.int "lrhy" 40
+                [ Url.Builder.int "ulsx" upperLeft.sectorX
+                , Url.Builder.int "ulsy" upperLeft.sectorY
+                , Url.Builder.int "ulhx" <| Tuple.second <| hexToCoords upperLeft.hexId
+                , Url.Builder.int "ulhy" <| Tuple.first <| hexToCoords upperLeft.hexId
+                , Url.Builder.int "lrsx" lowerRight.sectorX
+                , Url.Builder.int "lrsy" lowerRight.sectorY
+                , Url.Builder.int "lrhx" <| Tuple.second <| hexToCoords lowerRight.hexId
+                , Url.Builder.int "lrhy" <| Tuple.first <| hexToCoords lowerRight.hexId
                 ]
     in
     Http.get
@@ -1338,7 +1341,7 @@ update msg model =
 
         DownloadSectorJson ->
             ( model
-            , sendSectorRequest
+            , sendSectorRequest model.upperLeftHex model.lowerRightHex
             )
 
         DownloadedSolarSystems (Ok solarSystems) ->
