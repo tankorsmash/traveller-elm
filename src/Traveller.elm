@@ -83,7 +83,6 @@ type alias Model =
     , viewingHexOrigin : Maybe ( Int, Int )
     , viewport : Maybe Browser.Dom.Viewport
     , hexmapViewport : Maybe (Result Browser.Dom.Error Browser.Dom.Viewport)
-    , surveyIndexData : RemoteData Http.Error SurveyIndexData
     , selectedStellarObject : Maybe StellarObject
     , upperLeftHex : HexAddress
     , lowerRightHex : HexAddress
@@ -98,8 +97,6 @@ type OffsetDirection
 type Msg
     = NoOpMsg
     | ZoomScaleChanged Float
-    | DownloadSurveyIndexJson
-    | DownloadedSurveyIndexJson (Result Http.Error SurveyIndexData)
     | DownloadSolarSystems
     | DownloadedSolarSystems (Result Http.Error (List SolarSystem))
     | OffsetChanged OffsetDirection Float
@@ -127,7 +124,6 @@ init key =
         model =
             { hexScale = defaultHexSize
             , solarSystems = RemoteData.NotAsked
-            , surveyIndexData = RemoteData.NotAsked
             , offset = ( 0.0, 0.0 )
             , playerHex = HexId.createFromInt 135
             , hoveringHex = Nothing
@@ -144,7 +140,6 @@ init key =
     ( model
     , Cmd.batch
         [ sendSectorRequest model.upperLeftHex model.lowerRightHex
-        , sendSurveyIndexRequest
         , Browser.Dom.getViewport
             |> Task.perform GotViewport
         ]
@@ -1195,8 +1190,8 @@ view model =
             column []
                 [ Element.html <|
                     -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
-                    case ( model.solarSystems, model.viewport, model.surveyIndexData ) of
-                        ( RemoteData.Success solarSystems, Just viewport, RemoteData.Success surveyIndexData ) ->
+                    case ( model.solarSystems, model.viewport ) of
+                        ( RemoteData.Success solarSystems, Just viewport ) ->
                             viewHexes
                                 model.upperLeftHex
                                 model.viewingHexOrigin
@@ -1222,7 +1217,7 @@ view model =
                                 model.hexScale
                                 |> Html.toUnstyled
 
-                        ( RemoteData.Failure _, _, _ ) ->
+                        ( RemoteData.Failure _, _ ) ->
                             Html.toUnstyled <|
                                 Html.div
                                     [ Html.Styled.Attributes.css
@@ -1230,7 +1225,7 @@ view model =
                                     ]
                                     [ Html.text "Failed to decode SectorData. See console for details" ]
 
-                        ( NotAsked, _, _ ) ->
+                        ( NotAsked, _ ) ->
                             Html.toUnstyled <|
                                 Html.div
                                     [ Html.Styled.Attributes.css
@@ -1238,20 +1233,11 @@ view model =
                                     ]
                                     [ Html.text "Not asked" ]
 
-                        ( Loading, _, _ ) ->
+                        ( Loading, _ ) ->
                             Html.toUnstyled <| Html.text "Loading..."
 
-                        ( Success _, Nothing, _ ) ->
+                        ( Success _, Nothing ) ->
                             Html.toUnstyled <| Html.text "Have sector data but no viewport"
-
-                        ( Success _, Just _, NotAsked ) ->
-                            Html.toUnstyled <| Html.text "Have sector data and viewport, but not yet asked for survey index data"
-
-                        ( Success _, Just _, Loading ) ->
-                            Html.toUnstyled <| Html.text "Have sector data and viewport, but loading survey index data"
-
-                        ( Success _, Just _, Failure _ ) ->
-                            Html.toUnstyled <| Html.text "Have sector data and viewport, but failed to load survey index data"
                 ]
     in
     column []
@@ -1269,20 +1255,6 @@ view model =
                     <|
                         -- use <pre> to preserve whitespace
                         Html.pre [ Html.Styled.Attributes.css [ Css.overflow Css.hidden ] ] [ Html.text error ]
-                )
-
-            _ ->
-                Element.none
-        , -- displaying json errors for SurveyIndexData
-          case model.surveyIndexData of
-            Failure (Http.BadBody error) ->
-                (-- turn html into elm-ui
-                 Element.html
-                    << -- convert from elm-css's HTML
-                       Html.toUnstyled
-                 <|
-                    -- use <pre> to preserve whitespace
-                    Html.pre [ Html.Styled.Attributes.css [ Css.overflow Css.hidden ] ] [ Html.text error ]
                 )
 
             _ ->
@@ -1314,19 +1286,6 @@ sendSectorRequest upperLeft lowerRight =
     Http.get
         { url = url
         , expect = Http.expectJson DownloadedSolarSystems solarSystemsParser
-        }
-
-
-sendSurveyIndexRequest : Cmd Msg
-sendSurveyIndexRequest =
-    let
-        surveyIndexParser =
-            codecSurveyIndexData
-                |> Codec.decoder
-    in
-    Http.get
-        { url = "/public/surveyIndex.json"
-        , expect = Http.expectJson DownloadedSurveyIndexJson surveyIndexParser
         }
 
 
@@ -1388,41 +1347,6 @@ update msg model =
                             Debug.log bodyErr "__ END OF ERROR Traveller.elm __"
                     in
                     ( { model | solarSystems = RemoteData.Failure err }, Cmd.none )
-
-        DownloadSurveyIndexJson ->
-            ( model
-            , sendSurveyIndexRequest
-            )
-
-        DownloadedSurveyIndexJson (Ok surveyIndexData) ->
-            ( { model
-                | surveyIndexData =
-                    surveyIndexData
-                        |> RemoteData.Success
-              }
-            , Cmd.none
-            )
-
-        DownloadedSurveyIndexJson (Err err) ->
-            case err of
-                Http.BadUrl _ ->
-                    Debug.todo "branch 'DownloadedSurveyIndexJson bad url' not implemented"
-
-                Http.Timeout ->
-                    Debug.todo "branch 'DownloadedSurveyIndexJson timeout' not implemented"
-
-                Http.NetworkError ->
-                    Debug.todo "branch 'DownloadedSurveyIndexJson NetworkError' not implemented"
-
-                Http.BadStatus _ ->
-                    Debug.todo "branch 'DownloadedSurveyIndexJson BadStatus' not implemented"
-
-                Http.BadBody bodyErr ->
-                    let
-                        _ =
-                            Debug.log bodyErr ""
-                    in
-                    Debug.todo "branch 'DownloadedSurveyIndexJson BadBody' not implemented"
 
         OffsetChanged Horizontal horizOffset ->
             ( { model | offset = Tuple.mapFirst (always horizOffset) model.offset }, Cmd.none )
