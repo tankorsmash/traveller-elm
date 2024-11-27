@@ -48,7 +48,7 @@ import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
 import Traveller.SectorData exposing (SISector, SectorData, SurveyIndexData, codecSectorData, codecSurveyIndexData)
-import Traveller.SolarSystem exposing (SolarSystem)
+import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObject(..), TerrestrialData, getStarDataConfig, getStellarOrbit, starColourRGB)
 
 
@@ -64,10 +64,17 @@ planetoidSI =
     6
 
 
+type alias HexAddress =
+    { sectorX : Int
+    , sectorY : Int
+    , hexId : HexId
+    }
+
+
 type alias Model =
     { key : Browser.Navigation.Key
     , hexScale : Float
-    , sectorData : RemoteData Http.Error ( SectorData, Dict.Dict RawHexId SolarSystem )
+    , solarSystems : RemoteData Http.Error (Dict.Dict RawHexId SolarSystem)
     , offset : ( Float, Float )
     , playerHex : HexId
     , hoveringHex : Maybe HexId
@@ -77,6 +84,8 @@ type alias Model =
     , hexmapViewport : Maybe (Result Browser.Dom.Error Browser.Dom.Viewport)
     , surveyIndexData : RemoteData Http.Error SurveyIndexData
     , selectedStellarObject : Maybe StellarObject
+    , upperLeftHex : HexAddress
+    , lowerRightHex : HexAddress
     }
 
 
@@ -91,7 +100,7 @@ type Msg
     | DownloadSurveyIndexJson
     | DownloadedSurveyIndexJson (Result Http.Error SurveyIndexData)
     | DownloadSectorJson
-    | DownloadedSectorJson (Result Http.Error SectorData)
+    | DownloadedSolarSystems (Result Http.Error (List SolarSystem))
     | OffsetChanged OffsetDirection Float
     | HoveringHex HexId
     | ViewingHex ( HexId, Int )
@@ -114,7 +123,7 @@ subscriptions model =
 init : Browser.Navigation.Key -> ( Model, Cmd Msg )
 init key =
     ( { hexScale = defaultHexSize
-      , sectorData = RemoteData.NotAsked
+      , solarSystems = RemoteData.NotAsked
       , surveyIndexData = RemoteData.NotAsked
       , offset = ( 0.0, 0.0 )
       , playerHex = HexId.createFromInt 135
@@ -125,6 +134,8 @@ init key =
       , hexmapViewport = Nothing
       , key = key
       , selectedStellarObject = Nothing
+      , upperLeftHex = { sectorX = -10, sectorY = -2, hexId = HexId.createFromInt 2213 }
+      , lowerRightHex = { sectorX = -10, sectorY = -2, hexId = HexId.createFromInt 3234 }
       }
     , Cmd.batch
         [ sendSectorRequest
@@ -314,7 +325,16 @@ viewHexDetailed maybeSolarSystem si playerHexId hexIdx (( x, y ) as origin) size
                     )
 
             _ ->
-                Html.text ""
+                Svg.text_
+                    [ SvgAttrs.x <| String.fromInt <| x
+                    , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
+                    , SvgAttrs.fontSize "10"
+                    , SvgAttrs.textAnchor "middle"
+                    ]
+                    [ String.fromInt hexIdx
+                        |> String.pad 4 '0'
+                        |> Svg.text
+                    ]
         , case ( maybeSolarSystem, hasStar ) of
             ( Just solarSystem, True ) ->
                 Svg.g []
@@ -449,14 +469,14 @@ calcOrigin hexSize row col =
 viewHex :
     Browser.Dom.Viewport
     -> Float
-    -> ( SectorData, Dict.Dict Int SolarSystem )
+    -> Dict.Dict Int SolarSystem
     -> ( Float, Float )
     -> ( Float, Float )
     -> ( Int, Int, Int )
     -> HexOrigin
     -> HexId
     -> ( Maybe (Svg Msg), Int )
-viewHex widestViewport hexSize ( sectorData, solarSystemDict ) ( horizOffsetPct, vertOffsetPct ) ( viewportWidth, viewportHeight ) ( colIdx, rowIdx, systemSI ) ( ox, oy ) playerHexId =
+viewHex widestViewport hexSize solarSystemDict ( horizOffsetPct, vertOffsetPct ) ( viewportWidth, viewportHeight ) ( colIdx, rowIdx, systemSI ) ( ox, oy ) playerHexId =
     let
         idx =
             (rowIdx + 1) + (colIdx + 1) * 100
@@ -506,16 +526,17 @@ viewHex widestViewport hexSize ( sectorData, solarSystemDict ) ( horizOffsetPct,
 
 {-| View all the hexes in the system
 -}
-viewHexes : Maybe ( Int, Int ) -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport } -> ( SectorData, Dict.Dict Int SolarSystem ) -> SurveyIndexData -> ( Float, Float ) -> HexId -> Float -> Html Msg
-viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict ) surveyIndexData ( horizOffset, vertOffset ) playerHexId hexSize =
+viewHexes : Maybe ( Int, Int ) -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport } -> Dict.Dict Int SolarSystem -> SurveyIndexData -> ( Float, Float ) -> HexId -> Float -> Html Msg
+viewHexes viewingHexOrigin { screenVp, hexmapVp } solarSystemDict surveyIndexData ( horizOffset, vertOffset ) playerHexId hexSize =
     let
         hexKey : Int -> String
         hexKey hexId =
-            String.fromInt sectorData.x
-                ++ "."
-                ++ String.fromInt sectorData.y
-                ++ "."
-                ++ (String.padLeft 4 '0' <| String.fromInt hexId)
+            --String.fromInt sectorData.x
+            --    ++ "."
+            --    ++ String.fromInt sectorData.y
+            --    ++ "."
+            --    ++ (String.padLeft 4 '0' <| String.fromInt hexId)
+            String.padLeft 4 '0' <| String.fromInt hexId
 
         systemSI : Int -> Int -> Int
         systemSI hexX hexY =
@@ -524,7 +545,7 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
                     (hexY + 1) + (hexX + 1) * 100
             in
             Dict.get (hexKey idx) surveyIndexData
-                |> Maybe.withDefault 0
+                |> Maybe.withDefault 10
 
         viewportHeightIsh =
             screenVp.viewport.height * 0.9
@@ -558,7 +579,7 @@ viewHexes viewingHexOrigin { screenVp, hexmapVp } ( sectorData, solarSystemDict 
                         viewHex
                             widestViewport
                             hexSize
-                            ( sectorData, solarSystemDict )
+                            solarSystemDict
                             ( horizOffset, vertOffset )
                             ( viewportWidthIsh, viewportHeightIsh )
                             ( colIdx, rowIdx, systemSI colIdx rowIdx )
@@ -1146,8 +1167,8 @@ view model =
                                 text <| "None yet"
                         ]
                     ]
-                , case model.sectorData of
-                    Success ( sectorData, solarSystemDict ) ->
+                , case model.solarSystems of
+                    Success solarSystemDict ->
                         case model.viewingHexId of
                             Just ( viewingHexId, si ) ->
                                 case solarSystemDict |> Dict.get viewingHexId.value of
@@ -1172,8 +1193,8 @@ view model =
             column []
                 [ Element.html <|
                     -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
-                    case ( model.sectorData, model.viewport, model.surveyIndexData ) of
-                        ( RemoteData.Success sectorData, Just viewport, RemoteData.Success surveyIndexData ) ->
+                    case ( model.solarSystems, model.viewport, model.surveyIndexData ) of
+                        ( RemoteData.Success solarSystems, Just viewport, RemoteData.Success surveyIndexData ) ->
                             viewHexes
                                 model.viewingHexOrigin
                                 (case model.hexmapViewport of
@@ -1192,7 +1213,7 @@ view model =
                                         in
                                         { screenVp = viewport, hexmapVp = Nothing }
                                 )
-                                sectorData
+                                solarSystems
                                 surveyIndexData
                                 model.offset
                                 model.playerHex
@@ -1237,7 +1258,7 @@ view model =
             , hexesColumn
             ]
         , -- displaying json errors for SectorData
-          case model.sectorData of
+          case model.solarSystems of
             Failure (Http.BadBody error) ->
                 (-- turn html into elm-ui
                  Element.html <|
@@ -1271,14 +1292,14 @@ sendSectorRequest : Cmd Msg
 sendSectorRequest =
     let
         -- sectorParser : JsDecode.Decoder SectorData
-        sectorParser =
-            codecSectorData
+        solarSystemsParser =
+            Codec.list SolarSystem.codec
                 |> Codec.decoder
     in
     Http.get
         -- { url = "/Few Stars.json"
-        { url = "/public/Deepnight.json"
-        , expect = Http.expectJson DownloadedSectorJson sectorParser
+        { url = "https://radiofreewaba.net/deepnight/data/solarsystems?ulsx=-10&ulsy=-2&lrsx=-10&lrsy=-2&ulhx=1&ulhy=1&lrhx=32&lrhy=40"
+        , expect = Http.expectJson DownloadedSolarSystems solarSystemsParser
         }
 
 
@@ -1309,10 +1330,10 @@ update msg model =
             , sendSectorRequest
             )
 
-        DownloadedSectorJson (Ok sectorData) ->
+        DownloadedSolarSystems (Ok solarSystems) ->
             let
                 sortedSolarSystems =
-                    sectorData.solarSystems |> List.sortBy (.coordinates >> .value)
+                    solarSystems |> List.sortBy (.coordinates >> .value)
 
                 solarSystemDict =
                     sortedSolarSystems
@@ -1320,11 +1341,11 @@ update msg model =
                         |> Dict.fromList
 
                 newSectorData =
-                    { sectorData | solarSystems = sortedSolarSystems }
+                    { solarSystems = sortedSolarSystems }
             in
             ( { model
-                | sectorData =
-                    ( newSectorData, solarSystemDict )
+                | solarSystems =
+                    solarSystemDict
                         |> RemoteData.Success
               }
             , Cmd.batch
@@ -1333,7 +1354,7 @@ update msg model =
                 ]
             )
 
-        DownloadedSectorJson (Err err) ->
+        DownloadedSolarSystems (Err err) ->
             case err of
                 Http.BadUrl _ ->
                     Debug.todo "branch 'DownloadedSectorJson bad url' not implemented"
@@ -1352,7 +1373,7 @@ update msg model =
                         _ =
                             Debug.log bodyErr "__ END OF ERROR Traveller.elm __"
                     in
-                    ( { model | sectorData = RemoteData.Failure err }, Cmd.none )
+                    ( { model | solarSystems = RemoteData.Failure err }, Cmd.none )
 
         DownloadSurveyIndexJson ->
             ( model
@@ -1466,8 +1487,8 @@ update msg model =
                     )
 
                 maybeSolarSystem =
-                    case model.sectorData of
-                        RemoteData.Success ( sectorData, solarSystemDict ) ->
+                    case model.solarSystems of
+                        RemoteData.Success solarSystemDict ->
                             Dict.get hexId.value solarSystemDict
 
                         _ ->

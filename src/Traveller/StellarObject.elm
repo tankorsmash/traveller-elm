@@ -44,38 +44,41 @@ codecStarColour =
         ]
 
 
-starColourRGB : StarColour -> String
+starColourRGB : Maybe StarColour -> String
 starColourRGB colour =
     case colour of
-        Blue ->
+        Just Blue ->
             "#000077"
 
-        BlueWhite ->
+        Just BlueWhite ->
             "#87cefa"
 
-        White ->
+        Just White ->
             "#FFFFFF"
 
-        YellowWhite ->
+        Just YellowWhite ->
             "#ffffe0"
 
-        Yellow ->
+        Just Yellow ->
             "#ffff00"
 
-        LightOrange ->
+        Just LightOrange ->
             "#ffbf00"
 
-        OrangeRed ->
+        Just OrangeRed ->
             "#ff4500"
 
-        Red ->
+        Just Red ->
             "#ff0000"
 
-        Brown ->
+        Just Brown ->
             "#f4a460"
 
-        DeepDimRed ->
+        Just DeepDimRed ->
             "#800000"
+
+        Nothing ->
+            "#000000"
 
 
 type alias TerrestrialData =
@@ -212,7 +215,7 @@ type alias StarDataConfig =
     , diameter : Maybe Float
     , temperature : Maybe Int
     , age : Float
-    , colour : StarColour
+    , colour : Maybe StarColour
     , companion : Maybe StarData
     , orbit : Float
     , period : Float
@@ -367,7 +370,13 @@ codecPlanetoidData =
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
-        |> Codec.field "size" .size Codec.string
+        |> Codec.field "size"
+            .size
+            (Codec.oneOf Codec.string
+                [ Codec.int
+                    |> Codec.map String.fromInt (String.toInt >> Maybe.withDefault 99)
+                ]
+            )
         |> Codec.field "orbit" .orbit Codec.float
         |> Codec.field "period" .period (Codec.nullable Codec.float)
         |> Codec.field "composition" .composition Codec.string
@@ -426,7 +435,7 @@ codecStarData =
         |> Codec.field "diameter" .diameter (Codec.nullable Codec.float)
         |> Codec.field "temperature" .temperature (Codec.nullable Codec.int)
         |> Codec.field "age" .age Codec.float
-        |> Codec.field "colour" .colour codecStarColour
+        |> Codec.optionalField "colour" .colour codecStarColour
         |> Codec.field "companion" .companion (Codec.nullable <| Codec.lazy (\_ -> codecStarData))
         |> Codec.field "orbit" .orbit Codec.float
         |> Codec.field "period" .period Codec.float

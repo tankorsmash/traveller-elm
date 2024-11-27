@@ -7,6 +7,7 @@ import Dict
 import Element exposing (Element, column, row, text)
 import Element.Font as Font
 import Http
+import Json.Decode as JsDecode
 import Math.Vector2 as Vector2
 import RemoteData exposing (RemoteData)
 import Svg.Styled as Svg
@@ -18,13 +19,13 @@ import Traveller.HexId exposing (HexId, RawHexId)
 import Traveller.Moon exposing (Moon)
 import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.SectorData exposing (SectorData, codecSectorData)
-import Traveller.SolarSystem exposing (SolarSystem)
+import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.StellarObject exposing (StarData(..), StarDataConfig, StellarObject(..))
 
 
 type alias Model =
     { solarSystem : Maybe SolarSystem
-    , sectorData : RemoteData Http.Error ( SectorData, Dict.Dict RawHexId SolarSystem )
+    , solarSystems : RemoteData Http.Error (Dict.Dict RawHexId SolarSystem)
     , hexId : HexId
     , hoveredBody : HoveredBody
     }
@@ -40,18 +41,19 @@ type HoveredBody
 type Msg
     = NoOp
     | DownloadSectorJson
-    | DownloadedSectorJson (Result Http.Error SectorData)
+    | DownloadedSectorJson (Result Http.Error (List SolarSystem))
     | HoveredBody HoveredBody
 
 
 init : HexId -> ( Model, Cmd Msg )
 init hexId =
     ( { solarSystem = Nothing
-      , sectorData = RemoteData.NotAsked
+      , solarSystems = RemoteData.NotAsked
       , hexId = hexId
       , hoveredBody = NoHoveredBody
       }
-    , sendSectorRequest
+      --, sendSectorRequest
+    , Cmd.none
     )
 
 
@@ -289,15 +291,15 @@ view model =
 sendSectorRequest : Cmd Msg
 sendSectorRequest =
     let
-        -- sectorParser : JsDecode.Decoder SectorData
-        sectorParser =
-            codecSectorData
+        solarSystemListParser : JsDecode.Decoder (List SolarSystem)
+        solarSystemListParser =
+            Codec.list SolarSystem.codec
                 |> Codec.decoder
     in
     Http.get
         -- { url = "/Few Stars.json"
         { url = "/public/Deepnight.json"
-        , expect = Http.expectJson DownloadedSectorJson sectorParser
+        , expect = Http.expectJson DownloadedSectorJson solarSystemListParser
         }
 
 
@@ -312,25 +314,23 @@ update msg model =
             , sendSectorRequest
             )
 
-        DownloadedSectorJson (Ok sectorData) ->
+        DownloadedSectorJson (Ok solarSystems) ->
             let
-                sortedSolarSystems =
-                    sectorData.solarSystems |> List.sortBy (.coordinates >> .value)
-
+                --sortedSolarSystems =
+                --    sectorData.solarSystems |> List.sortBy (.coordinates >> .value)
                 solarSystemDict =
-                    sortedSolarSystems
+                    solarSystems
                         |> List.map (\system -> ( system.coordinates.value, system ))
                         |> Dict.fromList
 
-                newSectorData =
-                    { sectorData | solarSystems = sortedSolarSystems }
-
+                --newSectorData =
+                --    { sectorData | solarSystems = sortedSolarSystems }
                 newSolarSystem =
                     Dict.get model.hexId.value solarSystemDict
             in
             ( { model
-                | sectorData =
-                    ( newSectorData, solarSystemDict )
+                | solarSystems =
+                    solarSystemDict
                         |> RemoteData.Success
                 , solarSystem = newSolarSystem
               }
@@ -359,7 +359,7 @@ update msg model =
                         _ =
                             Debug.log bodyErr "__ END OF ERROR SolarSystemPage.elm __"
                     in
-                    ( { model | sectorData = RemoteData.Failure err }, Cmd.none )
+                    ( { model | solarSystems = RemoteData.Failure err }, Cmd.none )
 
         HoveredBody ((HoveredPlanet hoveredPlanet) as hoveredBody) ->
             ( { model | hoveredBody = hoveredBody }, Cmd.none )
