@@ -1,7 +1,7 @@
 module Traveller.SolarSystem exposing (SolarSystem, codec)
 
 import Codec
-import Traveller.HexId exposing (HexId, codecHexId, createFromInt)
+import Traveller.HexId exposing (HexId, codecHexId, createFromInt, hexToCoords)
 import Traveller.StellarObject exposing (StarData, codecStarData, codecStellarObject)
 
 
@@ -55,11 +55,8 @@ rawToFinal rawSolarSystem =
 finalToRaw : SolarSystem -> RawSolarSystem
 finalToRaw solarSystem =
     let
-        x =
-            12
-
-        y =
-            12
+        ( y, x ) =
+            hexToCoords solarSystem.coordinates
     in
     { x = x
     , y = y
