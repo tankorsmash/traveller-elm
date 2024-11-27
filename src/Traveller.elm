@@ -50,6 +50,7 @@ import Traveller.Point exposing (StellarPoint)
 import Traveller.SectorData exposing (SISector, SectorData, SurveyIndexData, codecSectorData, codecSurveyIndexData)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObject(..), TerrestrialData, getStarDataConfig, getStellarOrbit, starColourRGB)
+import Url.Builder
 
 
 gasGiantSI =
@@ -1289,14 +1290,26 @@ view model =
 sendSectorRequest : Cmd Msg
 sendSectorRequest =
     let
-        -- sectorParser : JsDecode.Decoder SectorData
+        solarSystemsParser : JsDecode.Decoder (List SolarSystem)
         solarSystemsParser =
             Codec.list SolarSystem.codec
                 |> Codec.decoder
+
+        url =
+            Url.Builder.crossOrigin "https://radiofreewaba.net"
+                [ "deepnight", "data", "solarsystems" ]
+                [ Url.Builder.int "ulsx" -10
+                , Url.Builder.int "ulsy" -2
+                , Url.Builder.int "ulhx" 1
+                , Url.Builder.int "ulhy" 1
+                , Url.Builder.int "lrsx" -10
+                , Url.Builder.int "lrsy" -2
+                , Url.Builder.int "lrhx" 32
+                , Url.Builder.int "lrhy" 40
+                ]
     in
     Http.get
-        -- { url = "/Few Stars.json"
-        { url = "https://radiofreewaba.net/deepnight/data/solarsystems?ulsx=-10&ulsy=-2&lrsx=-10&lrsy=-2&ulhx=1&ulhy=1&lrhx=32&lrhy=40"
+        { url = url
         , expect = Http.expectJson DownloadedSolarSystems solarSystemsParser
         }
 
