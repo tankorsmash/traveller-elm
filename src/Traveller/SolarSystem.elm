@@ -12,6 +12,8 @@ type alias SolarSystem =
     , planetoidBelts : Int
     , terrestrialPlanets : Int
     , surveyIndex : Int
+    , nativeSophont : Bool
+    , extinctSophont : Bool
     }
 
 
@@ -23,6 +25,8 @@ type alias RawSolarSystem =
     , planetoidBelts : Int
     , terrestrialPlanets : Int
     , surveyIndex : Int
+    , nativeSophont : Bool
+    , extinctSophont : Bool
     }
 
 
@@ -43,6 +47,8 @@ rawToFinal rawSolarSystem =
     , planetoidBelts = rawSolarSystem.planetoidBelts
     , terrestrialPlanets = rawSolarSystem.terrestrialPlanets
     , surveyIndex = rawSolarSystem.surveyIndex
+    , nativeSophont = rawSolarSystem.nativeSophont
+    , extinctSophont = rawSolarSystem.extinctSophont
     }
 
 
@@ -62,6 +68,8 @@ finalToRaw solarSystem =
     , planetoidBelts = solarSystem.planetoidBelts
     , terrestrialPlanets = solarSystem.terrestrialPlanets
     , surveyIndex = solarSystem.surveyIndex
+    , nativeSophont = solarSystem.nativeSophont
+    , extinctSophont = solarSystem.extinctSophont
     }
 
 
@@ -75,4 +83,6 @@ rawCodec =
         |> Codec.field "planetoid_belt_count" .planetoidBelts Codec.int
         |> Codec.field "terrestrial_planet_count" .terrestrialPlanets Codec.int
         |> Codec.field "survey_index" .surveyIndex Codec.int
+        |> Codec.field "native_sophont" .nativeSophont Codec.bool
+        |> Codec.field "extinct_sophont" .extinctSophont Codec.bool
         |> Codec.buildObject
