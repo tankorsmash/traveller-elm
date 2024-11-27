@@ -12,16 +12,13 @@ import Element
     exposing
         ( Element
         , centerX
-        , centerY
         , column
         , el
-        , fill
         , height
         , px
         , rgb
         , row
         , text
-        , width
         )
 import Element.Background as Background
 import Element.Border as Border
@@ -30,24 +27,20 @@ import Element.Font as Font
 import Element.Input as Input
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes
-import Html.Styled.Events
 import Http
 import Json.Decode as JsDecode
 import Maybe.Extra as Maybe
 import Parser
 import RemoteData exposing (RemoteData(..))
-import Round exposing (round)
-import Svg.Attributes exposing (width)
+import Round
 import Svg.Styled as Svg exposing (Svg)
-import Svg.Styled.Attributes as SvgAttrs exposing (fill, points, viewBox)
+import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
-import Svg.Styled.Lazy
 import Task
 import Traveller.HexId as HexId exposing (HexId, RawHexId)
 import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
-import Traveller.SectorData exposing (SISector, SectorData, SurveyIndexData, codecSectorData, codecSurveyIndexData)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObject(..), TerrestrialData, getStarDataConfig, getStellarOrbit, starColourRGB)
 import Url.Builder
@@ -114,7 +107,7 @@ type alias HexOrigin =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Browser.Events.onResize GotResize
 
 
@@ -199,7 +192,7 @@ isStarOrbit obj =
 
 
 viewHexDetailed : Maybe SolarSystem -> HexId -> Int -> HexOrigin -> Float -> Svg Msg
-viewHexDetailed maybeSolarSystem playerHexId hexIdx (( x, y ) as origin) size =
+viewHexDetailed maybeSolarSystem _ hexIdx (( x, y ) as origin) size =
     let
         si =
             case maybeSolarSystem of
@@ -418,20 +411,6 @@ numHexCols =
 
 numHexRows =
     40 * 1
-
-
-numHexes =
-    numHexCols * numHexRows
-
-
-hexWidth : Int
-hexWidth =
-    100
-
-
-hexHeight : Int
-hexHeight =
-    floor <| toFloat hexWidth * 1.2
 
 
 isEmptyHex : Maybe a -> Int
@@ -1303,15 +1282,8 @@ update msg model =
                     sortedSolarSystems
                         |> List.map (\system -> ( system.coordinates.value, system ))
                         |> Dict.fromList
-
-                newSectorData =
-                    { solarSystems = sortedSolarSystems }
             in
-            ( { model
-                | solarSystems =
-                    solarSystemDict
-                        |> RemoteData.Success
-              }
+            ( { model | solarSystems = solarSystemDict |> RemoteData.Success }
             , Cmd.batch
                 [ Browser.Dom.getViewportOf "hexmap"
                     |> Task.attempt GotHexMapViewport
@@ -1362,7 +1334,7 @@ update msg model =
         GotHexMapViewport hexmapOrErr ->
             ( { model | hexmapViewport = Just hexmapOrErr }, Cmd.none )
 
-        GotResize width_ height_ ->
+        GotResize width height ->
             ( model
             , Cmd.batch
                 [ Browser.Dom.getViewport
@@ -1382,46 +1354,6 @@ update msg model =
 
                 ( ox, oy ) =
                     calcOrigin model.hexScale goodValY goodValX
-
-                ( fox, foy ) =
-                    ( toFloat ox, toFloat oy )
-
-                newOffsetPct : ( Float, Float )
-                newOffsetPct =
-                    let
-                        vpWidth =
-                            case model.hexmapViewport of
-                                Nothing ->
-                                    Debug.todo "GotHexMapViewport doesnt exist yet"
-
-                                Just (Ok hexmapViewport) ->
-                                    Debug.log "width" hexmapViewport.viewport.width
-
-                                Just (Err _) ->
-                                    Debug.todo "GotHexMapViewport error"
-
-                        vpHeight =
-                            case model.hexmapViewport of
-                                Nothing ->
-                                    Debug.todo "GotHexMapViewport doesnt exist yet"
-
-                                Just (Ok hexmapViewport) ->
-                                    hexmapViewport.viewport.height
-
-                                Just (Err _) ->
-                                    Debug.todo "GotHexMapViewport error"
-                    in
-                    ( clamp 0 1 <| (fox - (vpWidth * 0.5)) / vpWidth
-                    , clamp 0 1 <| (foy - (vpHeight * 0.5)) / vpHeight
-                    )
-
-                maybeSolarSystem =
-                    case model.solarSystems of
-                        RemoteData.Success solarSystemDict ->
-                            Dict.get hexId.value solarSystemDict
-
-                        _ ->
-                            Nothing
             in
             ( { model
                 | viewingHexId = Just ( hexId, si )
