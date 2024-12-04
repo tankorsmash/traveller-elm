@@ -287,19 +287,33 @@ viewHexDetailed maybeSolarSystem _ hexIdx (( x, y ) as origin) size =
             , y_ + (scaleAttr distance * sinTheta) + (0 * cosTheta)
             )
 
+        -- a decoder that takes JSON and emits either a decode failure or a Msg
+        downDecoder : JsDecode.Decoder Msg
         downDecoder =
-            JsDecode.map (\evt -> MapMouseDown <| evt.offsetPos) Html.Events.Extra.Mouse.eventDecoder
+            let
+                -- takes a raw JS mouse event and turns it into a parsed Elm mouse event
+                jsMouseEventDecoder =
+                    Html.Events.Extra.Mouse.eventDecoder
+
+                -- takes an Elm Mouse event and creates our Msg
+                msgConstructor evt =
+                    MapMouseDown <| evt.offsetPos
+            in
+            -- run the mouse event decoder
+            jsMouseEventDecoder
+                |> -- then if that succeeds, pass the event object into msgConstructor
+                   JsDecode.map msgConstructor
 
         moveDecoder =
+            -- equivalent to the `downDecoder`, only it returns `MapMouseMove` instead
             JsDecode.map (\evt -> MapMouseMove <| evt.offsetPos) Html.Events.Extra.Mouse.eventDecoder
     in
     Svg.g
         [ SvgEvents.onMouseOver (HoveringHex (HexId.createFromInt hexIdx))
         , SvgEvents.onClick (ViewingHex ( HexId.createFromInt hexIdx, si ))
         , SvgEvents.onMouseUp MapMouseUp
-        , SvgEvents.on
-            "mousedown"
-            downDecoder
+        , -- listens for the JS 'mousedown' event and then runs the `downDecoder` on the JS Event, returning the Msg
+          SvgEvents.on "mousedown" downDecoder
         , SvgEvents.on "mousemove" moveDecoder
         , SvgAttrs.style "cursor: pointer;"
         ]
