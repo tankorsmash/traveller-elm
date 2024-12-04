@@ -1,5 +1,6 @@
-## To Do
+# To Do
 
+## MVP
 * [x] Display sector coordinates in sidebar
 * [ ] click to drag map
 * [ ] table'd sidebar
@@ -9,8 +10,10 @@
 * [ ] render neutron star
 * [ ] prettier ui somehow
 
-## Stretch Goals
+## 1.0
 * [ ] smart caching/requesting the api so we don't fetch too much duplicate data
+
+## Stretch Goals
 * [ ] plot player route
 
 ### Stretch Stretch Goals

@@ -1423,24 +1423,39 @@ update msg model =
                         yDelta =
                             truncate <| (originY - newY) / model.hexScale
 
-                        ( mapY, mapX ) =
-                            HexId.toRowCol model.upperLeftHex.hexId
+                        newUpperLeftHexId =
+                            let
+                                ( mapY, mapX ) =
+                                    HexId.toRowCol model.upperLeftHex.hexId
+                            in
+                            HexId.createFromXY { x = mapX + xDelta, y = mapY + yDelta }
 
-                        newHexId =
+                        newLowerRightHexId =
+                            let
+                                ( mapY, mapX ) =
+                                    HexId.toRowCol model.lowerRightHex.hexId
+                            in
                             HexId.createFromXY { x = mapX + xDelta, y = mapY + yDelta }
 
                         oldUpperLeft =
                             model.upperLeftHex
 
+                        oldLowerRight =
+                            model.lowerRightHex
+
                         _ =
                             Debug.log "mouseMove" ( ( xDelta, yDelta ), ( newX, newY ) )
+
+                        newModel =
+                            { model
+                                | dragMode = IsDragging ( newX, newY )
+                                , upperLeftHex = { oldUpperLeft | hexId = newUpperLeftHexId }
+                                , lowerRightHex = { oldLowerRight | hexId = newLowerRightHexId }
+                            }
                     in
                     if xDelta /= 0 || yDelta /= 0 then
-                        ( { model
-                            | dragMode = IsDragging ( newX, newY )
-                            , upperLeftHex = { oldUpperLeft | hexId = newHexId }
-                          }
-                        , Cmd.none
+                        ( newModel
+                        , sendSectorRequest newModel.upperLeftHex newModel.lowerRightHex
                         )
 
                     else
