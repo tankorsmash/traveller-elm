@@ -1,10 +1,7 @@
-module Traveller.HexId exposing (HexId, RawHexId, codecHexId, createFromInt, hexIdParser, hexIdToString, toRowCol, toXY)
+module Traveller.HexId exposing (HexId, RawHexId, codecHexId, createFromInt, createFromXY, hexIdParser, hexIdToString, toRowCol, toXY)
 
 import Codec exposing (Codec)
-import Json.Decode as JsDecode
-import Json.Encode as JsEncode
 import Parser exposing ((|.), (|=), Parser)
-import Parser.Extras as Parser
 
 
 toRowCol : HexId -> ( Int, Int )
@@ -36,6 +33,11 @@ type alias RawHexId =
 
 type alias HexId =
     { value : Int, raw : String }
+
+
+createFromXY : { x : Int, y : Int } -> HexId
+createFromXY { x, y } =
+    createFromInt <| x * 100 + y
 
 
 createFromInt : Int -> HexId

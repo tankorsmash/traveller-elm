@@ -1418,18 +1418,33 @@ update msg model =
                 IsDragging ( originX, originY ) ->
                     let
                         xDelta =
-                            toFloat <| floor <| (newX - originX) / model.hexScale
+                            truncate <| (originX - newX) / model.hexScale
 
                         yDelta =
-                            toFloat <| floor <| (newY - originY) / model.hexScale
+                            truncate <| (originY - newY) / model.hexScale
 
-                        ( offsetX, offsetY ) =
-                            model.offset
+                        ( mapY, mapX ) =
+                            HexId.toRowCol model.upperLeftHex.hexId
+
+                        newHexId =
+                            HexId.createFromXY { x = mapX + xDelta, y = mapY + yDelta }
+
+                        oldUpperLeft =
+                            model.upperLeftHex
 
                         _ =
-                            Debug.log "mouseMove" ( xDelta, yDelta )
+                            Debug.log "mouseMove" ( ( xDelta, yDelta ), ( newX, newY ) )
                     in
-                    ( { model | offset = ( (offsetX + xDelta) / 100.0, (offsetY + yDelta) / 100.0 ) }, Cmd.none )
+                    if xDelta /= 0 || yDelta /= 0 then
+                        ( { model
+                            | dragMode = IsDragging ( newX, newY )
+                            , upperLeftHex = { oldUpperLeft | hexId = newHexId }
+                          }
+                        , Cmd.none
+                        )
+
+                    else
+                        ( model, Cmd.none )
 
                 NoDragging ->
                     ( model, Cmd.none )
