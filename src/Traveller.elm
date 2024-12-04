@@ -1421,25 +1421,22 @@ update msg model =
                         yDelta =
                             truncate <| (originY - newY) / model.hexScale
 
-                        newUpperLeftHexId =
+                        shiftAddress : HexAddress -> HexAddress
+                        shiftAddress addr =
                             let
-                                ( mapY, mapX ) =
-                                    HexId.toRowCol model.upperLeftHex.hexId
+                                oldHexID =
+                                    addr.hexId |> HexId.toXY
+
+                                newXOffset =
+                                    hexAddressAdd { hexVal = oldHexID.x, max = numHexCols, delta = xDelta }
+
+                                newYOffset =
+                                    hexAddressAdd { hexVal = oldHexID.y, max = numHexRows, delta = yDelta }
                             in
-                            HexId.createFromXY { x = mapX + xDelta, y = mapY + yDelta }
-
-                        newLowerRightHexId =
-                            let
-                                ( mapY, mapX ) =
-                                    HexId.toRowCol model.lowerRightHex.hexId
-                            in
-                            HexId.createFromXY { x = mapX + xDelta, y = mapY + yDelta }
-
-                        oldUpperLeft =
-                            model.upperLeftHex
-
-                        oldLowerRight =
-                            model.lowerRightHex
+                            { sectorX = addr.sectorX + newXOffset.sectorDelta
+                            , sectorY = addr.sectorY - newYOffset.sectorDelta
+                            , hexId = HexId.createFromXY { x = newXOffset.hexVal, y = newYOffset.hexVal }
+                            }
 
                         _ =
                             Debug.log "mouseMove" ( ( xDelta, yDelta ), ( newX, newY ) )
@@ -1447,8 +1444,8 @@ update msg model =
                         newModel =
                             { model
                                 | dragMode = IsDragging ( newX, newY )
-                                , upperLeftHex = { oldUpperLeft | hexId = newUpperLeftHexId }
-                                , lowerRightHex = { oldLowerRight | hexId = newLowerRightHexId }
+                                , upperLeftHex = shiftAddress model.upperLeftHex
+                                , lowerRightHex = shiftAddress model.lowerRightHex
                             }
                     in
                     if xDelta /= 0 || yDelta /= 0 then
