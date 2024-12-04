@@ -673,7 +673,7 @@ viewHexes upperLeftHex viewingHexOrigin { screenVp, hexmapVp } solarSystemDict p
                         ++ bootstrapDark
                         ++ ", "
                         ++ bootstrapDark
-                        ++ " );"
+                        ++ " ); user-select: none;"
                 , SvgAttrs.css <|
                     [ Css.before
                         [ Css.boxShadowMany
