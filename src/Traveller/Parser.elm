@@ -58,7 +58,7 @@ import Parser exposing ((|.), (|=), Parser)
 import Parser.Extras as Parser
 import Traveller.Atmosphere exposing (Atmosphere, atmosphere)
 import Traveller.EHex exposing (EHex, eHex)
-import Traveller.HexId exposing (HexId, hexId)
+import Traveller.HexId exposing (HexId, hexIdParser)
 import Traveller.Population exposing (Population, population)
 
 
@@ -1251,7 +1251,7 @@ t5TabEntry =
             }
         )
         |= -- hex
-           hexId
+           hexIdParser
         |. singleTab
         |= -- name
            (Parser.getChompedString <| Parser.chompWhile (\c -> c /= '\t'))
@@ -1544,7 +1544,7 @@ parseRefereeData : Parser RefereeData
 parseRefereeData =
     Parser.succeed RefereeData
         |= --hex id
-           hexId
+           hexIdParser
         |. Parser.symbol ","
         |= -- name
            Parser.getChompedString (Parser.chompUntil ",")

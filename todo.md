@@ -1,5 +1,6 @@
 ## To Do
 
+* [x] Display sector coordinates in sidebar
 * [ ] table'd sidebar
 * [ ] click to drag map
 * [ ] support multi-sector viewing

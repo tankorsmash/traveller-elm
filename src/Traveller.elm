@@ -37,7 +37,7 @@ import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
 import Task
-import Traveller.HexId as HexId exposing (HexId, RawHexId)
+import Traveller.HexId as HexId exposing (HexId, RawHexId, hexIdToString)
 import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
@@ -72,7 +72,7 @@ type alias Model =
     , offset : ( Float, Float )
     , playerHex : HexId
     , hoveringHex : Maybe HexId
-    , viewingHexId : Maybe ( HexId, Int )
+    , viewingHex : Maybe ( HexId, Int )
     , viewingHexOrigin : Maybe ( Int, Int )
     , viewport : Maybe Browser.Dom.Viewport
     , hexmapViewport : Maybe (Result Browser.Dom.Error Browser.Dom.Viewport)
@@ -120,7 +120,7 @@ init key =
             , offset = ( 0.0, 0.0 )
             , playerHex = HexId.createFromInt 135
             , hoveringHex = Nothing
-            , viewingHexId = Nothing
+            , viewingHex = Nothing
             , viewingHexOrigin = Nothing
             , viewport = Nothing
             , hexmapViewport = Nothing
@@ -1016,7 +1016,8 @@ viewSystemDetailsSidebar : ( HexId, Int ) -> Maybe HexOrigin -> SolarSystem -> M
 viewSystemDetailsSidebar ( viewingHexId, si ) maybeViewingHexOrigin solarSystem selectedStellarObject =
     column [ Element.spacing 10 ] <|
         [ -- render the nested chart of the system
-          let
+          text <| solarSystem.sectorName ++ " " ++ hexIdToString solarSystem.coordinates
+        , let
             comparePos =
                 ( 0, 0 )
           in
@@ -1118,25 +1119,28 @@ view model =
                     , Font.color <| Element.rgb 0.5 1.5 0.5
                     ]
                   <|
-                    [ row [ Element.spacing 15 ]
-                        [ text "Player HexId:"
-                        , text <| String.fromInt model.playerHex.value
-                        , case model.hoveringHex of
-                            Just hoveringHex ->
-                                column []
-                                    [ text "Hovering HexId:"
-                                    , text <| String.fromInt hoveringHex.value
-                                    , text "distance to player hex"
-                                    , text <| String.fromInt <| calcDistance model.playerHex hoveringHex
-                                    ]
+                    [ column [ Element.spacing 15 ]
+                        [ row []
+                            [ text "Revelation location:"
+                            , text <| String.fromInt model.playerHex.value
+                            ]
 
-                            Nothing ->
-                                text <| "None yet"
+                        --, case model.hoveringHex of
+                        --    Just hoveringHex ->
+                        --        column []
+                        --            [ text "Hovering HexId:"
+                        --            , text <| String.fromInt hoveringHex.value
+                        --            , text "distance to player hex"
+                        --            , text <| String.fromInt <| calcDistance model.playerHex hoveringHex
+                        --            ]
+                        --
+                        --    Nothing ->
+                        --        text <| "None yet"
                         ]
                     ]
                 , case model.solarSystems of
                     Success solarSystemDict ->
-                        case model.viewingHexId of
+                        case model.viewingHex of
                             Just ( viewingHexId, si ) ->
                                 case solarSystemDict |> Dict.get viewingHexId.value of
                                     Just solarSystem ->
@@ -1356,7 +1360,7 @@ update msg model =
                     calcOrigin model.hexScale goodValY goodValX
             in
             ( { model
-                | viewingHexId = Just ( hexId, si )
+                | viewingHex = Just ( hexId, si )
                 , viewingHexOrigin = Just ( ox, oy )
                 , selectedStellarObject = Nothing
               }

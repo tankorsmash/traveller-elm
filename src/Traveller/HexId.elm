@@ -1,4 +1,4 @@
-module Traveller.HexId exposing (HexId, RawHexId, codecHexId, createFromInt, hexId, toXY, toRowCol)
+module Traveller.HexId exposing (HexId, RawHexId, codecHexId, createFromInt, hexIdParser, hexIdToString, toRowCol, toXY)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -43,8 +43,8 @@ createFromInt value =
     { value = value, raw = String.fromInt value }
 
 
-hexId : Parser HexId
-hexId =
+hexIdParser : Parser HexId
+hexIdParser =
     Parser.andThen
         (\rawString ->
             case String.toInt rawString of
@@ -72,3 +72,8 @@ codecHexId =
                 }
             )
             .raw
+
+
+hexIdToString : HexId -> String
+hexIdToString hexId =
+    hexId.raw

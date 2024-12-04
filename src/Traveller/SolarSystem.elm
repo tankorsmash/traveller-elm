@@ -1,7 +1,7 @@
 module Traveller.SolarSystem exposing (SolarSystem, codec)
 
 import Codec
-import Traveller.HexId exposing (HexId, codecHexId, createFromInt, toXY, toRowCol)
+import Traveller.HexId exposing (HexId, codecHexId, createFromInt, toRowCol, toXY)
 import Traveller.StellarObject exposing (StarData, codecStarData, codecStellarObject)
 
 
@@ -14,6 +14,9 @@ type alias SolarSystem =
     , surveyIndex : Int
     , nativeSophont : Bool
     , extinctSophont : Bool
+    , sectorX : Int
+    , sectorY : Int
+    , sectorName : String
     }
 
 
@@ -27,6 +30,9 @@ type alias RawSolarSystem =
     , surveyIndex : Int
     , nativeSophont : Bool
     , extinctSophont : Bool
+    , sectorX : Int
+    , sectorY : Int
+    , sectorName : String
     }
 
 
@@ -49,6 +55,9 @@ rawToFinal rawSolarSystem =
     , surveyIndex = rawSolarSystem.surveyIndex
     , nativeSophont = rawSolarSystem.nativeSophont
     , extinctSophont = rawSolarSystem.extinctSophont
+    , sectorX = rawSolarSystem.sectorX
+    , sectorY = rawSolarSystem.sectorY
+    , sectorName = rawSolarSystem.sectorName
     }
 
 
@@ -67,6 +76,9 @@ finalToRaw solarSystem =
     , surveyIndex = solarSystem.surveyIndex
     , nativeSophont = solarSystem.nativeSophont
     , extinctSophont = solarSystem.extinctSophont
+    , sectorX = solarSystem.sectorX
+    , sectorY = solarSystem.sectorY
+    , sectorName = solarSystem.sectorName
     }
 
 
@@ -82,4 +94,7 @@ rawCodec =
         |> Codec.field "survey_index" .surveyIndex Codec.int
         |> Codec.field "native_sophont" .nativeSophont Codec.bool
         |> Codec.field "extinct_sophont" .extinctSophont Codec.bool
+        |> Codec.field "sector_x" .sectorX Codec.int
+        |> Codec.field "sector_y" .sectorY Codec.int
+        |> Codec.field "sector_name" .sectorName Codec.string
         |> Codec.buildObject
