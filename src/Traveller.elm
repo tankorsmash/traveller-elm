@@ -25,6 +25,7 @@ import Element.Border as Border
 import Element.Events
 import Element.Font as Font
 import Element.Input as Input
+import Html.Events.Extra.Mouse
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes
 import Http
@@ -65,11 +66,17 @@ type alias HexAddress =
     }
 
 
+type DragMode
+    = IsDragging ( Float, Float )
+    | NoDragging
+
+
 type alias Model =
     { key : Browser.Navigation.Key
     , hexScale : Float
     , solarSystems : RemoteData Http.Error (Dict.Dict RawHexId SolarSystem)
     , offset : ( Float, Float )
+    , dragMode : DragMode
     , playerHex : HexId
     , hoveringHex : Maybe HexId
     , viewingHex : Maybe ( HexId, Int )
@@ -100,6 +107,9 @@ type Msg
     | GotResize Int Int
     | GoToSolarSystemPage HexId
     | FocusInSidebar StellarObject
+    | MapMouseDown ( Float, Float )
+    | MapMouseUp
+    | MapMouseMove ( Float, Float )
 
 
 type alias HexOrigin =
@@ -118,6 +128,7 @@ init key =
             { hexScale = defaultHexSize
             , solarSystems = RemoteData.NotAsked
             , offset = ( 0.0, 0.0 )
+            , dragMode = NoDragging
             , playerHex = HexId.createFromInt 135
             , hoveringHex = Nothing
             , viewingHex = Nothing
@@ -230,10 +241,21 @@ viewHexDetailed maybeSolarSystem _ hexIdx (( x, y ) as origin) size =
             ( x_ + (scaleAttr distance * cosTheta) - (0 * sinTheta)
             , y_ + (scaleAttr distance * sinTheta) + (0 * cosTheta)
             )
+
+        downDecoder =
+            JsDecode.map (\evt -> MapMouseDown <| evt.offsetPos) Html.Events.Extra.Mouse.eventDecoder
+
+        moveDecoder =
+            JsDecode.map (\evt -> MapMouseMove <| evt.offsetPos) Html.Events.Extra.Mouse.eventDecoder
     in
     Svg.g
         [ SvgEvents.onMouseOver (HoveringHex (HexId.createFromInt hexIdx))
         , SvgEvents.onClick (ViewingHex ( HexId.createFromInt hexIdx, si ))
+        , SvgEvents.onMouseUp MapMouseUp
+        , SvgEvents.on
+            "mousedown"
+            downDecoder
+        , SvgEvents.on "mousemove" moveDecoder
         , SvgAttrs.style "cursor: pointer;"
         ]
         [ -- background hex
@@ -1376,3 +1398,38 @@ update msg model =
             ( { model | selectedStellarObject = Just stellarObject }
             , Cmd.none
             )
+
+        MapMouseDown ( x, y ) ->
+            ( { model
+                | dragMode = Debug.log "mouseDown" <| IsDragging ( x, y )
+              }
+            , Cmd.none
+            )
+
+        MapMouseUp ->
+            ( { model
+                | dragMode = Debug.log "mouseUp" NoDragging
+              }
+            , Cmd.none
+            )
+
+        MapMouseMove ( newX, newY ) ->
+            case model.dragMode of
+                IsDragging ( originX, originY ) ->
+                    let
+                        xDelta =
+                            toFloat <| floor <| (newX - originX) / model.hexScale
+
+                        yDelta =
+                            toFloat <| floor <| (newY - originY) / model.hexScale
+
+                        ( offsetX, offsetY ) =
+                            model.offset
+
+                        _ =
+                            Debug.log "mouseMove" ( xDelta, yDelta )
+                    in
+                    ( { model | offset = ( (offsetX + xDelta) / 100.0, (offsetY + yDelta) / 100.0 ) }, Cmd.none )
+
+                NoDragging ->
+                    ( model, Cmd.none )
