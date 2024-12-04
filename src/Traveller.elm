@@ -66,6 +66,33 @@ type alias HexAddress =
     }
 
 
+hexAddressAdd :
+    { hexVal : Int, delta : Int, max : Int }
+    -> { hexVal : Int, sectorDelta : Int }
+hexAddressAdd { hexVal, delta, max } =
+    let
+        rangeMin : Int
+        rangeMin =
+            1
+
+        rangeMax =
+            max
+
+        rangeSize =
+            rangeMax - rangeMin + 1
+
+        total =
+            hexVal + delta
+
+        counter =
+            ceiling <| (toFloat rangeMin - toFloat total) / toFloat rangeSize
+
+        newHexVal =
+            modBy rangeSize (modBy rangeSize (total - rangeMin) + rangeSize) + rangeMin
+    in
+    { sectorDelta = -1 * counter, hexVal = newHexVal }
+
+
 type DragMode
     = IsDragging ( Float, Float )
     | NoDragging
@@ -137,6 +164,27 @@ init key =
             , upperLeftHex = { sectorX = -10, sectorY = -2, hexId = HexId.createFromInt 2213 }
             , lowerRightHex = { sectorX = -10, sectorY = -2, hexId = HexId.createFromInt 3234 }
             }
+
+        _ =
+            Debug.log "positive" <| hexAddressAdd { hexVal = 31, delta = 2, max = 32 }
+
+        _ =
+            Debug.log "negative" <| hexAddressAdd { hexVal = 6, delta = -7, max = 32 }
+
+        _ =
+            Debug.log "pos v2" <| hexAddressAdd { hexVal = 19, delta = 6, max = 32 }
+
+        _ =
+            Debug.log "pos v3" <| hexAddressAdd { hexVal = 32, delta = 1, max = 32 }
+
+        _ =
+            Debug.log "neg v2" <| hexAddressAdd { hexVal = 1, delta = -1, max = 32 }
+
+        _ =
+            Debug.log "neg v3" <| hexAddressAdd { hexVal = 1, delta = -97, max = 32 }
+
+        _ =
+            Debug.log "neg v4" <| hexAddressAdd { hexVal = 13, delta = -3, max = 32 }
     in
     ( model
     , Cmd.batch
