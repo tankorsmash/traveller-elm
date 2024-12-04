@@ -1360,7 +1360,7 @@ update msg model =
             ( { model
                 | dragMode = Debug.log "mouseUp" NoDragging
               }
-            , Cmd.none
+            , sendSectorRequest model.upperLeftHex model.lowerRightHex
             )
 
         MapMouseMove ( newX, newY ) ->
@@ -1405,7 +1405,7 @@ update msg model =
                     in
                     if xDelta /= 0 || yDelta /= 0 then
                         ( newModel
-                        , sendSectorRequest newModel.upperLeftHex newModel.lowerRightHex
+                        , Cmd.none
                         )
 
                     else
