@@ -15,6 +15,7 @@
 
 ## Stretch Goals
 * [ ] plot player route
+* [ ] make sure nginx is gzipping
 
 ### Stretch Stretch Goals
 

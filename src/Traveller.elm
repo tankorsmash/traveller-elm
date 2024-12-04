@@ -75,7 +75,6 @@ type alias Model =
     { key : Browser.Navigation.Key
     , hexScale : Float
     , solarSystems : RemoteData Http.Error (Dict.Dict RawHexId SolarSystem)
-    , offset : ( Float, Float )
     , dragMode : DragMode
     , playerHex : HexId
     , hoveringHex : Maybe HexId
@@ -99,7 +98,6 @@ type Msg
     | ZoomScaleChanged Float
     | DownloadSolarSystems
     | DownloadedSolarSystems (Result Http.Error (List SolarSystem))
-    | OffsetChanged OffsetDirection Float
     | HoveringHex HexId
     | ViewingHex ( HexId, Int )
     | GotViewport Browser.Dom.Viewport
@@ -127,7 +125,6 @@ init key =
         model =
             { hexScale = defaultHexSize
             , solarSystems = RemoteData.NotAsked
-            , offset = ( 0.0, 0.0 )
             , dragMode = NoDragging
             , playerHex = HexId.createFromInt 135
             , hoveringHex = Nothing
@@ -473,12 +470,11 @@ viewHex :
     -> Float
     -> Dict.Dict Int SolarSystem
     -> ( Float, Float )
-    -> ( Float, Float )
     -> ( Int, Int )
     -> HexOrigin
     -> HexId
     -> ( Maybe (Svg Msg), Int )
-viewHex widestViewport hexSize solarSystemDict ( horizOffsetPct, vertOffsetPct ) ( viewportWidth, viewportHeight ) ( colIdx, rowIdx ) ( ox, oy ) playerHexId =
+viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) ( colIdx, rowIdx ) ( ox, oy ) playerHexId =
     let
         idx =
             rowIdx + colIdx * 100
@@ -489,20 +485,20 @@ viewHex widestViewport hexSize solarSystemDict ( horizOffsetPct, vertOffsetPct )
         outsideX =
             let
                 plus =
-                    fox + hexSize - (viewportWidth * horizOffsetPct)
+                    fox + hexSize
 
                 minus =
-                    fox - hexSize - (viewportWidth * horizOffsetPct)
+                    fox - hexSize
             in
             (plus < 0) || (minus > widestViewport.viewport.width)
 
         outsideY =
             let
                 plus =
-                    foy + hexSize - (viewportHeight * vertOffsetPct)
+                    foy + hexSize
 
                 minus =
-                    foy - hexSize - (viewportHeight * vertOffsetPct)
+                    foy - hexSize
             in
             (plus < 0) || (minus > widestViewport.viewport.height)
 
@@ -532,11 +528,10 @@ viewHexes :
     -> Maybe ( Int, Int )
     -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport }
     -> Dict.Dict Int SolarSystem
-    -> ( Float, Float )
     -> HexId
     -> Float
     -> Html Msg
-viewHexes upperLeftHex viewingHexOrigin { screenVp, hexmapVp } solarSystemDict ( horizOffset, vertOffset ) playerHexId hexSize =
+viewHexes upperLeftHex viewingHexOrigin { screenVp, hexmapVp } solarSystemDict playerHexId hexSize =
     let
         hexKey : Int -> String
         hexKey hexId =
@@ -556,11 +551,11 @@ viewHexes upperLeftHex viewingHexOrigin { screenVp, hexmapVp } solarSystemDict (
 
         xOffset =
             -- view horizontal offset
-            String.fromFloat (viewportWidthIsh * horizOffset)
+            "0"
 
         yOffset =
             -- view vertical offset
-            String.fromFloat (viewportHeightIsh * vertOffset)
+            "0"
 
         widestViewport =
             case hexmapVp of
@@ -583,7 +578,6 @@ viewHexes upperLeftHex viewingHexOrigin { screenVp, hexmapVp } solarSystemDict (
                             widestViewport
                             hexSize
                             solarSystemDict
-                            ( horizOffset, vertOffset )
                             ( viewportWidthIsh, viewportHeightIsh )
                             ( colIdx + hexXOffset, rowIdx + hexYOffset )
                             hexOrigin
@@ -1104,38 +1098,6 @@ view model =
                     , value = model.hexScale
                     , thumb = Input.defaultThumb
                     }
-                , -- horiz slider
-                  let
-                    horizOffset =
-                        Tuple.first model.offset
-                  in
-                  Input.slider [ height <| px 50 ]
-                    { onChange = OffsetChanged Horizontal
-                    , label =
-                        Input.labelAbove []
-                            (text <| "Horiz: " ++ (Round.round 3 <| horizOffset))
-                    , min = 0
-                    , max = 1.0
-                    , step = Just 0.025
-                    , value = horizOffset
-                    , thumb = Input.defaultThumb
-                    }
-                , -- vertical slider
-                  let
-                    vertOffset =
-                        Tuple.second model.offset
-                  in
-                  Input.slider [ height <| px 50 ]
-                    { onChange = OffsetChanged Vertical
-                    , label =
-                        Input.labelAbove []
-                            (text <| "Vert: " ++ (Round.round 3 <| vertOffset))
-                    , min = 0
-                    , max = 1.0
-                    , step = Just 0.025
-                    , value = vertOffset
-                    , thumb = Input.defaultThumb
-                    }
                 , column
                     [ Font.size 14
                     , Font.color <| Element.rgb 0.5 1.5 0.5
@@ -1208,7 +1170,6 @@ view model =
                                         { screenVp = viewport, hexmapVp = Nothing }
                                 )
                                 solarSystems
-                                model.offset
                                 model.playerHex
                                 model.hexScale
                                 |> Html.toUnstyled
@@ -1336,17 +1297,6 @@ update msg model =
                             Debug.log bodyErr "__ END OF ERROR Traveller.elm __"
                     in
                     ( { model | solarSystems = RemoteData.Failure err }, Cmd.none )
-
-        OffsetChanged Horizontal horizOffset ->
-            ( { model | offset = Tuple.mapFirst (always horizOffset) model.offset }, Cmd.none )
-
-        OffsetChanged Vertical vertOffset ->
-            ( { model
-                | offset =
-                    Tuple.mapSecond (always vertOffset) model.offset
-              }
-            , Cmd.none
-            )
 
         HoveringHex hoveringHex ->
             ( { model | hoveringHex = Just hoveringHex }, Cmd.none )
