@@ -2,7 +2,7 @@
 
 ## MVP
 * [x] Display sector coordinates in sidebar
-* [ ] click to drag map
+* [X] click to drag map
 * [ ] table'd sidebar
 * [ ] support multi-sector viewing
 * [ ] making nicer function for turning a HexId into a row,col pair
