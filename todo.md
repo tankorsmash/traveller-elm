@@ -3,9 +3,10 @@
 ## MVP
 * [x] Display sector coordinates in sidebar
 * [X] click to drag map
+* [ ] fix clipping of map to viewport boundaries
 * [ ] table'd sidebar
-* [ ] support multi-sector viewing
-* [ ] making nicer function for turning a HexId into a row,col pair
+* [X] support multi-sector viewing
+* [X] making nicer function for turning a HexId into a row,col pair
 * [ ] making the HexId codec fail on invalid hexids
 * [ ] render neutron star
 * [ ] prettier ui somehow
