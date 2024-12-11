@@ -107,7 +107,16 @@ init flags url key =
     in
     ( model
     , Cmd.batch
-        [ Cmd.map GotTravellerMsg travellerCmds, Cmd.map GotSolarSystemPageMsg solarSystemCmds ]
+        [ -- we take a bunch of `Traveller.Cmds` from elsewhere and wrap them in the right
+          -- `Main.Msg`, since only the toplevel `update` function can pass them back up to Elm
+          --
+          -- So when we get the Cmd's response back, we can pass them back to the `Traveller.update`
+          -- when we handle the `GotTravellerMsg` msg
+          Cmd.map GotTravellerMsg travellerCmds
+
+        -- likewise for the solar system page
+        , Cmd.map GotSolarSystemPageMsg solarSystemCmds
+        ]
     )
 
 
