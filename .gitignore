@@ -6,3 +6,7 @@ node_modules
 .vscode/
 
 .idea/
+
+
+# main.js is the default output of the Elm compiler, we shouldn't commit that
+main.js
