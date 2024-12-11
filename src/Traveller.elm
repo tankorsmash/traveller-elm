@@ -151,7 +151,9 @@ init key =
     let
         model =
             { hexScale = defaultHexSize
-            , solarSystems = RemoteData.NotAsked
+            , solarSystems =
+                --Loading, because we're sending the solar system request
+                RemoteData.Loading
             , dragMode = NoDragging
             , playerHex = HexId.createFromInt 135
             , hoveringHex = Nothing
@@ -164,31 +166,10 @@ init key =
             , upperLeftHex = { sectorX = -10, sectorY = -2, hexId = HexId.createFromInt 2213 }
             , lowerRightHex = { sectorX = -10, sectorY = -2, hexId = HexId.createFromInt 3234 }
             }
-
-        _ =
-            Debug.log "positive" <| hexAddressAdd { hexVal = 31, delta = 2, max = 32 }
-
-        _ =
-            Debug.log "negative" <| hexAddressAdd { hexVal = 6, delta = -7, max = 32 }
-
-        _ =
-            Debug.log "pos v2" <| hexAddressAdd { hexVal = 19, delta = 6, max = 32 }
-
-        _ =
-            Debug.log "pos v3" <| hexAddressAdd { hexVal = 32, delta = 1, max = 32 }
-
-        _ =
-            Debug.log "neg v2" <| hexAddressAdd { hexVal = 1, delta = -1, max = 32 }
-
-        _ =
-            Debug.log "neg v3" <| hexAddressAdd { hexVal = 1, delta = -97, max = 32 }
-
-        _ =
-            Debug.log "neg v4" <| hexAddressAdd { hexVal = 13, delta = -3, max = 32 }
     in
     ( model
     , Cmd.batch
-        [ sendSectorRequest model.upperLeftHex model.lowerRightHex
+        [ sendSolarSystemRequest model.upperLeftHex model.lowerRightHex
         , Browser.Dom.getViewport
             |> Task.perform GotViewport
         ]
@@ -1281,8 +1262,8 @@ view model =
         ]
 
 
-sendSectorRequest : HexAddress -> HexAddress -> Cmd Msg
-sendSectorRequest upperLeft lowerRight =
+sendSolarSystemRequest : HexAddress -> HexAddress -> Cmd Msg
+sendSolarSystemRequest upperLeft lowerRight =
     let
         solarSystemsParser : JsDecode.Decoder (List SolarSystem)
         solarSystemsParser =
@@ -1319,7 +1300,7 @@ update msg model =
 
         DownloadSolarSystems ->
             ( model
-            , sendSectorRequest model.upperLeftHex model.lowerRightHex
+            , sendSolarSystemRequest model.upperLeftHex model.lowerRightHex
             )
 
         DownloadedSolarSystems (Ok solarSystems) ->
@@ -1422,7 +1403,7 @@ update msg model =
             ( { model
                 | dragMode = Debug.log "mouseUp" NoDragging
               }
-            , sendSectorRequest model.upperLeftHex model.lowerRightHex
+            , sendSolarSystemRequest model.upperLeftHex model.lowerRightHex
             )
 
         MapMouseMove ( newX, newY ) ->
