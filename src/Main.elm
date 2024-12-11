@@ -71,6 +71,7 @@ init flags url key =
         ( travellerModel, travellerCmds ) =
             Traveller.init key
 
+        hexId : HexId.HexId
         hexId =
             let
                 hexIdParser =
@@ -83,12 +84,12 @@ init flags url key =
             in
             Url.Parser.parse hexIdParser urlWithoutPath
                 |> -- the query parser returns a 'Maybe' because the query string might
-                   -- not be present _AND_ a maybe int, because the int we're looking
-                   --    for might not be present, so we join them both
+                   -- not be present _AND_ a Maybe Int, because the number we're looking
+                   -- for might not be present, so we join them both
                    Maybe.join
-                |> Maybe.withDefault
-                    -- 1014 is a solar system in Deepnight. Will need to get better about showing that we're using the default, instead of reading from the query string
-                    (HexId.createFromInt 1014)
+                |> Maybe.join
+                |> -- we fallback to 0101 if url parsing fails
+                   Maybe.withDefault HexId.one
 
         ( solarSystemModel, solarSystemCmds ) =
             SolarSystemPage.init <| hexId

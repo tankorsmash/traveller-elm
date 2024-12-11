@@ -1,7 +1,7 @@
 module Traveller.SolarSystem exposing (SolarSystem, codec)
 
 import Codec
-import Traveller.HexId exposing (HexId, codecHexId, createFromInt, toRowCol, toXY)
+import Traveller.HexId exposing (HexId, codecHexId, createFromInt, createFromXY, toRowCol, toXY)
 import Traveller.StellarObject exposing (StarData, codecStarData, codecStellarObject)
 
 
@@ -38,27 +38,39 @@ type alias RawSolarSystem =
 
 codec : Codec.Codec SolarSystem
 codec =
-    rawCodec |> Codec.map rawToFinal finalToRaw
+    rawCodec
+        |> Codec.andThen rawToFinal finalToRaw
 
 
-rawToFinal : RawSolarSystem -> SolarSystem
+rawToFinal : RawSolarSystem -> Codec.Codec SolarSystem
 rawToFinal rawSolarSystem =
     let
         coordinates =
-            createFromInt <| rawSolarSystem.x * 100 + rawSolarSystem.y
+            Traveller.HexId.createFromXY rawSolarSystem
     in
-    { coordinates = coordinates
-    , primaryStar = rawSolarSystem.primaryStar
-    , gasGiants = rawSolarSystem.gasGiants
-    , planetoidBelts = rawSolarSystem.planetoidBelts
-    , terrestrialPlanets = rawSolarSystem.terrestrialPlanets
-    , surveyIndex = rawSolarSystem.surveyIndex
-    , nativeSophont = rawSolarSystem.nativeSophont
-    , extinctSophont = rawSolarSystem.extinctSophont
-    , sectorX = rawSolarSystem.sectorX
-    , sectorY = rawSolarSystem.sectorY
-    , sectorName = rawSolarSystem.sectorName
-    }
+    case coordinates of
+        Just hexId ->
+            Codec.succeed
+                { coordinates = hexId
+                , primaryStar = rawSolarSystem.primaryStar
+                , gasGiants = rawSolarSystem.gasGiants
+                , planetoidBelts = rawSolarSystem.planetoidBelts
+                , terrestrialPlanets = rawSolarSystem.terrestrialPlanets
+                , surveyIndex = rawSolarSystem.surveyIndex
+                , nativeSophont = rawSolarSystem.nativeSophont
+                , extinctSophont = rawSolarSystem.extinctSophont
+                , sectorX = rawSolarSystem.sectorX
+                , sectorY = rawSolarSystem.sectorY
+                , sectorName = rawSolarSystem.sectorName
+                }
+
+        Nothing ->
+            Codec.fail <|
+                "Invalid coordinates: "
+                    ++ String.fromInt rawSolarSystem.x
+                    ++ ", "
+                    ++ String.fromInt rawSolarSystem.y
+                    ++ "(Not in range 0101 to 3240 maybe?)"
 
 
 finalToRaw : SolarSystem -> RawSolarSystem

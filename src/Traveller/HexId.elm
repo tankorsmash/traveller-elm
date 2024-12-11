@@ -1,4 +1,4 @@
-module Traveller.HexId exposing (HexId, RawHexId, codecHexId, createFromInt, createFromXY, hexIdParser, hexIdToString, toRowCol, toXY)
+module Traveller.HexId exposing (HexId, RawHexId, codecHexId, createFromInt, createFromXY, hexIdParser, hexIdToString, one, ten, toRowCol, toXY)
 
 import Codec exposing (Codec)
 import Parser exposing ((|.), (|=), Parser)
@@ -35,14 +35,34 @@ type alias HexId =
     { value : Int, raw : String }
 
 
-createFromXY : { x : Int, y : Int } -> HexId
+{-| known-valid HexId for 0101
+-}
+one : HexId
+one =
+    { value = 101, raw = "101" }
+
+
+{-| known-valid HexId for 1010
+-}
+ten : HexId
+ten =
+    { value = 1010, raw = "1010" }
+
+
+createFromXY : { a | x : Int, y : Int } -> Maybe HexId
 createFromXY { x, y } =
     createFromInt <| x * 100 + y
 
 
-createFromInt : Int -> HexId
+createFromInt : Int -> Maybe HexId
 createFromInt value =
-    { value = value, raw = String.fromInt value }
+    -- TODO : 3158 isnt handled by this check
+    if value <= 101 || value >= 3248 then
+        Nothing
+
+    else
+        Just
+            { value = value, raw = String.fromInt value }
 
 
 hexIdParser : Parser HexId
