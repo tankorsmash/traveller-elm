@@ -107,7 +107,6 @@ type alias Model =
     , playerHex : HexId
     , hoveringHex : Maybe HexId
     , viewingHex : Maybe ( HexId, Int )
-    , viewingHexOrigin : Maybe ( Int, Int )
     , viewport : Maybe Browser.Dom.Viewport
     , hexmapViewport : Maybe (Result Browser.Dom.Error Browser.Dom.Viewport)
     , selectedStellarObject : Maybe StellarObject
@@ -168,7 +167,6 @@ init key =
             , playerHex = HexId.one
             , hoveringHex = Nothing
             , viewingHex = Nothing
-            , viewingHexOrigin = Nothing
             , viewport = Nothing
             , hexmapViewport = Nothing
             , key = key
@@ -586,13 +584,12 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
 -}
 viewHexes :
     HexAddress
-    -> Maybe ( Int, Int )
     -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport }
     -> Dict.Dict Int SolarSystem
     -> HexId
     -> Float
     -> Html Msg
-viewHexes upperLeftHex viewingHexOrigin { screenVp, hexmapVp } solarSystemDict playerHexId hexSize =
+viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSize =
     let
         hexKey : Int -> String
         hexKey hexId =
@@ -1099,8 +1096,8 @@ renderStar comparePos (StarData starData) nestingLevel selectedStellarObject =
         ]
 
 
-viewSystemDetailsSidebar : ( HexId, Int ) -> Maybe HexOrigin -> SolarSystem -> Maybe StellarObject -> Element Msg
-viewSystemDetailsSidebar ( viewingHexId, si ) maybeViewingHexOrigin solarSystem selectedStellarObject =
+viewSystemDetailsSidebar : ( HexId, Int ) ->  SolarSystem -> Maybe StellarObject -> Element Msg
+viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject =
     column [ Element.spacing 10 ] <|
         [ -- render the nested chart of the system
           text <| solarSystem.sectorName ++ " " ++ hexIdToString solarSystem.coordinates
@@ -1201,7 +1198,6 @@ view model =
                                     Just solarSystem ->
                                         viewSystemDetailsSidebar
                                             ( viewingHexId, si )
-                                            model.viewingHexOrigin
                                             solarSystem
                                             model.selectedStellarObject
 
@@ -1230,7 +1226,6 @@ view model =
                         ( RemoteData.Success solarSystems, Just viewport ) ->
                             viewHexes
                                 model.upperLeftHex
-                                model.viewingHexOrigin
                                 (case model.hexmapViewport of
                                     Nothing ->
                                         { screenVp = viewport, hexmapVp = Nothing }
@@ -1410,7 +1405,6 @@ update msg model =
             in
             ( { model
                 | viewingHex = Just ( hexId, si )
-                , viewingHexOrigin = Just ( ox, oy )
                 , selectedStellarObject = Nothing
               }
             , Cmd.none
