@@ -57,7 +57,12 @@ createFromXY { x, y } =
 createFromInt : Int -> Maybe HexId
 createFromInt value =
     -- TODO : 3158 isnt handled by this check
-    if value <= 101 || value >= 3248 then
+    -- TODO : make sure we know that we're passing in a number that starts at 0, instead of 0101.
+    -- if value <= 101 || value >= 3248 then
+    if  value <= 0 || value >= 3248 then
+        let
+            _ = Debug.log "invalid hexId" value
+        in
         Nothing
 
     else

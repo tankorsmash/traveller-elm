@@ -635,7 +635,7 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
                         let
                             maybeHexId : Maybe HexId
                             maybeHexId =
-                                HexId.createFromInt <| rowIdx + colIdx * 100
+                                HexId.createFromXY { y = rowIdx, x = colIdx }
                         in
                         case maybeHexId of
                             Just hexId ->
@@ -1096,7 +1096,7 @@ renderStar comparePos (StarData starData) nestingLevel selectedStellarObject =
         ]
 
 
-viewSystemDetailsSidebar : ( HexId, Int ) ->  SolarSystem -> Maybe StellarObject -> Element Msg
+viewSystemDetailsSidebar : ( HexId, Int ) -> SolarSystem -> Maybe StellarObject -> Element Msg
 viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject =
     column [ Element.spacing 10 ] <|
         [ -- render the nested chart of the system
@@ -1299,8 +1299,8 @@ view model =
 sendSolarSystemRequest : HexAddress -> HexAddress -> Cmd Msg
 sendSolarSystemRequest upperLeft lowerRight =
     let
-        solarSystemsParser : JsDecode.Decoder (List SolarSystem)
-        solarSystemsParser =
+        solarSystemsDecoder : JsDecode.Decoder (List SolarSystem)
+        solarSystemsDecoder =
             Codec.list SolarSystem.codec
                 |> Codec.decoder
 
@@ -1328,7 +1328,7 @@ sendSolarSystemRequest upperLeft lowerRight =
                 , headers = []
                 , url = url
                 , body = Http.emptyBody
-                , expect = Http.expectJson DownloadedSolarSystems solarSystemsParser
+                , expect = Http.expectJson DownloadedSolarSystems solarSystemsDecoder
                 , timeout = Just 5000
                 , tracker = Nothing
                 }
