@@ -1,4 +1,4 @@
-module Traveller.HexId exposing (HexId, RawHexId, codecHexId, createFromInt, createFromXY, hexIdParser, hexIdToString, one, ten, toRowCol, toXY)
+module Traveller.HexId exposing (HexId, RawHexId, codecHexId, createFromInt, createFromXY, hexIdParser, one, ten, toInt, toRowCol, toString, toXY)
 
 import Codec exposing (Codec)
 import Parser exposing ((|.), (|=), Parser)
@@ -96,6 +96,15 @@ codecHexId =
             .raw
 
 
-hexIdToString : HexId -> String
-hexIdToString hexId =
-    hexId.raw
+toString : HexId -> String
+toString hexId =
+    toXY hexId
+        |> (\{ x, y } ->
+                (String.fromInt x |> String.padLeft 2 '0')
+                    ++ (String.fromInt y |> String.padLeft 2 '0')
+           )
+
+
+toInt : HexId -> Int
+toInt hexId =
+    hexId.value

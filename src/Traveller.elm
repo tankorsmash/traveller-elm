@@ -39,7 +39,7 @@ import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
 import Task
-import Traveller.HexId as HexId exposing (HexId, RawHexId, hexIdToString)
+import Traveller.HexId as HexId exposing (HexId, RawHexId)
 import Traveller.Orbit exposing (StellarOrbit(..))
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
@@ -106,7 +106,7 @@ type alias Model =
     , dragMode : DragMode
     , playerHex : HexId
     , hoveringHex : Maybe HexId
-    , viewingHex : Maybe ( HexId, Int )
+    , sidebarSystemAndSI : Maybe ( HexId, Int )
     , viewport : Maybe Browser.Dom.Viewport
     , hexmapViewport : Maybe (Result Browser.Dom.Error Browser.Dom.Viewport)
     , selectedStellarObject : Maybe StellarObject
@@ -166,7 +166,7 @@ init key =
             , dragMode = NoDragging
             , playerHex = HexId.one
             , hoveringHex = Nothing
-            , viewingHex = Nothing
+            , sidebarSystemAndSI = Nothing
             , viewport = Nothing
             , hexmapViewport = Nothing
             , key = key
@@ -1100,7 +1100,7 @@ viewSystemDetailsSidebar : ( HexId, Int ) ->  SolarSystem -> Maybe StellarObject
 viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject =
     column [ Element.spacing 10 ] <|
         [ -- render the nested chart of the system
-          text <| solarSystem.sectorName ++ " " ++ hexIdToString solarSystem.coordinates
+          text <| solarSystem.sectorName ++ " " ++ HexId.toString solarSystem.coordinates
         , let
             comparePos =
                 ( 0, 0 )
@@ -1192,7 +1192,7 @@ view model =
                     ]
                 , case model.solarSystems of
                     Success solarSystemDict ->
-                        case model.viewingHex of
+                        case model.sidebarSystemAndSI of
                             Just ( viewingHexId, si ) ->
                                 case solarSystemDict |> Dict.get viewingHexId.value of
                                     Just solarSystem ->
@@ -1404,7 +1404,7 @@ update msg model =
                     calcOrigin model.hexScale goodValY goodValX
             in
             ( { model
-                | viewingHex = Just ( hexId, si )
+                | sidebarSystemAndSI = Just ( hexId, si )
                 , selectedStellarObject = Nothing
               }
             , Cmd.none
