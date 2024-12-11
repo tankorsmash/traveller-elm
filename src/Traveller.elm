@@ -25,6 +25,7 @@ import Element.Border as Border
 import Element.Events
 import Element.Font as Font
 import Element.Input as Input
+import Html as UnstyledHtml
 import Html.Events.Extra.Mouse
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes
@@ -1188,6 +1189,13 @@ view model =
                 ]
 
         hexesColumn =
+            let
+                renderError : String -> UnstyledHtml.Html msg
+                renderError txt =
+                    Html.toUnstyled <|
+                        Html.div [ Html.Styled.Attributes.css [ Css.color (Css.hex "#ff0000") ] ]
+                            [ Html.text txt ]
+            in
             column []
                 [ Element.html <|
                     -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
@@ -1217,21 +1225,25 @@ view model =
                                 model.hexScale
                                 |> Html.toUnstyled
 
-                        ( RemoteData.Failure _, _ ) ->
-                            Html.toUnstyled <|
-                                Html.div
-                                    [ Html.Styled.Attributes.css
-                                        [ Css.color (Css.hex "#ff0000") ]
-                                    ]
-                                    [ Html.text "Failed to decode SectorData. See console for details" ]
+                        ( RemoteData.Failure (Http.BadBody jsonErr), _ ) ->
+                            renderError jsonErr
+
+                        ( RemoteData.Failure (Http.BadUrl url), _ ) ->
+                            renderError <| "Invalid URL: " ++ url
+
+                        ( RemoteData.Failure Http.NetworkError, _ ) ->
+                            renderError "Network Error"
+
+                        ( RemoteData.Failure (Http.BadStatus statusCode), _ ) ->
+                            renderError <| "BadStatus: " ++ String.fromInt statusCode
+
+                        ( RemoteData.Failure Http.Timeout, _ ) ->
+                            renderError "Request timedout"
 
                         ( NotAsked, _ ) ->
                             Html.toUnstyled <|
-                                Html.div
-                                    [ Html.Styled.Attributes.css
-                                        [ Css.color (Css.rgb 100 100 100) ]
-                                    ]
-                                    [ Html.text "Not asked" ]
+                                Html.div [ Html.Styled.Attributes.css [ Css.color (Css.rgb 100 100 100) ] ]
+                                    [ Html.text "Not yet asked" ]
 
                         ( Loading, _ ) ->
                             Html.toUnstyled <| Html.text "Loading..."
@@ -1282,11 +1294,24 @@ sendSolarSystemRequest upperLeft lowerRight =
                 , Url.Builder.int "lrhx" <| Tuple.second <| HexId.toRowCol lowerRight.hexId
                 , Url.Builder.int "lrhy" <| Tuple.first <| HexId.toRowCol lowerRight.hexId
                 ]
+
+        requestCmd =
+            -- Http.get
+            --     { url = url
+            --     , expect = Http.expectJson DownloadedSolarSystems solarSystemsParser
+            --     }
+            -- using Http.request to set a timeout
+            Http.request
+                { method = "GET"
+                , headers = []
+                , url = url
+                , body = Http.emptyBody
+                , expect = Http.expectJson DownloadedSolarSystems solarSystemsParser
+                , timeout = Just 5000
+                , tracker = Nothing
+                }
     in
-    Http.get
-        { url = url
-        , expect = Http.expectJson DownloadedSolarSystems solarSystemsParser
-        }
+    requestCmd
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -1321,25 +1346,7 @@ update msg model =
             )
 
         DownloadedSolarSystems (Err err) ->
-            case err of
-                Http.BadUrl _ ->
-                    Debug.todo "branch 'DownloadedSectorJson bad url' not implemented"
-
-                Http.Timeout ->
-                    Debug.todo "branch 'DownloadedSectorJson timeout' not implemented"
-
-                Http.NetworkError ->
-                    Debug.todo "branch 'DownloadedSectorJson NetworkError' not implemented"
-
-                Http.BadStatus _ ->
-                    Debug.todo "branch 'DownloadedSectorJson BadStatus' not implemented"
-
-                Http.BadBody bodyErr ->
-                    let
-                        _ =
-                            Debug.log bodyErr "__ END OF ERROR Traveller.elm __"
-                    in
-                    ( { model | solarSystems = RemoteData.Failure err }, Cmd.none )
+            ( { model | solarSystems = RemoteData.Failure err }, Cmd.none )
 
         HoveringHex hoveringHex ->
             ( { model | hoveringHex = Just hoveringHex }, Cmd.none )
