@@ -1099,6 +1099,25 @@ renderSequence stellarObject =
             text starDataConfig.orbitSequence
 
 
+renderSafeJump : StellarObject -> Element.Element Msg
+renderSafeJump stellarObject =
+    case stellarObject of
+        GasGiant gasGiantData ->
+            text <| "j: " ++ gasGiantData.safeJumpTime
+
+        TerrestrialPlanet terrestrialData ->
+            text <| "j: " ++ terrestrialData.safeJumpTime
+
+        PlanetoidBelt planetoidBeltData ->
+            text <| "j: " ++ planetoidBeltData.safeJumpTime
+
+        Planetoid planetoidData ->
+            text <| "j: " ++ planetoidData.safeJumpTime
+
+        Star (StarDataWrap starDataConfig) ->
+            text <| "j: " ++ starDataConfig.safeJumpTime
+
+
 renderDescription : StellarObject -> Element.Element Msg
 renderDescription stellarObject =
     case stellarObject of
