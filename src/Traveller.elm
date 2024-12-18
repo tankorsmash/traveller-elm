@@ -1168,27 +1168,27 @@ viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject 
                 Element.table []
                     { data = stellarObjects
                     , columns =
-                        [ { header = text "orbit"
+                        [ { header = text ""
                           , width = Element.fill
                           , view = renderOrbit
                           }
-                        , { header = text "seq"
+                        , { header = text ""
                           , width = Element.fill
                           , view = renderSequence
                           }
-                        , { header = text "uwp"
+                        , { header = text ""
                           , width = Element.fill
                           , view = renderDescription
                           }
-                        , { header = text "icon"
+                        , { header = text ""
                           , width = Element.fill
                           , view = always (text "col")
                           }
-                        , { header = text "jump"
+                        , { header = text ""
                           , width = Element.fill
                           , view = renderSafeJump
                           }
-                        , { header = text "travel"
+                        , { header = text ""
                           , width = Element.fill
                           , view = always (text "col")
                           }
