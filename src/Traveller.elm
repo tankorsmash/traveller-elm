@@ -635,7 +635,7 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
                         let
                             maybeHexId : Maybe HexId
                             maybeHexId =
-                                HexId.createFromXY { y = rowIdx, x = colIdx }
+                                HexId.createFromXY { y = rowIdx + hexYOffset, x = colIdx + hexXOffset }
                         in
                         case maybeHexId of
                             Just hexId ->
