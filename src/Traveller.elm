@@ -1051,11 +1051,74 @@ addressToString solarSystem =
            )
 
 
+renderSimpleStellarObject : StellarObject -> Element.Element Msg
+renderSimpleStellarObject stellarObject =
+    case stellarObject of
+        GasGiant gasGiantData ->
+            text <| "Gas Giant: " ++ gasGiantData.safeJumpTime
+
+        TerrestrialPlanet terrestrialData ->
+            text <| "Terrestrial: " ++ terrestrialData.safeJumpTime
+
+        PlanetoidBelt planetoidBeltData ->
+            text <| "Planetoid Belt: " ++ planetoidBeltData.safeJumpTime
+
+        Planetoid planetoidData ->
+            text <| "Planetoid: " ++ planetoidData.safeJumpTime
+
+        Star (StarData starDataConfig) ->
+            text <| "Star: " ++ starDataConfig.safeJumpTime
+
+
 viewSystemDetailsSidebar : ( HexAddress, Int ) -> SolarSystem -> Maybe StellarObject -> Element Msg
 viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject =
+    let
+        primaryStar : StarData
+        primaryStar =
+            solarSystem.primaryStar
+
+        starDataConfig =
+            getStarDataConfig primaryStar
+
+        stellarObjects =
+            starDataConfig.stellarObjects
+    in
     column [ Element.spacing 10 ] <|
         [ -- render the nested chart of the system
           text <| solarSystem.sectorName ++ " " ++ addressToString solarSystem
+        , let
+            table =
+                Element.table []
+                    { data = stellarObjects
+                    , columns =
+                        [ { header = text "orbit"
+                          , width = Element.fill
+                          , view = renderSimpleStellarObject
+                          }
+                        , { header = text "seq"
+                          , width = Element.fill
+                          , view = always (text "col")
+                          }
+                        , { header = text "uwp"
+                          , width = Element.fill
+                          , view = always (text "col")
+                          }
+                        , { header = text "icon"
+                          , width = Element.fill
+                          , view = always (text "col")
+                          }
+                        , { header = text "jump"
+                          , width = Element.fill
+                          , view = always (text "col")
+                          }
+                        , { header = text "travel"
+                          , width = Element.fill
+                          , view = always (text "col")
+                          }
+                        ]
+                    }
+          in
+          table
         , let
             comparePos =
                 ( 0, 0 )
