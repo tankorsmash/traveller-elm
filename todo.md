@@ -5,7 +5,7 @@
 * [X] Display sector coordinates in sidebar
 * [X] click to drag map
 * [ ] fix clipping of map to viewport boundaries
-* [ ] table'd sidebar (fix the sidebar rendering)
+* [ ] table'd sidebar (recursively render the columns, account for SVG's width, since its HTML and elm-ui isn't aware of that size)
 * [X] support multi-sector viewing
 * [X] making nicer function for turning a HexId into a row,col pair
 * [ ] making HexAddress fail on invalid addresses
