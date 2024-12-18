@@ -19,6 +19,10 @@ type alias SolarSystem =
     }
 
 
+type alias SolarSystemDict =
+    Dict.Dict String SolarSystem
+
+
 type alias RawSolarSystem =
     { x : Int
     , y : Int
@@ -43,12 +47,8 @@ codec =
 
 rawToFinal : RawSolarSystem -> Codec.Codec SolarSystem
 rawToFinal rawSolarSystem =
-    let
-        address =
-            HexAddress.createFromSolarSystem rawSolarSystem
-    in
     Codec.succeed
-        { address = address
+        { address = HexAddress.createFromSolarSystem rawSolarSystem
         , primaryStar = rawSolarSystem.primaryStar
         , gasGiants = rawSolarSystem.gasGiants
         , planetoidBelts = rawSolarSystem.planetoidBelts
@@ -97,7 +97,3 @@ rawCodec =
         |> Codec.field "sector_y" .sectorY Codec.int
         |> Codec.field "sector_name" .sectorName Codec.string
         |> Codec.buildObject
-
-
-type alias SolarSystemDict =
-    Dict.Dict String SolarSystem
