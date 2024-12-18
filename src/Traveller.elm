@@ -545,7 +545,6 @@ viewHexes :
     -> Html Msg
 viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSize =
     let
-
         viewportHeightIsh =
             screenVp.viewport.height * 0.9
 
@@ -1062,6 +1061,44 @@ renderSimpleStellarObject stellarObject =
             text <| "Star: " ++ starDataConfig.safeJumpTime
 
 
+renderOrbit : StellarObject -> Element.Element Msg
+renderOrbit stellarObject =
+    case stellarObject of
+        GasGiant gasGiantData ->
+            text <| Round.round 2 gasGiantData.au
+
+        TerrestrialPlanet terrestrialData ->
+            text <| Round.round 2 terrestrialData.au
+
+        PlanetoidBelt planetoidBeltData ->
+            text <| Round.round 2 planetoidBeltData.au
+
+        Planetoid planetoidData ->
+            text <| Round.round 2 planetoidData.au
+
+        Star (StarDataWrap starDataConfig) ->
+            text <| Round.round 2 starDataConfig.au
+
+
+renderSequence : StellarObject -> Element.Element Msg
+renderSequence stellarObject =
+    case stellarObject of
+        GasGiant gasGiantData ->
+            text gasGiantData.orbitSequence
+
+        TerrestrialPlanet terrestrialData ->
+            text terrestrialData.orbitSequence
+
+        PlanetoidBelt planetoidBeltData ->
+            text planetoidBeltData.orbitSequence
+
+        Planetoid planetoidData ->
+            text planetoidData.orbitSequence
+
+        Star (StarDataWrap starDataConfig) ->
+            text starDataConfig.orbitSequence
+
+
 viewSystemDetailsSidebar : ( HexAddress, Int ) -> SolarSystem -> Maybe StellarObject -> Element Msg
 viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject =
     let
@@ -1085,11 +1122,11 @@ viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject 
                     , columns =
                         [ { header = text "orbit"
                           , width = Element.fill
-                          , view = renderSimpleStellarObject
+                          , view = renderOrbit
                           }
                         , { header = text "seq"
                           , width = Element.fill
-                          , view = always (text "col")
+                          , view = renderSequence
                           }
                         , { header = text "uwp"
                           , width = Element.fill
