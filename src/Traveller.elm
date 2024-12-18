@@ -79,11 +79,6 @@ type alias Model =
     }
 
 
-type OffsetDirection
-    = Horizontal
-    | Vertical
-
-
 type Msg
     = NoOpMsg
     | ZoomScaleChanged Float
