@@ -52,4 +52,4 @@ toKey { sectorX, sectorY, x, y } =
 
 hexLabel : HexAddress -> String
 hexLabel { x, y } =
-    (String.fromInt y |> String.pad 2 '0') ++ (String.fromInt x |> String.pad 2 '0')
+    (String.fromInt x |> String.pad 2 '0') ++ (String.fromInt y |> String.pad 2 '0')

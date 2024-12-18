@@ -1,7 +1,7 @@
 # To Do
 
 ## MVP
-* [ ] Account for offsets when dragging, now that we (well Josh) broke it in
+* [X] Account for offsets when dragging, now that we (well Josh) broke it in
 	  8d8ef8b71c06e141d1b5081b1c4155326c192b94 when we made HexId.fromInt fail.
 	  It's not clear why it broke, but its definitely that commit. It looks
 	  like the offset isn't being applied when the scrolling is happening.
@@ -17,7 +17,8 @@
 * [ ] table'd sidebar
 * [X] support multi-sector viewing
 * [X] making nicer function for turning a HexId into a row,col pair
-* [ ] making the HexId codec fail on invalid hexids
+* [ ] making HexAddress fail on invalid addresses
+* [ ] Remember position between sessions
 * [ ] render neutron star
 * [ ] prettier ui somehow
 
