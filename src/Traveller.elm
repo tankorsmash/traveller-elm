@@ -1099,6 +1099,35 @@ renderSequence stellarObject =
             text starDataConfig.orbitSequence
 
 
+renderDescription : StellarObject -> Element.Element Msg
+renderDescription stellarObject =
+    case stellarObject of
+        GasGiant gasGiantData ->
+            text gasGiantData.code
+
+        TerrestrialPlanet terrestrialData ->
+            text terrestrialData.uwp
+
+        PlanetoidBelt planetoidBeltData ->
+            text planetoidBeltData.uwp
+
+        Planetoid planetoidData ->
+            text planetoidData.uwp
+
+        Star (StarDataWrap starDataConfig) ->
+            text <|
+                starDataConfig.stellarType
+                    ++ (case starDataConfig.subtype of
+                            Just num ->
+                                String.fromInt num
+
+                            Nothing ->
+                                ""
+                       )
+                    ++ " "
+                    ++ starDataConfig.stellarClass
+
+
 viewSystemDetailsSidebar : ( HexAddress, Int ) -> SolarSystem -> Maybe StellarObject -> Element Msg
 viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject =
     let
@@ -1130,7 +1159,7 @@ viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject 
                           }
                         , { header = text "uwp"
                           , width = Element.fill
-                          , view = always (text "col")
+                          , view = renderDescription
                           }
                         , { header = text "icon"
                           , width = Element.fill
@@ -1138,7 +1167,7 @@ viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject 
                           }
                         , { header = text "jump"
                           , width = Element.fill
-                          , view = always (text "col")
+                          , view = renderSafeJump
                           }
                         , { header = text "travel"
                           , width = Element.fill
