@@ -13,7 +13,6 @@ import Maybe.Extra as Maybe
 import RemoteData exposing (RemoteData(..))
 import SolarSystemPage
 import Traveller
-import Traveller.HexId as HexId
 import Url
 import Url.Parser exposing ((</>), Parser, map, oneOf, s, top)
 import Url.Parser.Query
@@ -71,28 +70,8 @@ init flags url key =
         ( travellerModel, travellerCmds ) =
             Traveller.init key
 
-        hexId : HexId.HexId
-        hexId =
-            let
-                hexIdParser =
-                    Url.Parser.query (Url.Parser.Query.int "hexid")
-                        |> Url.Parser.map (Maybe.map HexId.createFromInt)
-
-                -- if we don't do this we have to parse the actual url, but we just want the query string
-                urlWithoutPath =
-                    { url | path = "" }
-            in
-            Url.Parser.parse hexIdParser urlWithoutPath
-                |> -- the query parser returns a 'Maybe' because the query string might
-                   -- not be present _AND_ a Maybe Int, because the number we're looking
-                   -- for might not be present, so we join them both
-                   Maybe.join
-                |> Maybe.join
-                |> -- we fallback to 0101 if url parsing fails
-                   Maybe.withDefault HexId.one
-
         ( solarSystemModel, solarSystemCmds ) =
-            SolarSystemPage.init <| hexId
+            SolarSystemPage.init <| { sectorX = 0, sectorY = 0, x = 0, y = 0 }
 
         model : Model
         model =

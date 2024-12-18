@@ -1,7 +1,6 @@
 module SolarSystemPage exposing (Model, Msg(..), init, update, view)
 
 import Angle
-import Browser.Dom
 import Codec
 import Dict
 import Element exposing (Element, column, row, text)
@@ -13,20 +12,16 @@ import RemoteData exposing (RemoteData)
 import Svg.Styled as Svg
 import Svg.Styled.Attributes as SvgAttrs
 import Svg.Styled.Events
-import Task
-import Traveller exposing (Msg(..))
-import Traveller.HexId exposing (HexId, RawHexId)
+import Traveller.HexAddress as HexAddress exposing (HexAddress)
 import Traveller.Moon exposing (Moon)
-import Traveller.Orbit exposing (StellarOrbit(..))
-import Traveller.SectorData exposing (SectorData, codecSectorData)
-import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
+import Traveller.SolarSystem as SolarSystem exposing (SolarSystem, SolarSystemDict)
 import Traveller.StellarObject exposing (StarData(..), StarDataConfig, StellarObject(..))
 
 
 type alias Model =
     { solarSystem : Maybe SolarSystem
-    , solarSystems : RemoteData Http.Error (Dict.Dict RawHexId SolarSystem)
-    , hexId : HexId
+    , solarSystems : RemoteData Http.Error SolarSystemDict
+    , hexId : HexAddress
     , hoveredBody : HoveredBody
     }
 
@@ -45,7 +40,7 @@ type Msg
     | HoveredBody HoveredBody
 
 
-init : HexId -> ( Model, Cmd Msg )
+init : HexAddress -> ( Model, Cmd Msg )
 init hexId =
     ( { solarSystem = Nothing
       , solarSystems = RemoteData.NotAsked
@@ -262,7 +257,7 @@ view model =
                 , Font.color <| Element.rgb 0.5 0.75 0.0
                 ]
                 [ text "Solar System"
-                , text <| "Coordinate/hexid: " ++ model.hexId.raw
+                , text <| "Coordinate/hexid: " ++ HexAddress.toKey model.hexId
                 , row []
                     [ case model.hoveredBody of
                         NoHoveredBody ->
@@ -320,13 +315,13 @@ update msg model =
                 --    sectorData.solarSystems |> List.sortBy (.coordinates >> .value)
                 solarSystemDict =
                     solarSystems
-                        |> List.map (\system -> ( system.coordinates.value, system ))
+                        |> List.map (\system -> ( HexAddress.toKey system.address, system ))
                         |> Dict.fromList
 
                 --newSectorData =
                 --    { sectorData | solarSystems = sortedSolarSystems }
                 newSolarSystem =
-                    Dict.get model.hexId.value solarSystemDict
+                    Dict.get (HexAddress.toKey model.hexId) solarSystemDict
             in
             ( { model
                 | solarSystems =

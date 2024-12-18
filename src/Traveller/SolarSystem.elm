@@ -1,12 +1,13 @@
-module Traveller.SolarSystem exposing (SolarSystem, codec)
+module Traveller.SolarSystem exposing (SolarSystem, SolarSystemDict, codec)
 
 import Codec
-import Traveller.HexId exposing (HexId, codecHexId, createFromInt, createFromXY, toRowCol, toXY)
+import Dict
+import Traveller.HexAddress as HexAddress exposing (HexAddress)
 import Traveller.StellarObject exposing (StarData, codecStarData, codecStellarObject)
 
 
 type alias SolarSystem =
-    { coordinates : HexId
+    { address : HexAddress
     , primaryStar : StarData
     , gasGiants : Int
     , planetoidBelts : Int
@@ -14,8 +15,6 @@ type alias SolarSystem =
     , surveyIndex : Int
     , nativeSophont : Bool
     , extinctSophont : Bool
-    , sectorX : Int
-    , sectorY : Int
     , sectorName : String
     }
 
@@ -45,39 +44,27 @@ codec =
 rawToFinal : RawSolarSystem -> Codec.Codec SolarSystem
 rawToFinal rawSolarSystem =
     let
-        coordinates =
-            Traveller.HexId.createFromXY rawSolarSystem
+        address =
+            HexAddress.createFromSolarSystem rawSolarSystem
     in
-    case coordinates of
-        Just hexId ->
-            Codec.succeed
-                { coordinates = hexId
-                , primaryStar = rawSolarSystem.primaryStar
-                , gasGiants = rawSolarSystem.gasGiants
-                , planetoidBelts = rawSolarSystem.planetoidBelts
-                , terrestrialPlanets = rawSolarSystem.terrestrialPlanets
-                , surveyIndex = rawSolarSystem.surveyIndex
-                , nativeSophont = rawSolarSystem.nativeSophont
-                , extinctSophont = rawSolarSystem.extinctSophont
-                , sectorX = rawSolarSystem.sectorX
-                , sectorY = rawSolarSystem.sectorY
-                , sectorName = rawSolarSystem.sectorName
-                }
-
-        Nothing ->
-            Codec.fail <|
-                "Invalid coordinates: "
-                    ++ String.fromInt rawSolarSystem.x
-                    ++ ", "
-                    ++ String.fromInt rawSolarSystem.y
-                    ++ "(Not in range 0101 to 3240 maybe?)"
+    Codec.succeed
+        { address = address
+        , primaryStar = rawSolarSystem.primaryStar
+        , gasGiants = rawSolarSystem.gasGiants
+        , planetoidBelts = rawSolarSystem.planetoidBelts
+        , terrestrialPlanets = rawSolarSystem.terrestrialPlanets
+        , surveyIndex = rawSolarSystem.surveyIndex
+        , nativeSophont = rawSolarSystem.nativeSophont
+        , extinctSophont = rawSolarSystem.extinctSophont
+        , sectorName = rawSolarSystem.sectorName
+        }
 
 
 finalToRaw : SolarSystem -> RawSolarSystem
 finalToRaw solarSystem =
     let
-        { y, x } =
-            toXY solarSystem.coordinates
+        { sectorX, sectorY, x, y } =
+            solarSystem.address
     in
     { x = x
     , y = y
@@ -88,8 +75,8 @@ finalToRaw solarSystem =
     , surveyIndex = solarSystem.surveyIndex
     , nativeSophont = solarSystem.nativeSophont
     , extinctSophont = solarSystem.extinctSophont
-    , sectorX = solarSystem.sectorX
-    , sectorY = solarSystem.sectorY
+    , sectorX = sectorX
+    , sectorY = sectorY
     , sectorName = solarSystem.sectorName
     }
 
@@ -110,3 +97,7 @@ rawCodec =
         |> Codec.field "sector_y" .sectorY Codec.int
         |> Codec.field "sector_name" .sectorName Codec.string
         |> Codec.buildObject
+
+
+type alias SolarSystemDict =
+    Dict.Dict String SolarSystem

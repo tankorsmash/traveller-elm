@@ -1,5 +1,7 @@
 module Traveller exposing (Model, Msg(..), init, subscriptions, update, view)
 
+--import Traveller.HexId as HexId exposing (HexId, RawHexId)
+
 import Browser.Dom
 import Browser.Events
 import Browser.Navigation
@@ -14,8 +16,6 @@ import Element
         , centerX
         , column
         , el
-        , height
-        , px
         , rgb
         , row
         , text
@@ -31,7 +31,6 @@ import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes
 import Http
 import Json.Decode as JsDecode
-import Maybe.Extra as Maybe
 import Parser
 import RemoteData exposing (RemoteData(..))
 import Round
@@ -39,11 +38,10 @@ import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
 import Task
-import Traveller.HexId as HexId exposing (HexId, RawHexId)
-import Traveller.Orbit exposing (StellarOrbit(..))
+import Traveller.HexAddress as HexAddress exposing (HexAddress)
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
-import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
+import Traveller.SolarSystem as SolarSystem exposing (SolarSystem, SolarSystemDict)
 import Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObject(..), TerrestrialData, getStarDataConfig, getStellarOrbit, starColourRGB)
 import Url.Builder
 
@@ -60,40 +58,6 @@ planetoidSI =
     6
 
 
-type alias HexAddress =
-    { sectorX : Int
-    , sectorY : Int
-    , hexId : HexId
-    }
-
-
-hexAddressAdd :
-    { hexVal : Int, delta : Int, max : Int }
-    -> { hexVal : Int, sectorDelta : Int }
-hexAddressAdd { hexVal, delta, max } =
-    let
-        rangeMin : Int
-        rangeMin =
-            1
-
-        rangeMax =
-            max
-
-        rangeSize =
-            rangeMax - rangeMin + 1
-
-        total =
-            hexVal + delta
-
-        counter =
-            ceiling <| (toFloat rangeMin - toFloat total) / toFloat rangeSize
-
-        newHexVal =
-            modBy rangeSize (modBy rangeSize (total - rangeMin) + rangeSize) + rangeMin
-    in
-    { sectorDelta = -1 * counter, hexVal = newHexVal }
-
-
 type DragMode
     = IsDragging ( Float, Float )
     | NoDragging
@@ -102,11 +66,11 @@ type DragMode
 type alias Model =
     { key : Browser.Navigation.Key
     , hexScale : Float
-    , solarSystems : RemoteData Http.Error (Dict.Dict RawHexId SolarSystem)
+    , solarSystems : RemoteData Http.Error SolarSystemDict
     , dragMode : DragMode
-    , playerHex : HexId
-    , hoveringHex : Maybe HexId
-    , sidebarSystemAndSI : Maybe ( HexId, Int )
+    , playerHex : HexAddress
+    , hoveringHex : Maybe HexAddress
+    , sidebarSystemAndSI : Maybe ( HexAddress, Int )
     , viewport : Maybe Browser.Dom.Viewport
     , hexmapViewport : Maybe (Result Browser.Dom.Error Browser.Dom.Viewport)
     , selectedStellarObject : Maybe StellarObject
@@ -125,12 +89,12 @@ type Msg
     | ZoomScaleChanged Float
     | DownloadSolarSystems
     | DownloadedSolarSystems (Result Http.Error (List SolarSystem))
-    | HoveringHex HexId
-    | ViewingHex ( HexId, Int )
+    | HoveringHex HexAddress
+    | ViewingHex ( HexAddress, Int )
     | GotViewport Browser.Dom.Viewport
     | GotHexMapViewport (Result Browser.Dom.Error Browser.Dom.Viewport)
     | GotResize Int Int
-    | GoToSolarSystemPage HexId
+    | GoToSolarSystemPage HexAddress
     | FocusInSidebar StellarObject
     | MapMouseDown ( Float, Float )
     | MapMouseUp
@@ -149,14 +113,6 @@ subscriptions _ =
 init : Browser.Navigation.Key -> ( Model, Cmd Msg )
 init key =
     let
-        upperLeftHex =
-            HexId.createFromInt 2213
-                |> Maybe.withDefault HexId.one
-
-        lowerRightHex =
-            HexId.createFromInt 3234
-                |> Maybe.withDefault HexId.ten
-
         model : Model
         model =
             { hexScale = defaultHexSize
@@ -164,7 +120,7 @@ init key =
                 --Loading, because we're sending the solar system request
                 RemoteData.Loading
             , dragMode = NoDragging
-            , playerHex = HexId.one
+            , playerHex = { sectorX = 1, sectorY = 1, x = 1, y = 1 }
             , hoveringHex = Nothing
             , sidebarSystemAndSI = Nothing
             , viewport = Nothing
@@ -174,12 +130,14 @@ init key =
             , upperLeftHex =
                 { sectorX = -10
                 , sectorY = -2
-                , hexId = upperLeftHex
+                , x = 22
+                , y = 13
                 }
             , lowerRightHex =
                 { sectorX = -10
                 , sectorY = -2
-                , hexId = lowerRightHex
+                , x = 32
+                , y = 24
                 }
             }
     in
@@ -244,7 +202,7 @@ isStarOrbit obj =
             starDataConfig.orbitType < 10
 
 
-viewHexDetailed : Maybe SolarSystem -> HexId -> HexId -> HexOrigin -> Float -> Svg Msg
+viewHexDetailed : Maybe SolarSystem -> HexAddress -> HexAddress -> HexOrigin -> Float -> Svg Msg
 viewHexDetailed maybeSolarSystem _ hexId (( x, y ) as origin) size =
     let
         si =
@@ -403,9 +361,7 @@ viewHexDetailed maybeSolarSystem _ hexId (( x, y ) as origin) size =
                     , SvgAttrs.fontSize "10"
                     , SvgAttrs.textAnchor "middle"
                     ]
-                    [ String.fromInt hexId.value
-                        |> String.pad 4 '0'
-                        |> Svg.text
+                    [ HexAddress.hexLabel hexId |> Svg.text
                     ]
         , case ( maybeSolarSystem, hasStar ) of
             ( Just solarSystem, True ) ->
@@ -417,9 +373,7 @@ viewHexDetailed maybeSolarSystem _ hexId (( x, y ) as origin) size =
                         , SvgAttrs.fontSize "10"
                         , SvgAttrs.textAnchor "middle"
                         ]
-                        [ String.fromInt hexId.value
-                            |> String.pad 4 '0'
-                            |> Svg.text
+                        [ HexAddress.hexLabel hexId |> Svg.text
                         ]
                     , Svg.text_
                         [ SvgAttrs.x <| String.fromInt <| x
@@ -527,11 +481,11 @@ calcOrigin hexSize row col =
 viewHex :
     Browser.Dom.Viewport
     -> Float
-    -> Dict.Dict Int SolarSystem
+    -> SolarSystemDict
     -> ( Float, Float )
-    -> HexId
+    -> HexAddress
     -> HexOrigin
-    -> HexId
+    -> HexAddress
     -> ( Maybe (Svg Msg), Int )
 viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexId ( ox, oy ) playerHexId =
     let
@@ -562,7 +516,7 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
             (plus < 0) || (minus > widestViewport.viewport.height)
 
         solarSystem =
-            Dict.get hexId.value solarSystemDict
+            Dict.get (HexAddress.toKey hexId) solarSystemDict
 
         hexSVG =
             if not (outsideX || outsideY) then
@@ -585,8 +539,8 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
 viewHexes :
     HexAddress
     -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport }
-    -> Dict.Dict Int SolarSystem
-    -> HexId
+    -> SolarSystemDict
+    -> HexAddress
     -> Float
     -> Html Msg
 viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSize =
@@ -623,9 +577,6 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
                 Just hexmapViewport ->
                     hexmapViewport
 
-        ( hexYOffset, hexXOffset ) =
-            HexId.toRowCol upperLeftHex.hexId
-
         viewHexRow : Int -> List ( Maybe (Svg Msg), Int )
         viewHexRow rowIdx =
             List.range 0 numHexCols
@@ -633,23 +584,18 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
                 |> List.indexedMap
                     (\colIdx hexOrigin ->
                         let
-                            maybeHexId : Maybe HexId
-                            maybeHexId =
-                                HexId.createFromXY { y = rowIdx + hexYOffset, x = colIdx + hexXOffset }
+                            hexAddress : HexAddress
+                            hexAddress =
+                                { upperLeftHex | y = rowIdx + upperLeftHex.y, x = colIdx + upperLeftHex.x }
                         in
-                        case maybeHexId of
-                            Just hexId ->
-                                viewHex
-                                    widestViewport
-                                    hexSize
-                                    solarSystemDict
-                                    ( viewportWidthIsh, viewportHeightIsh )
-                                    hexId
-                                    hexOrigin
-                                    playerHexId
-
-                            Nothing ->
-                                ( Nothing, 0 )
+                        viewHex
+                            widestViewport
+                            hexSize
+                            solarSystemDict
+                            ( viewportWidthIsh, viewportHeightIsh )
+                            hexAddress
+                            hexOrigin
+                            playerHexId
                     )
     in
     List.range 0 numHexRows
@@ -1096,11 +1042,20 @@ renderStar comparePos (StarData starData) nestingLevel selectedStellarObject =
         ]
 
 
-viewSystemDetailsSidebar : ( HexId, Int ) -> SolarSystem -> Maybe StellarObject -> Element Msg
+addressToString : SolarSystem -> String
+addressToString solarSystem =
+    solarSystem.address
+        |> (\{ x, y } ->
+                (String.fromInt x |> String.padLeft 2 '0')
+                    ++ (String.fromInt y |> String.padLeft 2 '0')
+           )
+
+
+viewSystemDetailsSidebar : ( HexAddress, Int ) -> SolarSystem -> Maybe StellarObject -> Element Msg
 viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject =
     column [ Element.spacing 10 ] <|
         [ -- render the nested chart of the system
-          text <| solarSystem.sectorName ++ " " ++ HexId.toString solarSystem.coordinates
+          text <| solarSystem.sectorName ++ " " ++ addressToString solarSystem
         , let
             comparePos =
                 ( 0, 0 )
@@ -1119,27 +1074,28 @@ viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject 
               Element.mouseOver [ Border.color <| rgb 0.9 0.9 0.9, Background.color <| rgb 0.9 0.9 0.9 ]
             ]
             { onPress = Just <| GoToSolarSystemPage viewingHexId
-            , label = text <| "Visualize Solar System: " ++ viewingHexId.raw
+            , label = text <| "Visualize Solar System: " ++ HexAddress.toKey viewingHexId
             }
         ]
 
 
-calcDistance : HexId -> HexId -> Int
-calcDistance hex1 hex2 =
-    let
-        ( y1, x1 ) =
-            HexId.toRowCol hex1
 
-        ( y2, x2 ) =
-            HexId.toRowCol hex2
-
-        rowDiff =
-            abs (y1 - y2)
-
-        colDiff =
-            abs (x1 - x2)
-    in
-    max rowDiff colDiff + (min rowDiff colDiff // 2)
+--calcDistance : HexId -> HexId -> Int
+--calcDistance hex1 hex2 =
+--    let
+--        ( y1, x1 ) =
+--            HexId.toRowCol hex1
+--
+--        ( y2, x2 ) =
+--            HexId.toRowCol hex2
+--
+--        rowDiff =
+--            abs (y1 - y2)
+--
+--        colDiff =
+--            abs (x1 - x2)
+--    in
+--    max rowDiff colDiff + (min rowDiff colDiff // 2)
 
 
 view : Model -> Element.Element Msg
@@ -1174,7 +1130,7 @@ view model =
                     [ column [ Element.spacing 15 ]
                         [ row []
                             [ text "Revelation location:"
-                            , text <| String.fromInt model.playerHex.value
+                            , text <| HexAddress.toKey model.playerHex
                             ]
 
                         --, case model.hoveringHex of
@@ -1193,11 +1149,11 @@ view model =
                 , case model.solarSystems of
                     Success solarSystemDict ->
                         case model.sidebarSystemAndSI of
-                            Just ( viewingHexId, si ) ->
-                                case solarSystemDict |> Dict.get viewingHexId.value of
+                            Just ( viewingAddress, si ) ->
+                                case solarSystemDict |> Dict.get (HexAddress.toKey viewingAddress) of
                                     Just solarSystem ->
                                         viewSystemDetailsSidebar
-                                            ( viewingHexId, si )
+                                            ( viewingAddress, si )
                                             solarSystem
                                             model.selectedStellarObject
 
@@ -1309,12 +1265,12 @@ sendSolarSystemRequest upperLeft lowerRight =
                 [ "deepnight", "data", "solarsystems" ]
                 [ Url.Builder.int "ulsx" upperLeft.sectorX
                 , Url.Builder.int "ulsy" upperLeft.sectorY
-                , Url.Builder.int "ulhx" <| Tuple.second <| HexId.toRowCol upperLeft.hexId
-                , Url.Builder.int "ulhy" <| Tuple.first <| HexId.toRowCol upperLeft.hexId
+                , Url.Builder.int "ulhx" upperLeft.x
+                , Url.Builder.int "ulhy" upperLeft.y
                 , Url.Builder.int "lrsx" lowerRight.sectorX
                 , Url.Builder.int "lrsy" lowerRight.sectorY
-                , Url.Builder.int "lrhx" <| Tuple.second <| HexId.toRowCol lowerRight.hexId
-                , Url.Builder.int "lrhy" <| Tuple.first <| HexId.toRowCol lowerRight.hexId
+                , Url.Builder.int "lrhx" lowerRight.x
+                , Url.Builder.int "lrhy" lowerRight.y
                 ]
 
         requestCmd =
@@ -1353,11 +1309,11 @@ update msg model =
         DownloadedSolarSystems (Ok solarSystems) ->
             let
                 sortedSolarSystems =
-                    solarSystems |> List.sortBy (.coordinates >> .value)
+                    solarSystems |> List.sortBy (HexAddress.toKey << .address)
 
                 solarSystemDict =
                     sortedSolarSystems
-                        |> List.map (\system -> ( system.coordinates.value, system ))
+                        |> List.map (\system -> ( HexAddress.toKey system.address, system ))
                         |> Dict.fromList
             in
             ( { model | solarSystems = solarSystemDict |> RemoteData.Success }
@@ -1393,16 +1349,6 @@ update msg model =
             )
 
         ViewingHex ( hexId, si ) ->
-            let
-                goodValX =
-                    (hexId.value // 100) - 1
-
-                goodValY =
-                    modBy 100 hexId.value - 1
-
-                ( ox, oy ) =
-                    calcOrigin model.hexScale goodValY goodValX
-            in
             ( { model
                 | sidebarSystemAndSI = Just ( hexId, si )
                 , selectedStellarObject = Nothing
@@ -1412,7 +1358,7 @@ update msg model =
 
         GoToSolarSystemPage hexId ->
             ( model
-            , Browser.Navigation.pushUrl model.key <| "/view_system?hexid=" ++ hexId.raw
+            , Browser.Navigation.pushUrl model.key <| "/view_system?hexid=" ++ "FIXME"
             )
 
         FocusInSidebar stellarObject ->
@@ -1447,24 +1393,17 @@ update msg model =
                         shiftAddress : HexAddress -> HexAddress
                         shiftAddress addr =
                             let
-                                oldHexID =
-                                    addr.hexId |> HexId.toXY
-
                                 newXOffset =
-                                    hexAddressAdd { hexVal = oldHexID.x, max = numHexCols, delta = xDelta }
+                                    HexAddress.add { hexVal = addr.x, max = numHexCols, delta = xDelta }
 
                                 newYOffset =
-                                    hexAddressAdd { hexVal = oldHexID.y, max = numHexRows, delta = yDelta }
+                                    HexAddress.add { hexVal = addr.y, max = numHexRows, delta = yDelta }
                             in
-                            case HexId.createFromXY { x = newXOffset.hexVal, y = newYOffset.hexVal } of
-                                Just newHexId ->
-                                    { sectorX = addr.sectorX + newXOffset.sectorDelta
-                                    , sectorY = addr.sectorY - newYOffset.sectorDelta
-                                    , hexId = newHexId
-                                    }
-
-                                Nothing ->
-                                    Debug.log "cant shift further, doing nothing" addr
+                            { sectorX = addr.sectorX + newXOffset.sectorDelta
+                            , sectorY = addr.sectorY - newYOffset.sectorDelta
+                            , x = newXOffset.hexVal
+                            , y = newYOffset.hexVal
+                            }
 
                         _ =
                             Debug.log "mouseMove" ( ( xDelta, yDelta ), ( newX, newY ) )
