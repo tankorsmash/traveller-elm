@@ -42,7 +42,7 @@ import Traveller.HexAddress as HexAddress exposing (HexAddress)
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem, SolarSystemDict)
-import Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), InnerStarData, StellarObject(..), TerrestrialData, getInnerStarData, getStellarOrbit, starColourRGB)
+import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, getInnerStarData, getStellarOrbit, starColourRGB)
 import Url.Builder
 
 
@@ -203,7 +203,7 @@ isStarOrbit obj =
 
 
 viewHexDetailed : Maybe SolarSystem -> HexAddress -> HexAddress -> HexOrigin -> Float -> Svg Msg
-viewHexDetailed maybeSolarSystem _ hexId (( x, y ) as origin) size =
+viewHexDetailed maybeSolarSystem _ hexAddress (( x, y ) as origin) size =
     let
         si =
             case maybeSolarSystem of
@@ -264,8 +264,8 @@ viewHexDetailed maybeSolarSystem _ hexId (( x, y ) as origin) size =
             JsDecode.map (\evt -> MapMouseMove <| evt.offsetPos) Html.Events.Extra.Mouse.eventDecoder
     in
     Svg.g
-        [ SvgEvents.onMouseOver (HoveringHex hexId)
-        , SvgEvents.onClick (ViewingHex ( hexId, si ))
+        [ SvgEvents.onMouseOver (HoveringHex hexAddress)
+        , SvgEvents.onClick (ViewingHex ( hexAddress, si ))
         , SvgEvents.onMouseUp MapMouseUp
         , -- listens for the JS 'mousedown' event and then runs the `downDecoder` on the JS Event, returning the Msg
           SvgEvents.on "mousedown" downDecoder
@@ -361,7 +361,7 @@ viewHexDetailed maybeSolarSystem _ hexId (( x, y ) as origin) size =
                     , SvgAttrs.fontSize "10"
                     , SvgAttrs.textAnchor "middle"
                     ]
-                    [ HexAddress.hexLabel hexId |> Svg.text
+                    [ HexAddress.hexLabel hexAddress |> Svg.text
                     ]
         , case ( maybeSolarSystem, hasStar ) of
             ( Just solarSystem, True ) ->
@@ -373,7 +373,7 @@ viewHexDetailed maybeSolarSystem _ hexId (( x, y ) as origin) size =
                         , SvgAttrs.fontSize "10"
                         , SvgAttrs.textAnchor "middle"
                         ]
-                        [ HexAddress.hexLabel hexId |> Svg.text
+                        [ HexAddress.hexLabel hexAddress |> Svg.text
                         ]
                     , Svg.text_
                         [ SvgAttrs.x <| String.fromInt <| x
@@ -487,7 +487,7 @@ viewHex :
     -> HexOrigin
     -> HexAddress
     -> ( Maybe (Svg Msg), Int )
-viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexId ( ox, oy ) playerHexId =
+viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress ( ox, oy ) playerHexId =
     let
         -- idx =
         --     rowIdx + colIdx * 100
@@ -516,14 +516,14 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
             (plus < 0) || (minus > widestViewport.viewport.height)
 
         solarSystem =
-            Dict.get (HexAddress.toKey hexId) solarSystemDict
+            Dict.get (HexAddress.toKey hexAddress) solarSystemDict
 
         hexSVG =
             if not (outsideX || outsideY) then
                 Just
                     (viewHexDetailed solarSystem
                         playerHexId
-                        hexId
+                        hexAddress
                         ( ox, oy )
                         hexSize
                     )
@@ -545,14 +545,6 @@ viewHexes :
     -> Html Msg
 viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSize =
     let
-        hexKey : Int -> String
-        hexKey hexId =
-            --String.fromInt sectorData.x
-            --    ++ "."
-            --    ++ String.fromInt sectorData.y
-            --    ++ "."
-            --    ++ (String.padLeft 4 '0' <| String.fromInt hexId)
-            String.padLeft 4 '0' <| String.fromInt hexId
 
         viewportHeightIsh =
             screenVp.viewport.height * 0.9
@@ -1411,15 +1403,15 @@ update msg model =
                 ]
             )
 
-        ViewingHex ( hexId, si ) ->
+        ViewingHex ( hexAddress, si ) ->
             ( { model
-                | sidebarSystemAndSI = Just ( hexId, si )
+                | sidebarSystemAndSI = Just ( hexAddress, si )
                 , selectedStellarObject = Nothing
               }
             , Cmd.none
             )
 
-        GoToSolarSystemPage hexId ->
+        GoToSolarSystemPage hexAddress ->
             ( model
             , Browser.Navigation.pushUrl model.key <| "/view_system?hexid=" ++ "FIXME"
             )
