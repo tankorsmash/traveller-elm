@@ -1,4 +1,4 @@
-module Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObject(..), TerrestrialData, codecStarData, codecStellarObject, getStarDataConfig, getStellarOrbit, starColourRGB)
+module Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, codecStarData, codecStellarObject, getInnerStarData, getStellarOrbit, starColourRGB)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -202,7 +202,7 @@ type alias PlanetoidBeltData =
     }
 
 
-type alias StarDataConfig =
+type alias InnerStarData =
     { orbitPosition : StellarPoint
     , inclination : Float
     , eccentricity : Float
@@ -228,8 +228,14 @@ type alias StarDataConfig =
     }
 
 
+{-| Since StarData is recursive, we need to use a Type for it, instead of an
+alias
+-}
 type StarData
-    = StarData StarDataConfig
+    = -- StarDataWrap is the type variant that contains the InnerStarData
+      StarDataWrap
+        -- InnerStarData is the actual data
+        InnerStarData
 
 
 type alias StellarOrbit =
@@ -241,7 +247,11 @@ type alias StellarOrbit =
 
 
 extractStellarOrbit orbit =
-    { orbitPosition = orbit.orbitPosition, orbitType = orbit.orbitType, orbit = orbit.orbit, au = orbit.au }
+    { orbitPosition = orbit.orbitPosition
+    , orbitType = orbit.orbitType
+    , orbit = orbit.orbit
+    , au = orbit.au
+    }
 
 
 getStellarOrbit : StellarObject -> StellarOrbit
@@ -250,21 +260,21 @@ getStellarOrbit stellarObject =
         GasGiant giantData ->
             extractStellarOrbit giantData
 
-        TerrestrialPlanet p ->
-            extractStellarOrbit p
+        TerrestrialPlanet terrestrialData ->
+            extractStellarOrbit terrestrialData
 
-        PlanetoidBelt p ->
-            extractStellarOrbit p
+        PlanetoidBelt planetoidBelt ->
+            extractStellarOrbit planetoidBelt
 
-        Planetoid p ->
-            extractStellarOrbit p
+        Planetoid planetoid ->
+            extractStellarOrbit planetoid
 
-        Star (StarData s) ->
-            extractStellarOrbit s
+        Star (StarDataWrap innerStarData) ->
+            extractStellarOrbit innerStarData
 
 
-getStarDataConfig : StarData -> StarDataConfig
-getStarDataConfig (StarData starDataConfig) =
+getInnerStarData : StarData -> InnerStarData
+getInnerStarData (StarDataWrap starDataConfig) =
     starDataConfig
 
 
@@ -422,7 +432,7 @@ decodeStellarObjectX =
 
 codecStarData : Codec StarData
 codecStarData =
-    Codec.object StarDataConfig
+    Codec.object InnerStarData
         |> Codec.field "orbitPosition" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
@@ -446,7 +456,7 @@ codecStarData =
         |> Codec.field "au" .au Codec.float
         |> Codec.field "jumpShadow" .jumpShadow (Codec.nullable Codec.float)
         |> Codec.buildObject
-        |> Codec.map StarData (\(StarData data) -> data)
+        |> Codec.map StarDataWrap (\(StarDataWrap data) -> data)
 
 
 encodeStellarObjectX : StellarObject -> Codec.Value

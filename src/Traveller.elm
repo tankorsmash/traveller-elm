@@ -42,7 +42,7 @@ import Traveller.HexAddress as HexAddress exposing (HexAddress)
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem, SolarSystemDict)
-import Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), StarDataConfig, StellarObject(..), TerrestrialData, getStarDataConfig, getStellarOrbit, starColourRGB)
+import Traveller.StellarObject exposing (GasGiantData, PlanetoidBeltData, PlanetoidData, StarData(..), InnerStarData, StellarObject(..), TerrestrialData, getInnerStarData, getStellarOrbit, starColourRGB)
 import Url.Builder
 
 
@@ -198,7 +198,7 @@ isStarOrbit obj =
         Planetoid planetoidData ->
             planetoidData.orbitType < 10
 
-        Star (StarData starDataConfig) ->
+        Star (StarDataWrap starDataConfig) ->
             starDataConfig.orbitType < 10
 
 
@@ -284,7 +284,7 @@ viewHexDetailed maybeSolarSystem _ hexId (( x, y ) as origin) size =
             []
         , -- center star
           let
-            drawStar : ( Float, Float ) -> Int -> StarDataConfig -> Svg Msg
+            drawStar : ( Float, Float ) -> Int -> InnerStarData -> Svg Msg
             drawStar ( starX, starY ) radius star =
                 Svg.circle
                     [ SvgAttrs.cx <| String.fromFloat <| starX
@@ -305,18 +305,18 @@ viewHexDetailed maybeSolarSystem _ hexId (( x, y ) as origin) size =
                         ( toFloat x, toFloat y )
 
                     primaryStar =
-                        getStarDataConfig solarSystem.primaryStar
+                        getInnerStarData solarSystem.primaryStar
 
                     generateStar : Int -> StellarObject -> Svg Msg
                     generateStar idx stellarObject =
                         case stellarObject of
-                            Star (StarData star) ->
+                            Star (StarDataWrap star) ->
                                 let
                                     secondaryStarPos =
                                         rotatePoint idx primaryPos 60 20
                                 in
                                 case star.companion of
-                                    Just (StarData compStarData) ->
+                                    Just (StarDataWrap compStarData) ->
                                         let
                                             compStarPos =
                                                 Tuple.mapFirst (\x_ -> x_ - 5) secondaryStarPos
@@ -335,7 +335,7 @@ viewHexDetailed maybeSolarSystem _ hexId (( x, y ) as origin) size =
                 Svg.g
                     []
                     ((case primaryStar.companion of
-                        Just (StarData compStarData) ->
+                        Just (StarDataWrap compStarData) ->
                             let
                                 compStarPos =
                                     Tuple.mapFirst (\x_ -> x_ - 5) primaryPos
@@ -970,7 +970,7 @@ renderStellarObject comparePos newNestingLevel stellarObject selectedStellarObje
 
 
 renderStar : ( Float, Float ) -> StarData -> Int -> Maybe StellarObject -> Element.Element Msg
-renderStar comparePos (StarData starData) nestingLevel selectedStellarObject =
+renderStar comparePos (StarDataWrap starData) nestingLevel selectedStellarObject =
     let
         inJumpShadow obj =
             case starData.jumpShadow of
@@ -1066,7 +1066,7 @@ renderSimpleStellarObject stellarObject =
         Planetoid planetoidData ->
             text <| "Planetoid: " ++ planetoidData.safeJumpTime
 
-        Star (StarData starDataConfig) ->
+        Star (StarDataWrap starDataConfig) ->
             text <| "Star: " ++ starDataConfig.safeJumpTime
 
 
@@ -1078,7 +1078,7 @@ viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject 
             solarSystem.primaryStar
 
         starDataConfig =
-            getStarDataConfig primaryStar
+            getInnerStarData primaryStar
 
         stellarObjects =
             starDataConfig.stellarObjects
