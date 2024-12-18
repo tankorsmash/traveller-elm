@@ -419,8 +419,8 @@ codecPlanetoidData =
         |> Codec.buildObject
 
 
-decodeStellarObjectX : JsDecode.Decoder StellarObject
-decodeStellarObjectX =
+decodeStellarObject : JsDecode.Decoder StellarObject
+decodeStellarObject =
     JsDecode.oneOf
         [ JsDecode.map GasGiant (Codec.decoder codecGasGiantData)
         , JsDecode.map TerrestrialPlanet (Codec.decoder codecTerrestrialData)
@@ -459,9 +459,9 @@ codecStarData =
         |> Codec.map StarDataWrap (\(StarDataWrap data) -> data)
 
 
-encodeStellarObjectX : StellarObject -> Codec.Value
-encodeStellarObjectX stellarObjectX =
-    case stellarObjectX of
+encodeStellarObject : StellarObject -> Codec.Value
+encodeStellarObject stellarObject =
+    case stellarObject of
         GasGiant data ->
             Codec.encodeToValue codecGasGiantData data
 
@@ -481,5 +481,5 @@ encodeStellarObjectX stellarObjectX =
 codecStellarObject : Codec StellarObject
 codecStellarObject =
     Codec.build
-        encodeStellarObjectX
-        decodeStellarObjectX
+        encodeStellarObject
+        decodeStellarObject
