@@ -42,7 +42,20 @@ import Traveller.HexAddress as HexAddress exposing (HexAddress)
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem, SolarSystemDict)
-import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, getInnerStarData, getStellarOrbit, starColourRGB)
+import Traveller.StellarObject
+    exposing
+        ( GasGiantData
+        , InnerStarData
+        , PlanetoidBeltData
+        , PlanetoidData
+        , StarData(..)
+        , StellarObject(..)
+        , TerrestrialData
+        , getInnerStarData
+        , getSafeJumpTime
+        , getStellarOrbit
+        , starColourRGB
+        )
 import Url.Builder
 
 
@@ -1058,59 +1071,30 @@ renderSimpleStellarObject stellarObject =
 
 renderOrbit : StellarObject -> Element.Element Msg
 renderOrbit stellarObject =
-    case stellarObject of
-        GasGiant gasGiantData ->
-            text <| Round.round 2 gasGiantData.au
-
-        TerrestrialPlanet terrestrialData ->
-            text <| Round.round 2 terrestrialData.au
-
-        PlanetoidBelt planetoidBeltData ->
-            text <| Round.round 2 planetoidBeltData.au
-
-        Planetoid planetoidData ->
-            text <| Round.round 2 planetoidData.au
-
-        Star (StarDataWrap starDataConfig) ->
-            text <| Round.round 2 starDataConfig.au
+    stellarObject
+        |> getStellarOrbit
+        |> -- this is an anonymous function that gets this field off of what gets passed in
+           .au
+        |> Round.round 2
+        |> text
 
 
 renderSequence : StellarObject -> Element.Element Msg
 renderSequence stellarObject =
-    case stellarObject of
-        GasGiant gasGiantData ->
-            text gasGiantData.orbitSequence
-
-        TerrestrialPlanet terrestrialData ->
-            text terrestrialData.orbitSequence
-
-        PlanetoidBelt planetoidBeltData ->
-            text planetoidBeltData.orbitSequence
-
-        Planetoid planetoidData ->
-            text planetoidData.orbitSequence
-
-        Star (StarDataWrap starDataConfig) ->
-            text starDataConfig.orbitSequence
+    stellarObject
+        |> getStellarOrbit
+        |> -- this is an anonymous function that gets this field off of what gets passed in
+           .orbitSequence
+        |> text
 
 
 renderSafeJump : StellarObject -> Element.Element Msg
 renderSafeJump stellarObject =
-    case stellarObject of
-        GasGiant gasGiantData ->
-            text <| "j: " ++ gasGiantData.safeJumpTime
-
-        TerrestrialPlanet terrestrialData ->
-            text <| "j: " ++ terrestrialData.safeJumpTime
-
-        PlanetoidBelt planetoidBeltData ->
-            text <| "j: " ++ planetoidBeltData.safeJumpTime
-
-        Planetoid planetoidData ->
-            text <| "j: " ++ planetoidData.safeJumpTime
-
-        Star (StarDataWrap starDataConfig) ->
-            text <| "j: " ++ starDataConfig.safeJumpTime
+    stellarObject
+        |> getSafeJumpTime
+        |> (\safeJumpTime ->
+                text <| "j: " ++ safeJumpTime
+           )
 
 
 renderDescription : StellarObject -> Element.Element Msg
