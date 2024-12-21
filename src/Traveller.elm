@@ -1143,34 +1143,22 @@ viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject 
         [ -- render the nested chart of the system
           text <| solarSystem.sectorName ++ " " ++ addressToString solarSystem
         , let
+            tableColumn func =
+                { header = text ""
+                , width = Element.fill
+                , view = func
+                }
+
             table =
                 Element.table []
                     { data = stellarObjects
                     , columns =
-                        [ { header = text ""
-                          , width = Element.fill
-                          , view = renderOrbit
-                          }
-                        , { header = text ""
-                          , width = Element.fill
-                          , view = renderSequence
-                          }
-                        , { header = text ""
-                          , width = Element.fill
-                          , view = renderDescription
-                          }
-                        , { header = text ""
-                          , width = Element.fill
-                          , view = always (text "col")
-                          }
-                        , { header = text ""
-                          , width = Element.fill
-                          , view = renderSafeJump
-                          }
-                        , { header = text ""
-                          , width = Element.fill
-                          , view = always (text "col")
-                          }
+                        [ tableColumn renderOrbit
+                        , tableColumn renderSequence
+                        , tableColumn renderDescription
+                        , tableColumn (always (text "col"))
+                        , tableColumn renderSafeJump
+                        , tableColumn (always (text "col"))
                         ]
                     }
           in
