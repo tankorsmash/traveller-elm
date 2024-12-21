@@ -1189,24 +1189,58 @@ viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject 
 --    max rowDiff colDiff + (min rowDiff colDiff // 2)
 
 
+colorToElementColor : Color.Color -> Element.Color
+colorToElementColor color =
+    color
+        |> Color.toRgba
+        |> (\{ red, green, blue, alpha } -> Element.rgba red green blue alpha)
+
+
+fontTextColor : Element.Color
+fontTextColor =
+    textColor |> colorToElementColor
+
+
+{-| Color.Color is not Element.Color
+-}
+textColor : Color.Color
+textColor =
+    Color.rgb 0.5 1.0 0.5
+
+
+fontDarkTextColor : Element.Color
+fontDarkTextColor =
+    textColor
+        |> Color.Manipulate.desaturate 0.85
+        |> Color.Manipulate.darken 0.25
+        |> colorToElementColor
+
+
 view : Model -> Element.Element Msg
 view model =
     let
         sidebarColumn =
             column [ centerX, Element.width <| Element.px 400 ]
-                [ text <|
-                    "Welcome to the Traveller app!"
-                , text <|
-                    "Viewing "
-                        ++ String.fromInt numHexCols
-                        ++ " columns and "
-                        ++ String.fromInt numHexRows
-                        ++ " rows"
-                , text <| "Total hexes: " ++ String.fromInt (numHexCols * numHexRows)
+                [ el [ Font.size 20 ] <|
+                    text <|
+                        "Welcome to the Traveller app!"
+                , el [ Font.size 14, Font.color <| fontDarkTextColor ] <|
+                    text <|
+                        "Viewing "
+                            ++ String.fromInt numHexCols
+                            ++ " columns and "
+                            ++ String.fromInt numHexRows
+                            ++ " rows"
+                , el [ Font.size 14, Font.color <| fontDarkTextColor ] <|
+                    text <|
+                        "Total hexes: "
+                            ++ String.fromInt (numHexCols * numHexRows)
                 , -- zoom slider
-                  Input.slider []
+                  Input.slider [ Element.paddingXY 0 0 ]
                     { onChange = ZoomScaleChanged
-                    , label = Input.labelAbove [] (text <| "Zoom: " ++ String.fromFloat model.hexScale)
+                    , label =
+                        Input.labelAbove [ Element.paddingXY 0 5 ]
+                            (text <| "HexSize: " ++ String.fromFloat model.hexScale)
                     , min = 1
                     , max = 75
                     , step = Just 5
@@ -1215,9 +1249,8 @@ view model =
                     }
                 , column
                     [ Font.size 14
-                    , Font.color <| Element.rgb 0.5 1.5 0.5
+                    , Font.color <| fontTextColor
                     ]
-                  <|
                     [ column [ Element.spacing 15 ]
                         [ row []
                             [ text "Revelation location:"
@@ -1322,7 +1355,7 @@ view model =
                 ]
     in
     column []
-        [ row [ Font.size 20, Font.color <| Element.rgb 0.5 1.5 0.5 ]
+        [ row [ Font.size 20, Font.color <| fontTextColor ]
             [ sidebarColumn
             , hexesColumn
             ]
