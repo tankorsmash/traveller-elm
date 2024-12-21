@@ -159,7 +159,6 @@ view model =
                 [ a [ href "/", class "navbar-brand" ] [ text "Traveller" ]
                 , Html.ul [ class "navbar-nav" ]
                     [ Html.li [ class "nav-item" ] [ a [ class "nav-link", href "/" ] [ text "Map" ] ]
-                    , Html.li [ class "nav-item" ] [ a [ class "nav-link", href "/view_system?hexid=307" ] [ text "System" ] ]
                     ]
                 ]
             , case model.route of
