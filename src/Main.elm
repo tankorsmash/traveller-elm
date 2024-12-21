@@ -11,7 +11,6 @@ import Http exposing (Error(..))
 import Json.Encode
 import Maybe.Extra as Maybe
 import RemoteData exposing (RemoteData(..))
-import SolarSystemPage
 import Traveller
 import Url
 import Url.Parser exposing ((</>), Parser, map, oneOf, s, top)
@@ -25,7 +24,6 @@ type alias Model =
     , dialogBody : Html Msg
     , isDarkMode : Bool
     , travellerModel : Traveller.Model
-    , solarSystemModel : SolarSystemPage.Model
     }
 
 
@@ -36,12 +34,10 @@ type Msg
     | ToggleErrorDialog
     | ToggleDarkMode
     | GotTravellerMsg Traveller.Msg
-    | GotSolarSystemPageMsg SolarSystemPage.Msg
 
 
 type Route
     = TravellerPage
-    | StarPage
 
 
 port writeToLocalStorage : ( String, String ) -> Cmd msg
@@ -60,7 +56,6 @@ routeParser : Parser (Route -> a) a
 routeParser =
     oneOf
         [ map TravellerPage top
-        , map StarPage (s "view_system")
         ]
 
 
@@ -70,9 +65,6 @@ init flags url key =
         ( travellerModel, travellerCmds ) =
             Traveller.init key
 
-        ( solarSystemModel, solarSystemCmds ) =
-            SolarSystemPage.init <| { sectorX = 0, sectorY = 0, x = 0, y = 0 }
-
         model : Model
         model =
             { key = key
@@ -81,7 +73,6 @@ init flags url key =
             , isDarkMode = False
             , dialogBody = text "Error dialog"
             , travellerModel = travellerModel
-            , solarSystemModel = solarSystemModel
             }
     in
     ( model
@@ -92,9 +83,6 @@ init flags url key =
           -- So when we get the Cmd's response back, we can pass them back to the `Traveller.update`
           -- when we handle the `GotTravellerMsg` msg
           Cmd.map GotTravellerMsg travellerCmds
-
-        -- likewise for the solar system page
-        , Cmd.map GotSolarSystemPageMsg solarSystemCmds
         ]
     )
 
@@ -158,15 +146,6 @@ update msg model =
             , Cmd.map GotTravellerMsg newTravellerCmds
             )
 
-        GotSolarSystemPageMsg solarSystemPageMsg ->
-            let
-                ( newStarPageModel, newStarPageCmds ) =
-                    SolarSystemPage.update solarSystemPageMsg model.solarSystemModel
-            in
-            ( { model | solarSystemModel = newStarPageModel }
-            , Cmd.map GotSolarSystemPageMsg newStarPageCmds
-            )
-
 
 view : Model -> Browser.Document Msg
 view model =
@@ -188,11 +167,6 @@ view model =
                     Html.map GotTravellerMsg <|
                         Element.layout [ Element.centerX ] <|
                             Traveller.view model.travellerModel
-
-                Just StarPage ->
-                    Html.map GotSolarSystemPageMsg <|
-                        Element.layout [ Element.centerX ] <|
-                            SolarSystemPage.view model.solarSystemModel
 
                 Nothing ->
                     Html.text "404 i guess"

@@ -102,7 +102,6 @@ type Msg
     | GotViewport Browser.Dom.Viewport
     | GotHexMapViewport (Result Browser.Dom.Error Browser.Dom.Viewport)
     | GotResize Int Int
-    | GoToSolarSystemPage HexAddress
     | FocusInSidebar StellarObject
     | MapMouseDown ( Float, Float )
     | MapMouseUp
@@ -1168,21 +1167,6 @@ viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject 
                 ( 0, 0 )
           in
           renderStar comparePos solarSystem.primaryStar 0 selectedStellarObject
-        , -- the button to load the solar system
-          Input.button
-            [ Background.color <| rgb 0.5 1.5 0.5
-            , Border.rounded 5
-            , Border.width 10
-            , Border.color <| rgb 0.5 1.5 0.5
-            , Font.size 14
-            , Font.color <| rgb 0 0 0
-            , Element.spacing 10
-            , -- limited styling for mouse over
-              Element.mouseOver [ Border.color <| rgb 0.9 0.9 0.9, Background.color <| rgb 0.9 0.9 0.9 ]
-            ]
-            { onPress = Just <| GoToSolarSystemPage viewingHexId
-            , label = text <| "Visualize Solar System: " ++ HexAddress.toKey viewingHexId
-            }
         ]
 
 
@@ -1461,11 +1445,6 @@ update msg model =
                 , selectedStellarObject = Nothing
               }
             , Cmd.none
-            )
-
-        GoToSolarSystemPage hexAddress ->
-            ( model
-            , Browser.Navigation.pushUrl model.key <| "/view_system?hexid=" ++ "FIXME"
             )
 
         FocusInSidebar stellarObject ->
