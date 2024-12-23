@@ -1492,14 +1492,14 @@ update msg model =
 
         MapMouseDown ( x, y ) ->
             ( { model
-                | dragMode = Debug.log "mouseDown" <| IsDragging ( x, y )
+                | dragMode = IsDragging ( x, y )
               }
             , Cmd.none
             )
 
         MapMouseUp ->
             ( { model
-                | dragMode = Debug.log "mouseUp" NoDragging
+                | dragMode = NoDragging
               }
             , sendSolarSystemRequest model.hostConfig model.upperLeftHex model.lowerRightHex
             )
@@ -1528,9 +1528,6 @@ update msg model =
                             , x = newXOffset.hexVal
                             , y = newYOffset.hexVal
                             }
-
-                        _ =
-                            Debug.log "mouseMove" ( ( xDelta, yDelta ), ( newX, newY ) )
 
                         newModel =
                             { model
