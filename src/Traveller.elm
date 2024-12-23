@@ -1234,7 +1234,7 @@ view : Model -> Element.Element Msg
 view model =
     let
         sidebarColumn =
-            column [ centerX ]
+            column []
                 [ el [ Font.size 20 ] <|
                     text <|
                         "Welcome to the Traveller app!"
@@ -1360,7 +1360,7 @@ view model =
     in
     column [ width fill ]
         [ row [ width fill, Font.size 20, Font.color <| fontTextColor ]
-            [ el [ Element.width <| Element.fillPortion 1 ] <|
+            [ el [ Element.width <| Element.px 400, Element.alignTop, Element.alignLeft ] <|
                 sidebarColumn
             , el [ Element.width <| Element.fillPortion 9 ] <|
                 hexesColumn
