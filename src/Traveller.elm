@@ -57,6 +57,7 @@ import Traveller.StellarObject
         , starColourRGB
         )
 import Url.Builder
+import HostConfig exposing (HostConfig)
 
 
 gasGiantSI =
@@ -89,6 +90,7 @@ type alias Model =
     , selectedStellarObject : Maybe StellarObject
     , upperLeftHex : HexAddress
     , lowerRightHex : HexAddress
+    , hostConfig : HostConfig.HostConfig
     }
 
 
@@ -117,8 +119,8 @@ subscriptions _ =
     Browser.Events.onResize GotResize
 
 
-init : Browser.Navigation.Key -> ( Model, Cmd Msg )
-init key =
+init : Browser.Navigation.Key -> HostConfig.HostConfig -> ( Model, Cmd Msg )
+init key hostConfig =
     let
         model : Model
         model =
@@ -146,11 +148,12 @@ init key =
                 , x = 32
                 , y = 24
                 }
+            , hostConfig = hostConfig
             }
     in
     ( model
     , Cmd.batch
-        [ sendSolarSystemRequest model.upperLeftHex model.lowerRightHex
+        [ sendSolarSystemRequest model.hostConfig model.upperLeftHex model.lowerRightHex
         , Browser.Dom.getViewport
             |> Task.perform GotViewport
         ]
@@ -1376,17 +1379,21 @@ view model =
         ]
 
 
-sendSolarSystemRequest : HexAddress -> HexAddress -> Cmd Msg
-sendSolarSystemRequest upperLeft lowerRight =
+
+sendSolarSystemRequest : HostConfig -> HexAddress -> HexAddress -> Cmd Msg
+sendSolarSystemRequest hostConfig upperLeft lowerRight =
     let
         solarSystemsDecoder : JsDecode.Decoder (List SolarSystem)
         solarSystemsDecoder =
             Codec.list SolarSystem.codec
                 |> Codec.decoder
 
+        ( urlHostRoot, urlHostPath ) =
+            Debug.log ("hostConfig callsite") hostConfig
+
         url =
-            Url.Builder.crossOrigin "https://radiofreewaba.net"
-                [ "deepnight", "data", "solarsystems" ]
+            Url.Builder.crossOrigin urlHostRoot
+                urlHostPath
                 [ Url.Builder.int "ulsx" upperLeft.sectorX
                 , Url.Builder.int "ulsy" upperLeft.sectorY
                 , Url.Builder.int "ulhx" upperLeft.x
@@ -1427,7 +1434,7 @@ update msg model =
 
         DownloadSolarSystems ->
             ( model
-            , sendSolarSystemRequest model.upperLeftHex model.lowerRightHex
+            , sendSolarSystemRequest model.hostConfig model.upperLeftHex model.lowerRightHex
             )
 
         DownloadedSolarSystems (Ok solarSystems) ->
@@ -1496,7 +1503,7 @@ update msg model =
             ( { model
                 | dragMode = Debug.log "mouseUp" NoDragging
               }
-            , sendSolarSystemRequest model.upperLeftHex model.lowerRightHex
+            , sendSolarSystemRequest model.hostConfig model.upperLeftHex model.lowerRightHex
             )
 
         MapMouseMove ( newX, newY ) ->

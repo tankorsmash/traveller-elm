@@ -4,6 +4,7 @@ import Browser
 import Browser.Navigation as Nav
 import Dialog
 import Element
+import HostConfig
 import Html exposing (Html, a, div, text)
 import Html.Attributes exposing (class, href)
 import Html.Events
@@ -62,8 +63,13 @@ routeParser =
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
+        hostConfig : HostConfig.HostConfig
+        hostConfig =
+            HostConfig.serverHost url
+                |> Maybe.withDefault HostConfig.default
+
         ( travellerModel, travellerCmds ) =
-            Traveller.init key
+            Traveller.init key hostConfig
 
         model : Model
         model =
