@@ -25,6 +25,7 @@ import Element.Border as Border
 import Element.Events
 import Element.Font as Font
 import Element.Input as Input
+import HostConfig exposing (HostConfig)
 import Html as UnstyledHtml
 import Html.Events.Extra.Mouse
 import Html.Styled as Html exposing (Html)
@@ -57,7 +58,6 @@ import Traveller.StellarObject
         , starColourRGB
         )
 import Url.Builder
-import HostConfig exposing (HostConfig)
 
 
 gasGiantSI =
@@ -1219,6 +1219,44 @@ fontDarkTextColor =
         |> colorToElementColor
 
 
+sliderColors : List Element.Color
+sliderColors =
+    -- gradient colors so it looks like a slider
+    [ Element.rgba 0 0 0 0
+    , textColor |> Color.Manipulate.fadeOut 0.99 |> colorToElementColor
+    , textColor |> Color.Manipulate.fadeOut 0.95 |> colorToElementColor
+    , textColor |> Color.Manipulate.fadeOut 0.95 |> colorToElementColor
+    , textColor |> Color.Manipulate.fadeOut 0.05 |> colorToElementColor
+    , textColor |> Color.Manipulate.fadeOut 0.95 |> colorToElementColor
+    , textColor |> Color.Manipulate.fadeOut 0.95 |> colorToElementColor
+    , textColor |> Color.Manipulate.fadeOut 0.99 |> colorToElementColor
+    , Element.rgba 0 0 0 0
+    ]
+
+
+zoomSlider : Float -> Element Msg
+zoomSlider hexScale =
+    Input.slider
+        [ Background.gradient
+            { angle = 0
+            , steps =
+                sliderColors
+            }
+        , Element.paddingXY 0 0
+        , Element.width <| Element.px 200
+        ]
+        { onChange = ZoomScaleChanged
+        , label =
+            Input.labelLeft [ Font.size 16, Element.paddingXY 0 5 ]
+                (text <| "HexSize: " ++ String.fromFloat hexScale)
+        , min = 1
+        , max = 76
+        , step = Just 5
+        , value = hexScale
+        , thumb = Input.defaultThumb
+        }
+
+
 view : Model -> Element.Element Msg
 view model =
     let
@@ -1239,17 +1277,7 @@ view model =
                         "Total hexes: "
                             ++ String.fromInt (numHexCols * numHexRows)
                 , -- zoom slider
-                  Input.slider [ Element.paddingXY 0 0 ]
-                    { onChange = ZoomScaleChanged
-                    , label =
-                        Input.labelAbove [ Element.paddingXY 0 5 ]
-                            (text <| "HexSize: " ++ String.fromFloat model.hexScale)
-                    , min = 1
-                    , max = 75
-                    , step = Just 5
-                    , value = model.hexScale
-                    , thumb = Input.defaultThumb
-                    }
+                  zoomSlider model.hexScale
                 , column
                     [ Font.size 14
                     , Font.color <| fontTextColor
@@ -1379,7 +1407,6 @@ view model =
         ]
 
 
-
 sendSolarSystemRequest : HostConfig -> HexAddress -> HexAddress -> Cmd Msg
 sendSolarSystemRequest hostConfig upperLeft lowerRight =
     let
@@ -1389,7 +1416,7 @@ sendSolarSystemRequest hostConfig upperLeft lowerRight =
                 |> Codec.decoder
 
         ( urlHostRoot, urlHostPath ) =
-            Debug.log ("hostConfig callsite") hostConfig
+            hostConfig
 
         url =
             Url.Builder.crossOrigin urlHostRoot
@@ -1405,11 +1432,7 @@ sendSolarSystemRequest hostConfig upperLeft lowerRight =
                 ]
 
         requestCmd =
-            -- Http.get
-            --     { url = url
-            --     , expect = Http.expectJson DownloadedSolarSystems solarSystemsParser
-            --     }
-            -- using Http.request to set a timeout
+            -- using Http.request instead of Http.get, to allow setting a timeout
             Http.request
                 { method = "GET"
                 , headers = []
