@@ -65,8 +65,18 @@ init flags url key =
     let
         hostConfig : HostConfig.HostConfig
         hostConfig =
-            HostConfig.serverHost url
-                |> Maybe.withDefault HostConfig.default
+            Url.Parser.parse HostConfig.urlParser url
+                |> (\parseResult ->
+                        case parseResult of
+                            Just (Just parsedHostConfig) ->
+                                parsedHostConfig
+
+                            Just Nothing ->
+                                HostConfig.default
+
+                            Nothing ->
+                                HostConfig.default
+                   )
 
         ( travellerModel, travellerCmds ) =
             Traveller.init key hostConfig
