@@ -282,7 +282,7 @@ viewHexDetailed maybeSolarSystem _ hexAddress (( x, y ) as origin) size =
         , -- listens for the JS 'mousedown' event and then runs the `downDecoder` on the JS Event, returning the Msg
           SvgEvents.on "mousedown" downDecoder
         , SvgEvents.on "mousemove" moveDecoder
-        , SvgAttrs.style "cursor: pointer;"
+        , SvgAttrs.style "cursor: pointer; user-select: none"
         ]
         [ -- background hex
           Svg.polygon
