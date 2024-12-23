@@ -1078,7 +1078,9 @@ renderOrbit stellarObject =
         |> -- this is an anonymous function that gets this field off of what gets passed in
            .au
         |> Round.round 2
+        |> String.padLeft 6 ' '
         |> text
+        |> el [ Font.family [ Font.monospace ] ]
 
 
 renderSequence : StellarObject -> Element.Element Msg
@@ -1088,6 +1090,7 @@ renderSequence stellarObject =
         |> -- this is an anonymous function that gets this field off of what gets passed in
            .orbitSequence
         |> text
+        |> el [ Font.family [ Font.monospace ] ]
 
 
 renderSafeJump : StellarObject -> Element.Element Msg
@@ -1097,35 +1100,40 @@ renderSafeJump stellarObject =
         |> (\safeJumpTime ->
                 text <| "j: " ++ safeJumpTime
            )
+        |> el [ Font.family [ Font.monospace ] ]
 
 
 renderDescription : StellarObject -> Element.Element Msg
 renderDescription stellarObject =
-    case stellarObject of
-        GasGiant gasGiantData ->
-            text gasGiantData.code
+    let
+        description =
+            case stellarObject of
+                GasGiant gasGiantData ->
+                    text gasGiantData.code
 
-        TerrestrialPlanet terrestrialData ->
-            text terrestrialData.uwp
+                TerrestrialPlanet terrestrialData ->
+                    text terrestrialData.uwp
 
-        PlanetoidBelt planetoidBeltData ->
-            text planetoidBeltData.uwp
+                PlanetoidBelt planetoidBeltData ->
+                    text planetoidBeltData.uwp
 
-        Planetoid planetoidData ->
-            text planetoidData.uwp
+                Planetoid planetoidData ->
+                    text planetoidData.uwp
 
-        Star (StarDataWrap starDataConfig) ->
-            text <|
-                starDataConfig.stellarType
-                    ++ (case starDataConfig.subtype of
-                            Just num ->
-                                String.fromInt num
+                Star (StarDataWrap starDataConfig) ->
+                    text <|
+                        starDataConfig.stellarType
+                            ++ (case starDataConfig.subtype of
+                                    Just num ->
+                                        String.fromInt num
 
-                            Nothing ->
-                                ""
-                       )
-                    ++ " "
-                    ++ starDataConfig.stellarClass
+                                    Nothing ->
+                                        ""
+                               )
+                            ++ " "
+                            ++ starDataConfig.stellarClass
+    in
+    el [ Font.family [ Font.monospace ] ] description
 
 
 viewSystemDetailsSidebar : ( HexAddress, Int ) -> SolarSystem -> Maybe StellarObject -> Element Msg
@@ -1152,7 +1160,7 @@ viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject 
                 }
 
             table =
-                Element.table []
+                Element.table [ Element.spacingXY 5 0 ]
                     { data = stellarObjects
                     , columns =
                         [ tableColumn renderOrbit
@@ -1171,7 +1179,6 @@ viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject 
           in
           renderStar comparePos solarSystem.primaryStar 0 selectedStellarObject
         ]
-
 
 
 colorToElementColor : Color.Color -> Element.Color
