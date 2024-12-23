@@ -1174,24 +1174,6 @@ viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject 
 
 
 
---calcDistance : HexId -> HexId -> Int
---calcDistance hex1 hex2 =
---    let
---        ( y1, x1 ) =
---            HexId.toRowCol hex1
---
---        ( y2, x2 ) =
---            HexId.toRowCol hex2
---
---        rowDiff =
---            abs (y1 - y2)
---
---        colDiff =
---            abs (x1 - x2)
---    in
---    max rowDiff colDiff + (min rowDiff colDiff // 2)
-
-
 colorToElementColor : Color.Color -> Element.Color
 colorToElementColor color =
     color
