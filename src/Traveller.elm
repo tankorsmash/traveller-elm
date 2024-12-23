@@ -16,9 +16,11 @@ import Element
         , centerX
         , column
         , el
+        , fill
         , rgb
         , row
         , text
+        , width
         )
 import Element.Background as Background
 import Element.Border as Border
@@ -619,28 +621,10 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
 
                 stringHeight =
                     String.fromFloat <| viewportHeightIsh
-
-                bootstrapDark =
-                    "#212529"
-
-                midColor =
-                    "#f5f5f5"
             in
             Svg.svg
                 [ SvgAttrs.width <| stringWidth
                 , SvgAttrs.height <| stringHeight
-                , SvgAttrs.style <|
-                    -- "background-color: "
-                    --     ++ "blue"
-                    --     ++ ";"
-                    --
-                    "background-image: radial-gradient("
-                        ++ midColor
-                        ++ ", "
-                        ++ bootstrapDark
-                        ++ ", "
-                        ++ bootstrapDark
-                        ++ " ); user-select: none;"
                 , SvgAttrs.css <|
                     [ Css.before
                         [ Css.boxShadowMany
@@ -1250,7 +1234,7 @@ view : Model -> Element.Element Msg
 view model =
     let
         sidebarColumn =
-            column [ centerX, Element.width <| Element.px 400 ]
+            column [ centerX ]
                 [ el [ Font.size 20 ] <|
                     text <|
                         "Welcome to the Traveller app!"
@@ -1374,10 +1358,12 @@ view model =
                             Html.toUnstyled <| Html.text "Have sector data but no viewport"
                 ]
     in
-    column []
-        [ row [ Font.size 20, Font.color <| fontTextColor ]
-            [ sidebarColumn
-            , hexesColumn
+    column [ width fill ]
+        [ row [ width fill, Font.size 20, Font.color <| fontTextColor ]
+            [ el [ Element.width <| Element.fillPortion 1 ] <|
+                sidebarColumn
+            , el [ Element.width <| Element.fillPortion 9 ] <|
+                hexesColumn
             ]
         , -- displaying json errors for SectorData
           case model.solarSystems of
