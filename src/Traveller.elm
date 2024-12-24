@@ -87,6 +87,7 @@ type alias Model =
     , playerHex : HexAddress
     , hoveringHex : Maybe HexAddress
     , sidebarSystemAndSI : Maybe ( HexAddress, Int )
+    , sidebarHoverText : Maybe String
     , viewport : Maybe Browser.Dom.Viewport
     , hexmapViewport : Maybe (Result Browser.Dom.Error Browser.Dom.Viewport)
     , selectedStellarObject : Maybe StellarObject
@@ -107,6 +108,7 @@ type Msg
     | GotHexMapViewport (Result Browser.Dom.Error Browser.Dom.Viewport)
     | GotResize Int Int
     | FocusInSidebar StellarObject
+    | TableColumnHovered (Maybe String)
     | MapMouseDown ( Float, Float )
     | MapMouseUp
     | MapMouseMove ( Float, Float )
@@ -134,6 +136,7 @@ init key hostConfig =
             , playerHex = { sectorX = 1, sectorY = 1, x = 1, y = 1 }
             , hoveringHex = Nothing
             , sidebarSystemAndSI = Nothing
+            , sidebarHoverText = Nothing
             , viewport = Nothing
             , hexmapViewport = Nothing
             , key = key
@@ -1120,8 +1123,8 @@ renderDescription stellarObject =
     el [ Font.family [ Font.monospace ] ] description
 
 
-viewSystemDetailsSidebar : ( HexAddress, Int ) -> SolarSystem -> Maybe StellarObject -> Element Msg
-viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject =
+viewSystemDetailsSidebar : ( HexAddress, Int ) -> Maybe String -> SolarSystem -> Maybe StellarObject -> Element Msg
+viewSystemDetailsSidebar ( viewingHexId, si ) sidebarHoverText solarSystem selectedStellarObject =
     let
         primaryStar : StarData
         primaryStar =
@@ -1137,26 +1140,32 @@ viewSystemDetailsSidebar ( viewingHexId, si ) solarSystem selectedStellarObject 
         [ -- render the nested chart of the system
           text <| solarSystem.sectorName ++ " " ++ addressToString solarSystem
         , let
-            tableColumn func =
+            tableColumn desc viewFunc =
                 { header = text ""
                 , width = Element.fill
-                , view = func
+                , view =
+                    Element.el [ Element.Events.onMouseEnter <| TableColumnHovered (Just desc) ]
+                        << viewFunc
                 }
 
             table =
-                Element.table [ Element.spacingXY 5 0 ]
+                Element.table [ Element.spacingXY 5 0, Element.Events.onMouseLeave (TableColumnHovered Nothing) ]
                     { data = stellarObjects
                     , columns =
-                        [ tableColumn renderOrbit
-                        , tableColumn renderSequence
-                        , tableColumn renderDescription
-                        , tableColumn (always (text "col"))
-                        , tableColumn renderSafeJump
-                        , tableColumn (always (text "col"))
+                        [ tableColumn "Orbit" renderOrbit
+                        , tableColumn "Sequence" renderSequence
+                        , tableColumn "UWP/Desc" renderDescription
+                        , tableColumn "???" (always (text "col"))
+                        , tableColumn "Safe Jump Time" renderSafeJump
+                        , tableColumn "???" (always (text "col"))
                         ]
                     }
           in
-          table
+          column []
+            [ el [ Font.size 12, Font.italic, centerX ] <|
+                text (sidebarHoverText |> Maybe.withDefault "--")
+            , table
+            ]
         , let
             comparePos =
                 ( 0, 0 )
@@ -1282,6 +1291,7 @@ view model =
                                     Just solarSystem ->
                                         viewSystemDetailsSidebar
                                             ( viewingAddress, si )
+                                            model.sidebarHoverText
                                             solarSystem
                                             model.selectedStellarObject
 
@@ -1359,7 +1369,7 @@ view model =
                 ]
     in
     column [ width fill ]
-        [ row [ width fill, Font.size 20, Font.color <| fontTextColor ]
+        [ row [ width fill, Font.size 20, Font.color <| fontTextColor, Element.paddingXY 15 0 ]
             [ el [ Element.width <| Element.px 400, Element.alignTop, Element.alignLeft ] <|
                 sidebarColumn
             , el [ Element.width <| Element.fillPortion 9 ] <|
@@ -1546,3 +1556,6 @@ update msg model =
 
                 NoDragging ->
                     ( model, Cmd.none )
+
+        TableColumnHovered columnDesc ->
+            ( { model | sidebarHoverText = columnDesc }, Cmd.none )
