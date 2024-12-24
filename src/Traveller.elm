@@ -14,6 +14,7 @@ import Element
     exposing
         ( Element
         , centerX
+        , centerY
         , column
         , el
         , fill
@@ -1136,9 +1137,8 @@ viewSystemDetailsSidebar ( viewingHexId, si ) sidebarHoverText solarSystem selec
         stellarObjects =
             starDataConfig.stellarObjects
     in
-    column [ Element.spacing 10 ] <|
-        [ -- render the nested chart of the system
-          text <| solarSystem.sectorName ++ " " ++ addressToString solarSystem
+    column [ Element.spacing 10, Element.paddingXY 0 10 ] <|
+        [ text <| solarSystem.sectorName ++ " " ++ addressToString solarSystem
         , let
             tableColumn desc viewFunc =
                 { header = text ""
@@ -1166,7 +1166,8 @@ viewSystemDetailsSidebar ( viewingHexId, si ) sidebarHoverText solarSystem selec
                 text (sidebarHoverText |> Maybe.withDefault "--")
             , table
             ]
-        , let
+        , -- render the nested chart of the system
+          let
             comparePos =
                 ( 0, 0 )
           in
@@ -1296,10 +1297,15 @@ view model =
                                             model.selectedStellarObject
 
                                     Nothing ->
-                                        text "No solar system data found in dict"
+                                        column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                                            [ text "No solar system data found for system."
+                                            , text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
+                                            ]
 
                             Nothing ->
-                                text "No viewing hex data yet"
+                                        column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                                            [ text "Click a hex to view system details."
+                                            ]
 
                     _ ->
                         text "No loaded sector data yet"
