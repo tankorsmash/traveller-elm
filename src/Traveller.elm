@@ -80,10 +80,87 @@ type DragMode
     | NoDragging
 
 
+{-| RequestNum is a unique identifier for a request.
+
+'Mk' is a prefix meaning 'make', to distinguishg it from the RequestNum parent,
+even though they could be the same name.
+
+-}
+type RequestNum
+    = MkRequestNum Int
+
+
+{-| RequestEntry is a record of a request made to the server.
+
+Each time we call sendSolarSystemRequest we prep a RequestEntry and store it in
+the Model.
+
+Then when we get a response back, we mark the request as complete and update
+our model, using `markRequestComplete`.
+
+-}
+type alias RequestEntry =
+    { requestNum : RequestNum
+    , upperLeftHex : HexAddress
+    , lowerRightHex : HexAddress
+    , status :
+        RemoteData
+            Http.Error
+            -- no data is kept beyond pass/fail. '()' means 'unit' or 'void' in other languages
+            ()
+    }
+
+
+type alias RequestHistory =
+    List RequestEntry
+
+
+
+
+nextRequestNum : RequestHistory -> RequestNum
+nextRequestNum requestHistory =
+    let
+        lastRequestNum : Int
+        lastRequestNum =
+            case requestHistory of
+                [] ->
+                    0
+
+                requests ->
+                    requests
+                        |> List.map (.requestNum >> (\(MkRequestNum x) -> x))
+                        |> List.maximum
+                        |> Maybe.withDefault 0
+    in
+    MkRequestNum (lastRequestNum + 1)
+
+
+{-| Builds a RequestEntry and updates the existing History with it.
+
+This is so we have less chance of getting the history out of sync with the
+entries, because this is the only way to construct a RequestEntry.
+-}
+prepNextRequest : RequestHistory -> HexAddress -> HexAddress -> ( RequestEntry, RequestHistory )
+prepNextRequest requestHistory upperLeftHex lowerRightHex =
+    let
+        requestNum =
+            nextRequestNum requestHistory
+
+        requestEntry =
+            { requestNum = requestNum
+            , upperLeftHex = upperLeftHex
+            , lowerRightHex = lowerRightHex
+            , status = RemoteData.Loading
+            }
+    in
+    ( requestEntry, requestEntry :: requestHistory )
+
+
 type alias Model =
     { key : Browser.Navigation.Key
     , hexScale : Float
     , solarSystems : RemoteData Http.Error SolarSystemDict
+    , requestHistory : RequestHistory
     , dragMode : DragMode
     , playerHex : HexAddress
     , hoveringHex : Maybe HexAddress
@@ -102,7 +179,7 @@ type Msg
     = NoOpMsg
     | ZoomScaleChanged Float
     | DownloadSolarSystems
-    | DownloadedSolarSystems (Result Http.Error (List SolarSystem))
+    | DownloadedSolarSystems RequestNum (Result Http.Error (List SolarSystem))
     | HoveringHex HexAddress
     | ViewingHex ( HexAddress, Int )
     | GotViewport Browser.Dom.Viewport
@@ -127,12 +204,31 @@ subscriptions _ =
 init : Browser.Navigation.Key -> HostConfig.HostConfig -> ( Model, Cmd Msg )
 init key hostConfig =
     let
+        -- requestHistory : RequestHistory
+        ( requestEntry, requestHistory ) =
+            prepNextRequest [] upperLeftHex lowerRightHex
+
+        upperLeftHex =
+            { sectorX = -10
+            , sectorY = -2
+            , x = 22
+            , y = 13
+            }
+
+        lowerRightHex =
+            { sectorX = -10
+            , sectorY = -2
+            , x = 32
+            , y = 24
+            }
+
         model : Model
         model =
             { hexScale = defaultHexSize
             , solarSystems =
                 --Loading, because we're sending the solar system request
                 RemoteData.Loading
+            , requestHistory = requestHistory
             , dragMode = NoDragging
             , playerHex = { sectorX = 1, sectorY = 1, x = 1, y = 1 }
             , hoveringHex = Nothing
@@ -142,24 +238,14 @@ init key hostConfig =
             , hexmapViewport = Nothing
             , key = key
             , selectedStellarObject = Nothing
-            , upperLeftHex =
-                { sectorX = -10
-                , sectorY = -2
-                , x = 22
-                , y = 13
-                }
-            , lowerRightHex =
-                { sectorX = -10
-                , sectorY = -2
-                , x = 32
-                , y = 24
-                }
+            , upperLeftHex = upperLeftHex
+            , lowerRightHex = lowerRightHex
             , hostConfig = hostConfig
             }
     in
     ( model
     , Cmd.batch
-        [ sendSolarSystemRequest model.hostConfig model.upperLeftHex model.lowerRightHex
+        [ sendSolarSystemRequest requestEntry.requestNum model.hostConfig model.upperLeftHex model.lowerRightHex
         , Browser.Dom.getViewport
             |> Task.perform GotViewport
         ]
@@ -1418,8 +1504,8 @@ view model =
         ]
 
 
-sendSolarSystemRequest : HostConfig -> HexAddress -> HexAddress -> Cmd Msg
-sendSolarSystemRequest hostConfig upperLeft lowerRight =
+sendSolarSystemRequest : RequestNum -> HostConfig -> HexAddress -> HexAddress -> Cmd Msg
+sendSolarSystemRequest requestNum hostConfig upperLeft lowerRight =
     let
         solarSystemsDecoder : JsDecode.Decoder (List SolarSystem)
         solarSystemsDecoder =
@@ -1449,7 +1535,7 @@ sendSolarSystemRequest hostConfig upperLeft lowerRight =
                 , headers = []
                 , url = url
                 , body = Http.emptyBody
-                , expect = Http.expectJson DownloadedSolarSystems solarSystemsDecoder
+                , expect = Http.expectJson (DownloadedSolarSystems requestNum) solarSystemsDecoder
                 , timeout = Just 5000
                 , tracker = Nothing
                 }
@@ -1467,11 +1553,17 @@ update msg model =
             ( { model | hexScale = newScale }, Cmd.none )
 
         DownloadSolarSystems ->
-            ( model
-            , sendSolarSystemRequest model.hostConfig model.upperLeftHex model.lowerRightHex
+            let
+                ( nextRequestEntry, newRequestHistory ) =
+                    prepNextRequest model.requestHistory model.upperLeftHex model.lowerRightHex
+            in
+            ( { model
+                | requestHistory = newRequestHistory
+              }
+            , sendSolarSystemRequest nextRequestEntry.requestNum model.hostConfig model.upperLeftHex model.lowerRightHex
             )
 
-        DownloadedSolarSystems (Ok solarSystems) ->
+        DownloadedSolarSystems requestNum (Ok solarSystems) ->
             let
                 sortedSolarSystems =
                     solarSystems |> List.sortBy (HexAddress.toKey << .address)
@@ -1492,16 +1584,31 @@ update msg model =
 
                         _ ->
                             Dict.empty
+
+                newRequestHistory =
+                    markRequestComplete requestNum (RemoteData.Success ()) model.requestHistory
             in
-            ( { model | solarSystems = solarSystemDict |> RemoteData.Success }
+            ( { model
+                | solarSystems = solarSystemDict |> RemoteData.Success
+                , requestHistory = newRequestHistory
+              }
             , Cmd.batch
                 [ Browser.Dom.getViewportOf "hexmap"
                     |> Task.attempt GotHexMapViewport
                 ]
             )
 
-        DownloadedSolarSystems (Err err) ->
-            ( { model | solarSystems = RemoteData.Failure err }, Cmd.none )
+        DownloadedSolarSystems requestNum (Err err) ->
+            let
+                newRequestHistory =
+                    markRequestComplete requestNum (RemoteData.Success ()) model.requestHistory
+            in
+            ( { model
+                | solarSystems = RemoteData.Failure err
+                , requestHistory = newRequestHistory
+              }
+            , Cmd.none
+            )
 
         HoveringHex hoveringHex ->
             ( { model | hoveringHex = Just hoveringHex }, Cmd.none )
@@ -1546,10 +1653,15 @@ update msg model =
             )
 
         MapMouseUp ->
+            let
+                ( nextRequestEntry, newRequestHistory ) =
+                    prepNextRequest model.requestHistory model.upperLeftHex model.lowerRightHex
+            in
             ( { model
                 | dragMode = NoDragging
+                , requestHistory = newRequestHistory
               }
-            , sendSolarSystemRequest model.hostConfig model.upperLeftHex model.lowerRightHex
+            , sendSolarSystemRequest nextRequestEntry.requestNum model.hostConfig model.upperLeftHex model.lowerRightHex
             )
 
         MapMouseMove ( newX, newY ) ->
@@ -1597,3 +1709,32 @@ update msg model =
 
         TableColumnHovered columnDesc ->
             ( { model | sidebarHoverText = columnDesc }, Cmd.none )
+
+
+stripDataFromRemoteData : RemoteData err data -> RemoteData err ()
+stripDataFromRemoteData remoteData =
+    case remoteData of
+        RemoteData.Success _ ->
+            RemoteData.Success ()
+
+        RemoteData.Failure err ->
+            RemoteData.Failure err
+
+        RemoteData.NotAsked ->
+            RemoteData.NotAsked
+
+        RemoteData.Loading ->
+            RemoteData.Loading
+
+
+markRequestComplete : RequestNum -> RemoteData Http.Error () -> RequestHistory -> RequestHistory
+markRequestComplete requestNum remoteData requestHistory =
+    requestHistory
+        |> List.map
+            (\entry ->
+                if entry.requestNum == requestNum then
+                    { entry | status = stripDataFromRemoteData remoteData }
+
+                else
+                    entry
+            )
