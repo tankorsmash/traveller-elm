@@ -1225,13 +1225,14 @@ zoomSlider hexScale =
             , steps =
                 sliderColors
             }
+        , Border.rounded 200
         , Element.paddingXY 0 0
         , Element.width <| Element.px 200
         ]
         { onChange = ZoomScaleChanged
         , label =
-            Input.labelLeft [ Font.size 16, Element.paddingXY 0 5 ]
-                (text <| "HexSize: " ++ String.fromFloat hexScale)
+            Input.labelLeft [ Font.family [ Font.monospace ], Font.size 16, Element.paddingXY 0 5 ]
+                (text <| "HexSize: " ++ (String.padLeft 2 ' ' <| String.fromFloat hexScale))
         , min = 1
         , max = 76
         , step = Just 5
