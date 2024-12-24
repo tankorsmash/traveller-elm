@@ -1480,6 +1480,18 @@ update msg model =
                     sortedSolarSystems
                         |> List.map (\system -> ( HexAddress.toKey system.address, system ))
                         |> Dict.fromList
+                        |> (\newDict ->
+                                -- union mergs the dict, and prefers the left arg's to resolve dupes, so we want to prefer the new one
+                                Dict.union newDict existingDict
+                           )
+
+                existingDict =
+                    case model.solarSystems of
+                        RemoteData.Success existingSolarSystems ->
+                            existingSolarSystems
+
+                        _ ->
+                            Dict.empty
             in
             ( { model | solarSystems = solarSystemDict |> RemoteData.Success }
             , Cmd.batch
