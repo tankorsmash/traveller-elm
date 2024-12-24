@@ -1303,9 +1303,9 @@ view model =
                                             ]
 
                             Nothing ->
-                                        column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
-                                            [ text "Click a hex to view system details."
-                                            ]
+                                column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                                    [ text "Click a hex to view system details."
+                                    ]
 
                     _ ->
                         text "No loaded sector data yet"
@@ -1378,7 +1378,7 @@ view model =
         [ row [ width fill, Font.size 20, Font.color <| fontTextColor, Element.paddingXY 15 0 ]
             [ el [ Element.width <| Element.px 400, Element.alignTop, Element.alignLeft ] <|
                 sidebarColumn
-            , el [ Element.width <| Element.fillPortion 9 ] <|
+            , el [ Element.width <| Element.fillPortion 9, Element.alignTop ] <|
                 hexesColumn
             ]
         , -- displaying json errors for SectorData
