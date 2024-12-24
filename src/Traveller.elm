@@ -1311,56 +1311,63 @@ view model =
                         text "No loaded sector data yet"
                 ]
 
+        renderError : String -> UnstyledHtml.Html msg
+        renderError txt =
+            Html.toUnstyled <|
+                Html.div [ Html.Styled.Attributes.css [ Css.color (Css.hex "#ff0000") ] ]
+                    [ Html.text txt ]
+
+        renderHttpError httpError =
+            case httpError of
+                Http.BadBody error ->
+                    renderError error
+
+                Http.BadUrl url ->
+                    renderError <| "Invalid URL: " ++ url
+
+                Http.NetworkError ->
+                    renderError "Network Error"
+
+                Http.BadStatus statusCode ->
+                    renderError <| "BadStatus: " ++ String.fromInt statusCode
+
+                Http.Timeout ->
+                    renderError "Request timedout"
+
         hexesColumn =
-            let
-                renderError : String -> UnstyledHtml.Html msg
-                renderError txt =
-                    Html.toUnstyled <|
-                        Html.div [ Html.Styled.Attributes.css [ Css.color (Css.hex "#ff0000") ] ]
-                            [ Html.text txt ]
-            in
             column []
                 [ Element.html <|
                     -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
                     case ( model.solarSystems, model.viewport ) of
                         ( RemoteData.Success solarSystems, Just viewport ) ->
+                            let
+                                defaultViewport =
+                                    { screenVp = viewport, hexmapVp = Nothing }
+                            in
                             viewHexes
                                 model.upperLeftHex
                                 (case model.hexmapViewport of
                                     Nothing ->
-                                        { screenVp = viewport, hexmapVp = Nothing }
+                                        defaultViewport
 
                                     Just (Ok hexmapViewport) ->
-                                        { screenVp = viewport
-                                        , hexmapVp = Just hexmapViewport
-                                        }
+                                        { defaultViewport | hexmapVp = Just hexmapViewport }
 
-                                    Just (Err domError) ->
+                                    Just (Err notFoundError) ->
                                         let
                                             _ =
-                                                Debug.log "cant use, domError" domError
+                                                --TODO handle the hexmap svg not being present
+                                                Debug.log "cant use, element not present" notFoundError
                                         in
-                                        { screenVp = viewport, hexmapVp = Nothing }
+                                        defaultViewport
                                 )
                                 solarSystems
                                 model.playerHex
                                 model.hexScale
                                 |> Html.toUnstyled
 
-                        ( RemoteData.Failure (Http.BadBody jsonErr), _ ) ->
-                            renderError jsonErr
-
-                        ( RemoteData.Failure (Http.BadUrl url), _ ) ->
-                            renderError <| "Invalid URL: " ++ url
-
-                        ( RemoteData.Failure Http.NetworkError, _ ) ->
-                            renderError "Network Error"
-
-                        ( RemoteData.Failure (Http.BadStatus statusCode), _ ) ->
-                            renderError <| "BadStatus: " ++ String.fromInt statusCode
-
-                        ( RemoteData.Failure Http.Timeout, _ ) ->
-                            renderError "Request timedout"
+                        ( RemoteData.Failure httpError, _ ) ->
+                            renderHttpError httpError
 
                         ( NotAsked, _ ) ->
                             Html.toUnstyled <|
@@ -1384,13 +1391,13 @@ view model =
         , -- displaying json errors for SectorData
           case model.solarSystems of
             Failure (Http.BadBody error) ->
-                (-- turn html into elm-ui
-                 Element.html <|
+                (-- use <pre> to preserve whitespace
+                 Html.pre [ Html.Styled.Attributes.css [ Css.overflow Css.hidden ] ]
+                    [ Html.text error ]
                     -- convert from elm-css's HTML
-                    Html.toUnstyled
-                    <|
-                        -- use <pre> to preserve whitespace
-                        Html.pre [ Html.Styled.Attributes.css [ Css.overflow Css.hidden ] ] [ Html.text error ]
+                    |> Html.toUnstyled
+                    -- turn html into elm-ui
+                    |> Element.html
                 )
 
             _ ->
