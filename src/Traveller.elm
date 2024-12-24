@@ -374,7 +374,13 @@ viewHexDetailed maybeSolarSystem _ hexAddress (( x, y ) as origin) size =
                 Svg.text_
                     [ SvgAttrs.x <| String.fromInt <| x
                     , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
-                    , SvgAttrs.fontSize "10"
+                    , SvgAttrs.fontSize
+                        (if size > 15 then
+                            "10"
+
+                         else
+                            "5"
+                        )
                     , SvgAttrs.textAnchor "middle"
                     ]
                     [ HexAddress.hexLabel hexAddress |> Svg.text
@@ -386,7 +392,13 @@ viewHexDetailed maybeSolarSystem _ hexAddress (( x, y ) as origin) size =
                       Svg.text_
                         [ SvgAttrs.x <| String.fromInt <| x
                         , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
-                        , SvgAttrs.fontSize "10"
+                        , SvgAttrs.fontSize
+                            (if size > 15 then
+                                "10"
+
+                             else
+                                "5"
+                            )
                         , SvgAttrs.textAnchor "middle"
                         ]
                         [ HexAddress.hexLabel hexAddress |> Svg.text
