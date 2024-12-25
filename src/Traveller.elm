@@ -45,7 +45,7 @@ import Task
 import Traveller.HexAddress as HexAddress exposing (HexAddress)
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
-import Traveller.SolarSystem as SolarSystem exposing (SolarSystem, SolarSystemDict)
+import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.StellarObject
     exposing
         ( GasGiantData
@@ -115,8 +115,6 @@ type alias RequestHistory =
     List RequestEntry
 
 
-
-
 nextRequestNum : RequestHistory -> RequestNum
 nextRequestNum requestHistory =
     let
@@ -139,6 +137,7 @@ nextRequestNum requestHistory =
 
 This is so we have less chance of getting the history out of sync with the
 entries, because this is the only way to construct a RequestEntry.
+
 -}
 prepNextRequest : RequestHistory -> HexAddress -> HexAddress -> ( RequestEntry, RequestHistory )
 prepNextRequest requestHistory upperLeftHex lowerRightHex =
@@ -225,9 +224,7 @@ init key hostConfig =
         model : Model
         model =
             { hexScale = defaultHexSize
-            , solarSystems =
-                --Loading, because we're sending the solar system request
-                RemoteData.Loading
+            , solarSystems = RemoteData.Loading
             , requestHistory = requestHistory
             , dragMode = NoDragging
             , playerHex = { sectorX = 1, sectorY = 1, x = 1, y = 1 }
@@ -252,6 +249,7 @@ init key hostConfig =
     )
 
 
+hoverableStyle : Css.Style
 hoverableStyle =
     Css.batch
         [ Css.hover
@@ -304,45 +302,35 @@ isStarOrbit obj =
             starDataConfig.orbitType < 10
 
 
-viewHexDetailed : Maybe SolarSystem -> HexAddress -> HexAddress -> HexOrigin -> Float -> Svg Msg
-viewHexDetailed maybeSolarSystem _ hexAddress (( x, y ) as origin) size =
+scaleAttr : Float -> Int -> Float
+scaleAttr hexSize default =
+    toFloat default * min 1 (hexSize / defaultHexSize)
+
+
+rotatePoint : Float -> Int -> ( Float, Float ) -> Float -> Int -> ( Float, Float )
+rotatePoint hexSize idx ( x_, y_ ) degrees_ distance =
+    let
+        rads =
+            (toFloat idx * degrees_)
+                - 30
+                |> degrees
+
+        cosTheta =
+            cos rads
+
+        sinTheta =
+            sin rads
+    in
+    ( x_ + (scaleAttr hexSize distance * cosTheta) - (0 * sinTheta)
+    , y_ + (scaleAttr hexSize distance * sinTheta) + (0 * cosTheta)
+    )
+
+
+viewHexEmpty : HexAddress -> HexAddress -> HexOrigin -> Float -> Svg Msg -> Svg Msg
+viewHexEmpty playerHexAddress hexAddress (( x, y ) as origin) size childSvg =
     let
         si =
-            case maybeSolarSystem of
-                Just solarSystem ->
-                    solarSystem.surveyIndex
-
-                Nothing ->
-                    0
-
-        hasStar =
-            case maybeSolarSystem of
-                Just solarSystem ->
-                    solarSystem.surveyIndex > 0
-
-                Nothing ->
-                    False
-
-        scaleAttr : Int -> Float
-        scaleAttr default =
-            toFloat default * min 1 (size / defaultHexSize)
-
-        rotatePoint idx ( x_, y_ ) degrees_ distance =
-            let
-                rads =
-                    (toFloat idx * degrees_)
-                        - 30
-                        |> degrees
-
-                cosTheta =
-                    cos rads
-
-                sinTheta =
-                    sin rads
-            in
-            ( x_ + (scaleAttr distance * cosTheta) - (0 * sinTheta)
-            , y_ + (scaleAttr distance * sinTheta) + (0 * cosTheta)
-            )
+            0
 
         -- a decoder that takes JSON and emits either a decode failure or a Msg
         downDecoder : JsDecode.Decoder Msg
@@ -363,7 +351,8 @@ viewHexDetailed maybeSolarSystem _ hexAddress (( x, y ) as origin) size =
 
         moveDecoder =
             -- equivalent to the `downDecoder`, only it returns `MapMouseMove` instead
-            JsDecode.map (\evt -> MapMouseMove <| evt.offsetPos) Html.Events.Extra.Mouse.eventDecoder
+            Html.Events.Extra.Mouse.eventDecoder
+                |> JsDecode.map (.offsetPos >> MapMouseMove)
     in
     Svg.g
         [ SvgEvents.onMouseOver (HoveringHex hexAddress)
@@ -385,79 +374,159 @@ viewHexDetailed maybeSolarSystem _ hexAddress (( x, y ) as origin) size =
             ]
             []
         , -- center star
-          let
-            drawStar : ( Float, Float ) -> Int -> InnerStarData -> Svg Msg
-            drawStar ( starX, starY ) radius star =
-                Svg.circle
-                    [ SvgAttrs.cx <| String.fromFloat <| starX
-                    , SvgAttrs.cy <| String.fromFloat <| starY
-                    , SvgAttrs.r <|
-                        String.fromFloat <|
-                            scaleAttr radius
-                    , SvgAttrs.fill <|
-                        starColourRGB star.colour
-                    ]
-                    []
-          in
-          case ( maybeSolarSystem, hasStar ) of
-            ( Just solarSystem, True ) ->
-                --(StarData primaryStar) :: stars ->
-                let
-                    primaryPos =
-                        ( toFloat x, toFloat y )
+          Svg.text_
+            [ SvgAttrs.x <| String.fromInt <| x
+            , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
+            , SvgAttrs.fontSize
+                (if size > 15 then
+                    "10"
 
-                    primaryStar =
-                        getInnerStarData solarSystem.primaryStar
+                 else
+                    "5"
+                )
+            , SvgAttrs.textAnchor "middle"
+            ]
+            [ HexAddress.hexLabel hexAddress |> Svg.text
+            ]
+        , childSvg
+        ]
 
-                    generateStar : Int -> StellarObject -> Svg Msg
-                    generateStar idx stellarObject =
-                        case stellarObject of
-                            Star (StarDataWrap star) ->
-                                let
-                                    secondaryStarPos =
-                                        rotatePoint idx primaryPos 60 20
-                                in
-                                case star.companion of
-                                    Just (StarDataWrap compStarData) ->
-                                        let
-                                            compStarPos =
-                                                Tuple.mapFirst (\x_ -> x_ - 5) secondaryStarPos
-                                        in
-                                        Svg.g []
-                                            [ drawStar secondaryStarPos 7 star
-                                            , drawStar compStarPos 3 compStarData
-                                            ]
 
-                                    Nothing ->
-                                        drawStar secondaryStarPos 7 star
+viewHexDetailed : SolarSystem -> HexAddress -> HexAddress -> HexOrigin -> Float -> Svg Msg
+viewHexDetailed solarSystem _ hexAddress (( x, y ) as origin) size =
+    let
+        si =
+            solarSystem.surveyIndex
 
-                            _ ->
-                                Html.text ""
-                in
-                Svg.g
-                    []
-                    ((case primaryStar.companion of
-                        Just (StarDataWrap compStarData) ->
+        hasStar =
+            solarSystem.surveyIndex > 0
+
+        -- a decoder that takes JSON and emits either a decode failure or a Msg
+        downDecoder : JsDecode.Decoder Msg
+        downDecoder =
+            let
+                -- takes a raw JS mouse event and turns it into a parsed Elm mouse event
+                jsMouseEventDecoder =
+                    Html.Events.Extra.Mouse.eventDecoder
+
+                -- takes an Elm Mouse event and creates our Msg
+                msgConstructor evt =
+                    MapMouseDown <| evt.offsetPos
+            in
+            -- run the mouse event decoder
+            jsMouseEventDecoder
+                |> -- then if that succeeds, pass the event object into msgConstructor
+                   JsDecode.map msgConstructor
+
+        moveDecoder =
+            -- equivalent to the `downDecoder`, only it returns `MapMouseMove` instead
+            Html.Events.Extra.Mouse.eventDecoder
+                |> JsDecode.map (.offsetPos >> MapMouseMove)
+
+        drawStar : ( Float, Float ) -> Int -> InnerStarData -> Svg Msg
+        drawStar ( starX, starY ) radius star =
+            Svg.circle
+                [ SvgAttrs.cx <| String.fromFloat <| starX
+                , SvgAttrs.cy <| String.fromFloat <| starY
+                , SvgAttrs.r <| String.fromFloat <| scaleAttr size radius
+                , SvgAttrs.fill <| starColourRGB star.colour
+                ]
+                []
+    in
+    Svg.g
+        [ SvgEvents.onMouseOver (HoveringHex hexAddress)
+        , SvgEvents.onClick (ViewingHex ( hexAddress, si ))
+        , SvgEvents.onMouseUp MapMouseUp
+        , -- listens for the JS 'mousedown' event and then runs the `downDecoder` on the JS Event, returning the Msg
+          SvgEvents.on "mousedown" downDecoder
+        , SvgEvents.on "mousemove" moveDecoder
+        , SvgAttrs.style "cursor: pointer; user-select: none"
+        ]
+        [ -- background hex
+          Svg.polygon
+            [ points (hexagonPoints origin size)
+            , SvgAttrs.fill defaultHexBg
+            , SvgAttrs.stroke "#CCCCCC"
+            , SvgAttrs.strokeWidth "1"
+            , SvgAttrs.pointerEvents "visiblePainted"
+            , SvgAttrs.css [ hoverableStyle ]
+            ]
+            []
+        , -- center star
+          if hasStar then
+            let
+                primaryPos =
+                    ( toFloat x, toFloat y )
+
+                primaryStar =
+                    getInnerStarData solarSystem.primaryStar
+
+                generateStar : Int -> StellarObject -> Svg Msg
+                generateStar idx stellarObject =
+                    case stellarObject of
+                        Star (StarDataWrap star) ->
                             let
-                                compStarPos =
-                                    Tuple.mapFirst (\x_ -> x_ - 5) primaryPos
+                                secondaryStarPos =
+                                    rotatePoint size idx primaryPos 60 20
                             in
-                            Svg.g []
-                                [ drawStar primaryPos 12 primaryStar
-                                , drawStar compStarPos 6 compStarData
-                                ]
+                            case star.companion of
+                                Just (StarDataWrap compStarData) ->
+                                    let
+                                        compStarPos =
+                                            Tuple.mapFirst (\x_ -> x_ - 5) secondaryStarPos
+                                    in
+                                    Svg.g []
+                                        [ drawStar secondaryStarPos 7 star
+                                        , drawStar compStarPos 3 compStarData
+                                        ]
 
-                        Nothing ->
-                            drawStar primaryPos 12 primaryStar
-                     )
-                        :: (primaryStar.stellarObjects
-                                |> List.filter isStarOrbit
-                                |> List.indexedMap generateStar
-                           )
+                                Nothing ->
+                                    drawStar secondaryStarPos 7 star
+
+                        _ ->
+                            Html.text ""
+            in
+            Svg.g
+                []
+                ((case primaryStar.companion of
+                    Just (StarDataWrap compStarData) ->
+                        let
+                            compStarPos =
+                                Tuple.mapFirst (\x_ -> x_ - 5) primaryPos
+                        in
+                        Svg.g []
+                            [ drawStar primaryPos 12 primaryStar
+                            , drawStar compStarPos 6 compStarData
+                            ]
+
+                    Nothing ->
+                        drawStar primaryPos 12 primaryStar
+                 )
+                    :: (primaryStar.stellarObjects
+                            |> List.filter isStarOrbit
+                            |> List.indexedMap generateStar
+                       )
+                )
+
+          else
+            Svg.text_
+                [ SvgAttrs.x <| String.fromInt <| x
+                , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
+                , SvgAttrs.fontSize
+                    (if size > 15 then
+                        "10"
+
+                     else
+                        "5"
                     )
-
-            _ ->
-                Svg.text_
+                , SvgAttrs.textAnchor "middle"
+                ]
+                [ HexAddress.hexLabel hexAddress |> Svg.text
+                ]
+        , if hasStar then
+            Svg.g []
+                [ -- hex index
+                  Svg.text_
                     [ SvgAttrs.x <| String.fromInt <| x
                     , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
                     , SvgAttrs.fontSize
@@ -471,75 +540,51 @@ viewHexDetailed maybeSolarSystem _ hexAddress (( x, y ) as origin) size =
                     ]
                     [ HexAddress.hexLabel hexAddress |> Svg.text
                     ]
-        , case ( maybeSolarSystem, hasStar ) of
-            ( Just solarSystem, True ) ->
-                Svg.g []
-                    [ -- hex index
-                      Svg.text_
-                        [ SvgAttrs.x <| String.fromInt <| x
-                        , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
-                        , SvgAttrs.fontSize
-                            (if size > 15 then
-                                "10"
-
-                             else
-                                "5"
-                            )
-                        , SvgAttrs.textAnchor "middle"
-                        ]
-                        [ HexAddress.hexLabel hexAddress |> Svg.text
-                        ]
-                    , Svg.text_
-                        [ SvgAttrs.x <| String.fromInt <| x
-                        , SvgAttrs.y <| String.fromInt <| y + (floor <| size * 0.85)
-                        , SvgAttrs.fontSize "12"
-                        , SvgAttrs.textAnchor "middle"
-                        ]
-                        (let
-                            showGasGiants =
-                                if si >= gasGiantSI then
-                                    String.fromInt <| solarSystem.gasGiants
-
-                                else
-                                    "?"
-
-                            showTerrestrialPlanets =
-                                if si >= terrestrialSI then
-                                    String.fromInt <| solarSystem.terrestrialPlanets
-
-                                else
-                                    "?"
-
-                            showplanetoidBelts =
-                                if si >= planetoidSI then
-                                    String.fromInt <| solarSystem.planetoidBelts
-
-                                else
-                                    "?"
-                         in
-                         [ Svg.tspan
-                            [ SvgAttrs.fill "#109076" ]
-                            [ showGasGiants |> Svg.text ]
-                         , Svg.text " / "
-                         , Svg.tspan
-                            [ SvgAttrs.fill "#809076" ]
-                            [ showTerrestrialPlanets |> Svg.text ]
-                         , Svg.text " / "
-                         , Svg.tspan
-                            [ SvgAttrs.fill "#68B976" ]
-                            [ showplanetoidBelts |> Svg.text ]
-                         ]
-                        )
+                , Svg.text_
+                    [ SvgAttrs.x <| String.fromInt <| x
+                    , SvgAttrs.y <| String.fromInt <| y + (floor <| size * 0.85)
+                    , SvgAttrs.fontSize "12"
+                    , SvgAttrs.textAnchor "middle"
                     ]
+                    (let
+                        showGasGiants =
+                            if si >= gasGiantSI then
+                                String.fromInt <| solarSystem.gasGiants
 
-            ( Just solarSystem, False ) ->
-                Svg.text ""
+                            else
+                                "?"
 
-            ( Nothing, True ) ->
-                Svg.text ""
+                        showTerrestrialPlanets =
+                            if si >= terrestrialSI then
+                                String.fromInt <| solarSystem.terrestrialPlanets
 
-            ( Nothing, False ) ->
-                Svg.text ""
+                            else
+                                "?"
+
+                        showplanetoidBelts =
+                            if si >= planetoidSI then
+                                String.fromInt <| solarSystem.planetoidBelts
+
+                            else
+                                "?"
+                     in
+                     [ Svg.tspan
+                        [ SvgAttrs.fill "#109076" ]
+                        [ showGasGiants |> Svg.text ]
+                     , Svg.text " / "
+                     , Svg.tspan
+                        [ SvgAttrs.fill "#809076" ]
+                        [ showTerrestrialPlanets |> Svg.text ]
+                     , Svg.text " / "
+                     , Svg.tspan
+                        [ SvgAttrs.fill "#68B976" ]
+                        [ showplanetoidBelts |> Svg.text ]
+                     ]
+                    )
+                ]
+
+          else
+            Svg.text ""
         ]
 
 
@@ -635,17 +680,60 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
         hexSVG =
             if not (outsideX || outsideY) then
                 Just
-                    (viewHexDetailed solarSystem
-                        playerHexId
-                        hexAddress
-                        ( ox, oy )
-                        hexSize
+                    (case solarSystem of
+                        Just (LoadedSolarSystem ss) ->
+                            viewHexDetailed ss
+                                playerHexId
+                                hexAddress
+                                ( ox, oy )
+                                hexSize
+
+                        Just LoadingSolarSystem ->
+                            Svg.text_
+                                [ SvgAttrs.x <| String.fromInt ox
+                                , SvgAttrs.y <| String.fromInt oy
+                                , SvgAttrs.fontSize "10"
+                                , SvgAttrs.textAnchor "middle"
+                                ]
+                                [ Svg.text "Loading..." ]
+                                |> viewHexEmpty playerHexId hexAddress ( ox, oy ) hexSize
+
+                        Just FailedSolarSystem ->
+                            Svg.text_
+                                [ SvgAttrs.x <| String.fromInt ox
+                                , SvgAttrs.y <| String.fromInt oy
+                                , SvgAttrs.fontSize "10"
+                                , SvgAttrs.textAnchor "middle"
+                                ]
+                                [ Svg.text "Failed." ]
+                                |> viewHexEmpty playerHexId hexAddress ( ox, oy ) hexSize
+
+                        Nothing ->
+                            -- Svg.text_
+                            --     [ SvgAttrs.x <| String.fromInt ox
+                            --     , SvgAttrs.y <| String.fromInt oy
+                            --     , SvgAttrs.fontSize "10"
+                            --     , SvgAttrs.textAnchor "middle"
+                            --     ]
+                            --     [ Svg.text "Nothing" ]
+                            Svg.text ""
+                                |> viewHexEmpty playerHexId hexAddress ( ox, oy ) hexSize
                     )
 
             else
                 Nothing
     in
     ( hexSVG, isEmptyHex solarSystem )
+
+
+type RemoteSolarSystem
+    = LoadedSolarSystem SolarSystem
+    | LoadingSolarSystem
+    | FailedSolarSystem
+
+
+type alias SolarSystemDict =
+    Dict.Dict String RemoteSolarSystem
 
 
 {-| View all the hexes in the system
@@ -732,11 +820,9 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
                         [ Css.boxShadowMany
                             [ { offsetX = Css.px 0
                               , offsetY = Css.px 0
-                              , blurRadius =
-                                    Just (Css.px 10)
-                              , spreadRadius =
-                                    Just (Css.px 10)
-                              , color = Just (Css.hex "#FFFFFF")
+                              , blurRadius = Just <| Css.px 10
+                              , spreadRadius = Just <| Css.px 10
+                              , color = Just <| Css.hex "#FFFFFF"
                               , inset = True
                               }
                             ]
@@ -765,22 +851,22 @@ monospaceText someString =
 renderGasGiant : Int -> GasGiantData -> Maybe StellarObject -> Element.Element Msg
 renderGasGiant newNestingLevel gasGiantData selectedStellarObject =
     let
-        planet =
+        stellarObject =
             GasGiant gasGiantData
     in
     row
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
-        , Element.Events.onClick <| FocusInSidebar planet
+        , Element.Events.onClick <| FocusInSidebar stellarObject
         ]
-        [ text <| renderArrow planet selectedStellarObject
+        [ text <| renderArrow stellarObject selectedStellarObject
         , renderRawOrbit gasGiantData.au
         , text gasGiantData.orbitSequence
         , text gasGiantData.code
         , text "🛢"
         , text <| "j: " ++ gasGiantData.safeJumpTime
-        , text <| renderTravelTime planet selectedStellarObject
+        , text <| renderTravelTime stellarObject selectedStellarObject
         ]
 
 
@@ -845,9 +931,7 @@ renderTerrestrialPlanet newNestingLevel terrestrialData selectedStellarObject =
           in
           case Parser.run TravellerParser.uwp rawUwp of
             Ok uwpData ->
-                column []
-                    [ monospaceText <| rawUwp
-                    ]
+                column [] [ monospaceText <| rawUwp ]
 
             Err _ ->
                 monospaceText <| rawUwp
@@ -1388,12 +1472,24 @@ view model =
                         case model.sidebarSystemAndSI of
                             Just ( viewingAddress, si ) ->
                                 case solarSystemDict |> Dict.get (HexAddress.toKey viewingAddress) of
-                                    Just solarSystem ->
+                                    Just (LoadedSolarSystem solarSystem) ->
                                         viewSystemDetailsSidebar
                                             ( viewingAddress, si )
                                             model.sidebarHoverText
                                             solarSystem
                                             model.selectedStellarObject
+
+                                    Just LoadingSolarSystem ->
+                                        column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                                            [ text "loading..."
+                                            , text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
+                                            ]
+
+                                    Just FailedSolarSystem ->
+                                        column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                                            [ text "failed."
+                                            , text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
+                                            ]
 
                                     Nothing ->
                                         column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
@@ -1442,24 +1538,26 @@ view model =
                             let
                                 defaultViewport =
                                     { screenVp = viewport, hexmapVp = Nothing }
+
+                                viewPortConfig =
+                                    case model.hexmapViewport of
+                                        Nothing ->
+                                            defaultViewport
+
+                                        Just (Ok hexmapViewport) ->
+                                            { defaultViewport | hexmapVp = Just hexmapViewport }
+
+                                        Just (Err notFoundError) ->
+                                            let
+                                                _ =
+                                                    --TODO handle the hexmap svg not being present
+                                                    Debug.log "cant use, element not present" notFoundError
+                                            in
+                                            defaultViewport
                             in
                             viewHexes
                                 model.upperLeftHex
-                                (case model.hexmapViewport of
-                                    Nothing ->
-                                        defaultViewport
-
-                                    Just (Ok hexmapViewport) ->
-                                        { defaultViewport | hexmapVp = Just hexmapViewport }
-
-                                    Just (Err notFoundError) ->
-                                        let
-                                            _ =
-                                                --TODO handle the hexmap svg not being present
-                                                Debug.log "cant use, element not present" notFoundError
-                                        in
-                                        defaultViewport
-                                )
+                                viewPortConfig
                                 solarSystems
                                 model.playerHex
                                 model.hexScale
@@ -1570,7 +1668,7 @@ update msg model =
 
                 solarSystemDict =
                     sortedSolarSystems
-                        |> List.map (\system -> ( HexAddress.toKey system.address, system ))
+                        |> List.map (\system -> ( HexAddress.toKey system.address, LoadedSolarSystem system ))
                         |> Dict.fromList
                         |> (\newDict ->
                                 -- `Dict.union` merges the dict, and prefers the left arg's to resolve dupes, so we want to prefer the new one

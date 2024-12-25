@@ -1,4 +1,4 @@
-module Traveller.SolarSystem exposing (SolarSystem, SolarSystemDict, codec)
+module Traveller.SolarSystem exposing (SolarSystem, codec)
 
 import Codec
 import Dict
@@ -17,10 +17,6 @@ type alias SolarSystem =
     , extinctSophont : Bool
     , sectorName : String
     }
-
-
-type alias SolarSystemDict =
-    Dict.Dict String SolarSystem
 
 
 type alias RawSolarSystem =
