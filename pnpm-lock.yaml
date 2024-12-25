@@ -8,6 +8,9 @@ dependencies:
   elm:
     specifier: 0.19.1-6
     version: 0.19.1-6
+  elm-test-rs:
+    specifier: 3.0.0-5
+    version: 3.0.0-5
 
 devDependencies:
   elm-review:
@@ -118,6 +121,54 @@ packages:
       '@lydell/node-pty-win32-arm64': 1.0.1
       '@lydell/node-pty-win32-x64': 1.0.1
     dev: true
+
+  /@mattpiz/elm-test-rs-darwin-arm64@3.0.0-1:
+    resolution: {integrity: sha512-+8pzcj2CK8NUElWvI4NUwCtn1doLk05NjFRXS9nUluGzgoImy9wwQPLtla5DWgdYOL70UufkwfxJN+0qaQMEpg==}
+    cpu: [arm64]
+    os: [darwin]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@mattpiz/elm-test-rs-darwin-x64@3.0.0-0:
+    resolution: {integrity: sha512-PfUELK7y9UpeZnvKeJBSPbuCbb1I3T0ptZUOnjVIWvAQmg3iov6I79PD2OEP9NtP0iepj+2v2BtgbmZlVrXIZg==}
+    cpu: [x64]
+    os: [darwin]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@mattpiz/elm-test-rs-linux-arm64@3.0.0-0:
+    resolution: {integrity: sha512-BdfQDWtVUFM1NMPa5U5lBKT3gtDSP7KpypdK+R0jRBx51382t5VA5Byb+2Nzc7aXgS6LA1/nvNRtq/jO7Aj2uw==}
+    cpu: [arm64]
+    os: [linux]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@mattpiz/elm-test-rs-linux-arm@3.0.0-0:
+    resolution: {integrity: sha512-VVFq5horhAldLLmz/P2ljLArJkZuuzpjIUVo9KIPA15euesAxM0lzUnj5Bag9kbjZz4T6/YKToXnaxdDdwcitg==}
+    cpu: [arm]
+    os: [linux]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@mattpiz/elm-test-rs-linux-x64@3.0.0-0:
+    resolution: {integrity: sha512-RfOs3KEyPn0yEHjMjka3R99SdR/TtjgnjSsYahLL1mVUaWOHEcdr86iU6CpWScVtY2jMNQLaeudXOcBm6lXIsQ==}
+    cpu: [x64]
+    os: [linux]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@mattpiz/elm-test-rs-win32-x64@3.0.0-0:
+    resolution: {integrity: sha512-7Vr74820XFPwUNrpZVybStPlCTyAjthgnUel23j3fJB2yDm9ydbBSPvLCmngqzkZBAnpX8eruUqDphTx+mR28Q==}
+    cpu: [x64]
+    os: [win32]
+    requiresBuild: true
+    dev: false
+    optional: true
 
   /@nodelib/fs.scandir@2.1.5:
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -449,6 +500,19 @@ packages:
   /elm-solve-deps-wasm@1.0.2:
     resolution: {integrity: sha512-qnwo7RO9IO7jd9SLHvIy0rSOEIlc/tNMTE9Cras0kl+b161PVidW4FvXo0MtXU8GAKi/2s/HYvhcnpR/NNQ1zw==}
     dev: true
+
+  /elm-test-rs@3.0.0-5:
+    resolution: {integrity: sha512-efTPM54Ly7gm6zfECCYxfueP4TOVrMudae2eturtMBAvp5rlFOkWUL+7VHAsd4AjCvMNw5h7qD+c/RqQDhAH9Q==}
+    hasBin: true
+    requiresBuild: true
+    optionalDependencies:
+      '@mattpiz/elm-test-rs-darwin-arm64': 3.0.0-1
+      '@mattpiz/elm-test-rs-darwin-x64': 3.0.0-0
+      '@mattpiz/elm-test-rs-linux-arm': 3.0.0-0
+      '@mattpiz/elm-test-rs-linux-arm64': 3.0.0-0
+      '@mattpiz/elm-test-rs-linux-x64': 3.0.0-0
+      '@mattpiz/elm-test-rs-win32-x64': 3.0.0-0
+    dev: false
 
   /elm-tooling@1.15.1:
     resolution: {integrity: sha512-+rRYa7gzz6l2/Ip2i197MqkW5abOwPOP/+WlyyatLDeDhh+JR0HUMlZJYenCYodBeG/xW5xW3pRYQ2onf5bIAw==}

@@ -1,4 +1,4 @@
-module Traveller.HexAddress exposing (HexAddress, add, createFromSolarSystem, hexLabel, toKey)
+module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, addVal, create, createFromSolarSystem, hexLabel, shiftAddressBy, toKey)
 
 
 type alias HexAddress =
@@ -9,10 +9,16 @@ type alias HexAddress =
     }
 
 
-add :
+type alias Delta =
     { hexVal : Int, delta : Int, max : Int }
-    -> { hexVal : Int, sectorDelta : Int }
-add { hexVal, delta, max } =
+
+
+type alias AfterChange =
+    { hexVal : Int, sectorDelta : Int }
+
+
+addVal : Delta -> AfterChange
+addVal { hexVal, delta, max } =
     let
         rangeMin : Int
         rangeMin =
@@ -36,8 +42,33 @@ add { hexVal, delta, max } =
     { sectorDelta = -1 * counter, hexVal = newHexVal }
 
 
+shiftAddressBy :
+    { deltaX : Int, deltaY : Int }
+    -> { maxX : Int, maxY : Int }
+    -> HexAddress
+    -> HexAddress
+shiftAddressBy { deltaX, deltaY } { maxX, maxY } hexAddress =
+    let
+        newXOffset =
+            addVal { hexVal = hexAddress.x, max = maxX, delta = deltaX }
+
+        newYOffset =
+            addVal { hexVal = hexAddress.y, max = maxY, delta = deltaY }
+    in
+    { sectorX = hexAddress.sectorX + newXOffset.sectorDelta
+    , sectorY = hexAddress.sectorY - newYOffset.sectorDelta
+    , x = newXOffset.hexVal
+    , y = newYOffset.hexVal
+    }
+
+
 createFromSolarSystem : { a | sectorX : Int, sectorY : Int, x : Int, y : Int } -> HexAddress
 createFromSolarSystem { sectorX, sectorY, x, y } =
+    create { sectorX = sectorX, sectorY = sectorY, x = x, y = y }
+
+
+create : { sectorX : Int, sectorY : Int, x : Int, y : Int } -> HexAddress
+create { sectorX, sectorY, x, y } =
     { sectorX = sectorX
     , sectorY = sectorY
     , x = x
@@ -47,9 +78,16 @@ createFromSolarSystem { sectorX, sectorY, x, y } =
 
 toKey : HexAddress -> String
 toKey { sectorX, sectorY, x, y } =
-    String.fromInt sectorX ++ "." ++ String.fromInt sectorY ++ "." ++ String.fromInt x ++ "." ++ String.fromInt y
+    String.fromInt sectorX
+        ++ "."
+        ++ String.fromInt sectorY
+        ++ "."
+        ++ String.fromInt x
+        ++ "."
+        ++ String.fromInt y
 
 
 hexLabel : HexAddress -> String
 hexLabel { x, y } =
-    (String.fromInt x |> String.pad 2 '0') ++ (String.fromInt y |> String.pad 2 '0')
+    (String.fromInt x |> String.pad 2 '0')
+        ++ (String.fromInt y |> String.pad 2 '0')

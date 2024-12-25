@@ -1,4 +1,4 @@
-module Traveller exposing (Model, Msg(..), init, subscriptions, update, view)
+module Traveller exposing (Model, Msg(..), init, numHexCols, numHexRows, subscriptions, update, view)
 
 --import Traveller.HexId as HexId exposing (HexId, RawHexId)
 
@@ -1772,20 +1772,11 @@ update msg model =
                         yDelta =
                             truncate <| (originY - newY) / model.hexScale
 
-                        shiftAddress : HexAddress -> HexAddress
-                        shiftAddress addr =
-                            let
-                                newXOffset =
-                                    HexAddress.add { hexVal = addr.x, max = numHexCols, delta = xDelta }
-
-                                newYOffset =
-                                    HexAddress.add { hexVal = addr.y, max = numHexRows, delta = yDelta }
-                            in
-                            { sectorX = addr.sectorX + newXOffset.sectorDelta
-                            , sectorY = addr.sectorY - newYOffset.sectorDelta
-                            , x = newXOffset.hexVal
-                            , y = newYOffset.hexVal
-                            }
+                        shiftAddress hex =
+                            HexAddress.shiftAddressBy
+                                { deltaX = xDelta, deltaY = yDelta }
+                                { maxX = numHexCols, maxY = numHexRows }
+                                hex
 
                         newModel =
                             { model
