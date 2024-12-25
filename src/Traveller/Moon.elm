@@ -36,9 +36,8 @@ codec =
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
         |> Codec.field "orbit" .orbit (Codec.nullable Orbit.codec)
         |> Codec.field "size" .size codecMoonSize
-        |> Codec.optionalNullableField "period" .period (Codec.float)
+        |> Codec.optionalNullableField "period" .period Codec.float
         |> Codec.field "biomassRating" .biomassRating Codec.int
         |> Codec.field "axialTilt" .axialTilt Codec.float
         |> Codec.optionalField "safeJumpDistance" .safeJumpDistance Codec.string
         |> Codec.buildObject
-
