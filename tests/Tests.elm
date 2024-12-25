@@ -1,6 +1,7 @@
 module Tests exposing (..)
 
 import Expect
+import Fuzz
 import Test exposing (Test, describe)
 import Traveller
 import Traveller.HexAddress as HexAddress exposing (HexAddress)
@@ -57,6 +58,36 @@ suite =
                     res =
                         HexAddress.shiftAddressBy
                             { deltaX = 1, deltaY = 1 }
+                            { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
+                            sourceHexAddress
+                in
+                Expect.equal res targetHexAddress
+        , Test.fuzz2
+            (Fuzz.intRange 1 (Traveller.numHexCols - 1))
+            (Fuzz.intRange 1 (Traveller.numHexRows - 1))
+            "adding within the same sector doesnt increment the sector"
+          <|
+            \deltaX deltaY ->
+                let
+                    sourceHexAddress =
+                        HexAddress.create
+                            { sectorX = 1
+                            , sectorY = 1
+                            , x = 1
+                            , y = 1
+                            }
+
+                    targetHexAddress =
+                        HexAddress.create
+                            { sectorX = 1
+                            , sectorY = 1
+                            , x = 1 + deltaX
+                            , y = 1 + deltaY
+                            }
+
+                    res =
+                        HexAddress.shiftAddressBy
+                            { deltaX = deltaX, deltaY = deltaY }
                             { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
                             sourceHexAddress
                 in
