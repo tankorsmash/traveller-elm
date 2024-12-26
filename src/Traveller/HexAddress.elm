@@ -144,28 +144,28 @@ between hexRules firstAddr secondAddr =
                         minX
 
                     else
-                        0
+                        1
 
                 endX =
                     if sectorX == maxSectorX then
                         maxX
 
                     else
-                        numCols - 1
+                        numCols
 
                 startY =
                     if sectorY == minSectorY then
                         minY
 
                     else
-                        0
+                        1
 
                 endY =
                     if sectorY == maxSectorY then
                         maxY
 
                     else
-                        numRows - 1
+                        numRows
             in
             List.range startY endY
                 |> List.map

@@ -182,5 +182,12 @@ suite =
                     hexesBetween =
                         HexAddress.between hexRules sourceHexAddress targetHexAddress
                 in
-                Expect.all [ Expect.equal 3 << List.length ] hexesBetween
+                Expect.all
+                    [ Expect.equal 3 << List.length
+                    , List.filter (\hex -> hex.sectorX == 1)
+                        >> List.length
+                        >> Expect.equal 2
+                        >> Expect.onFail "expected 2 hexes in sector 1"
+                    ]
+                    hexesBetween
         ]
