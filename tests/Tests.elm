@@ -17,6 +17,9 @@ suite =
                 , x = 1
                 , y = 1
                 }
+
+        hexRules =
+            { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
     in
     describe "HexAddress"
         [ Test.test "adding 0 does nothing" <|
@@ -100,7 +103,7 @@ suite =
                         [ .x >> Expect.notEqual 0
                         , .y >> Expect.notEqual 0
                         ]
-        , Test.test "`between` with same everything returns nothing" <|
+        , Test.test "`between` with same input twice returns itself" <|
             \() ->
                 let
                     sourceHexAddress =
@@ -110,7 +113,29 @@ suite =
                         hexAddressOne
 
                     hexesBetween =
-                        HexAddress.between sourceHexAddress targetHexAddress
+                        HexAddress.between hexRules sourceHexAddress targetHexAddress
                 in
-                Expect.equalLists hexesBetween []
+                case hexesBetween of
+                    [] ->
+                        Expect.fail "empty hex range"
+
+                    [ hex ] ->
+                        Expect.equal sourceHexAddress hex
+
+                    _ ->
+                        Expect.fail "too many hexes in range"
+
+        -- , Test.test "`between` with 1 space horizontally works" <|
+        --     \() ->
+        --         let
+        --             sourceHexAddress =
+        --                 hexAddressOne
+        --
+        --             targetHexAddress =
+        --                 hexAddressOne
+        --
+        --             hexesBetween =
+        --                 HexAddress.between hexRules sourceHexAddress targetHexAddress
+        --         in
+        --         Expect.equal 0 <| List.length hexesBetween
         ]

@@ -87,9 +87,13 @@ toKey { sectorX, sectorY, x, y } =
         ++ String.fromInt y
 
 
-between : HexAddress -> HexAddress -> List HexAddress
-between firstAddr secondAddr =
+{-| Returns a list of hex addresses between two hex addresses, inclusive. -}
+between : { maxX : Int, maxY : Int } -> HexAddress -> HexAddress -> List HexAddress
+between hexRules firstAddr secondAddr =
     let
+        ( numCols, numRows ) =
+            ( hexRules.maxX, hexRules.maxY )
+
         ( minX, minY ) =
             ( min firstAddr.x secondAddr.x, min firstAddr.y secondAddr.y )
 
@@ -101,8 +105,60 @@ between firstAddr secondAddr =
 
         ( maxSectorX, maxSectorY ) =
             ( max firstAddr.sectorX secondAddr.sectorX, max firstAddr.sectorY secondAddr.sectorY )
+
+        hexesInSector ( sectorX, sectorY ) =
+            let
+                startX =
+                    if sectorX == minSectorX then
+                        minX
+
+                    else
+                        0
+
+                endX =
+                    if sectorX == maxSectorX then
+                        maxX
+
+                    else
+                        numCols - 1
+
+                startY =
+                    if sectorY == minSectorY then
+                        minY
+
+                    else
+                        0
+
+                endY =
+                    if sectorY == maxSectorY then
+                        maxY
+
+                    else
+                        numRows - 1
+            in
+            List.range startY endY
+                |> List.map
+                    (\y ->
+                        List.range startX endX
+                            |> List.map
+                                (\x ->
+                                    { sectorX = sectorX
+                                    , sectorY = sectorY
+                                    , x = x
+                                    , y = y
+                                    }
+                                )
+                    )
     in
-    []
+    List.concatMap
+        (\sectorX ->
+            List.map (\sectorY -> ( sectorX, sectorY ))
+                (List.range minSectorY maxSectorY)
+        )
+        (List.range minSectorX maxSectorX)
+        |> List.map hexesInSector
+        |> List.concat
+        |> List.concat
 
 
 hexLabel : HexAddress -> String
