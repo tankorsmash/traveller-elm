@@ -139,8 +139,8 @@ This is so we have less chance of getting the history out of sync with the
 entries, because this is the only way to construct a RequestEntry.
 
 -}
-prepNextRequest : RequestHistory -> HexAddress -> HexAddress -> ( RequestEntry, RequestHistory )
-prepNextRequest requestHistory upperLeftHex lowerRightHex =
+prepNextRequest : ( SolarSystemDict, RequestHistory ) -> HexAddress -> HexAddress -> ( RequestEntry, ( SolarSystemDict, RequestHistory ) )
+prepNextRequest ( oldSolarSystemDict, requestHistory ) upperLeftHex lowerRightHex =
     let
         requestNum =
             nextRequestNum requestHistory
@@ -151,14 +151,35 @@ prepNextRequest requestHistory upperLeftHex lowerRightHex =
             , lowerRightHex = lowerRightHex
             , status = RemoteData.Loading
             }
+
+        hexRange =
+            HexAddress.between hexRules upperLeftHex lowerRightHex
+
+        newSolarSystemDict =
+            hexRange
+                |> List.foldl
+                    (\hexAddr ssDict ->
+                        Dict.update (HexAddress.toKey hexAddr)
+                            (\maybeSolarSystem ->
+                                case maybeSolarSystem of
+                                    Just existingSolarSystem ->
+                                        Just existingSolarSystem
+
+                                    Nothing ->
+                                        Just LoadingSolarSystem
+                            )
+                            ssDict
+                    )
+                    oldSolarSystemDict
     in
-    ( requestEntry, requestEntry :: requestHistory )
+    ( requestEntry, ( newSolarSystemDict, requestEntry :: requestHistory ) )
 
 
 type alias Model =
     { key : Browser.Navigation.Key
     , hexScale : Float
-    , solarSystems : RemoteData Http.Error SolarSystemDict
+    , solarSystems : SolarSystemDict
+    , lastSolarSystemError : Maybe Http.Error
     , requestHistory : RequestHistory
     , dragMode : DragMode
     , playerHex : HexAddress
@@ -178,7 +199,7 @@ type Msg
     = NoOpMsg
     | ZoomScaleChanged Float
     | DownloadSolarSystems
-    | DownloadedSolarSystems RequestNum (Result Http.Error (List SolarSystem))
+    | DownloadedSolarSystems RequestEntry (Result Http.Error (List SolarSystem))
     | HoveringHex HexAddress
     | ViewingHex ( HexAddress, Int )
     | GotViewport Browser.Dom.Viewport
@@ -204,8 +225,8 @@ init : Browser.Navigation.Key -> HostConfig.HostConfig -> ( Model, Cmd Msg )
 init key hostConfig =
     let
         -- requestHistory : RequestHistory
-        ( requestEntry, requestHistory ) =
-            prepNextRequest [] upperLeftHex lowerRightHex
+        ( requestEntry, ( solarSystemDict, requestHistory ) ) =
+            prepNextRequest ( Dict.empty, [] ) upperLeftHex lowerRightHex
 
         upperLeftHex =
             { sectorX = -10
@@ -224,7 +245,8 @@ init key hostConfig =
         model : Model
         model =
             { hexScale = defaultHexSize
-            , solarSystems = RemoteData.Loading
+            , solarSystems = solarSystemDict
+            , lastSolarSystemError = Nothing
             , requestHistory = requestHistory
             , dragMode = NoDragging
             , playerHex = { sectorX = 1, sectorY = 1, x = 1, y = 1 }
@@ -242,7 +264,7 @@ init key hostConfig =
     in
     ( model
     , Cmd.batch
-        [ sendSolarSystemRequest requestEntry.requestNum model.hostConfig model.upperLeftHex model.lowerRightHex
+        [ sendSolarSystemRequest requestEntry model.hostConfig model.upperLeftHex model.lowerRightHex
         , Browser.Dom.getViewport
             |> Task.perform GotViewport
         ]
@@ -604,6 +626,10 @@ numHexRows =
     40 * 1
 
 
+hexRules =
+    { maxX = numHexCols, maxY = numHexRows }
+
+
 isEmptyHex : Maybe a -> Int
 isEmptyHex maybeSolarSystem =
     case maybeSolarSystem of
@@ -708,6 +734,17 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
                                 [ Svg.text "Failed." ]
                                 |> viewHexEmpty playerHexId hexAddress ( ox, oy ) hexSize
 
+                        Just LoadedEmptyHex ->
+                            Svg.text_
+                                [ SvgAttrs.x <| String.fromInt ox
+                                , SvgAttrs.y <| String.fromInt oy
+                                , SvgAttrs.fontSize "6"
+                                , SvgAttrs.textAnchor "middle"
+                                , SvgAttrs.fill "#cccccc"
+                                ]
+                                [ Svg.text "Empty" ]
+                                |> viewHexEmpty playerHexId hexAddress ( ox, oy ) hexSize
+
                         Nothing ->
                             -- Svg.text_
                             --     [ SvgAttrs.x <| String.fromInt ox
@@ -728,6 +765,7 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
 
 type RemoteSolarSystem
     = LoadedSolarSystem SolarSystem
+    | LoadedEmptyHex
     | LoadingSolarSystem
     | FailedSolarSystem
 
@@ -1467,43 +1505,44 @@ view model =
                         --        text <| "None yet"
                         ]
                     ]
-                , case model.solarSystems of
-                    Success solarSystemDict ->
-                        case model.sidebarSystemAndSI of
-                            Just ( viewingAddress, si ) ->
-                                case solarSystemDict |> Dict.get (HexAddress.toKey viewingAddress) of
-                                    Just (LoadedSolarSystem solarSystem) ->
-                                        viewSystemDetailsSidebar
-                                            ( viewingAddress, si )
-                                            model.sidebarHoverText
-                                            solarSystem
-                                            model.selectedStellarObject
+                , case model.sidebarSystemAndSI of
+                    Just ( viewingAddress, si ) ->
+                        case model.solarSystems |> Dict.get (HexAddress.toKey viewingAddress) of
+                            Just (LoadedSolarSystem solarSystem) ->
+                                viewSystemDetailsSidebar
+                                    ( viewingAddress, si )
+                                    model.sidebarHoverText
+                                    solarSystem
+                                    model.selectedStellarObject
 
-                                    Just LoadingSolarSystem ->
-                                        column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
-                                            [ text "loading..."
-                                            , text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
-                                            ]
+                            Just LoadingSolarSystem ->
+                                column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                                    [ text "loading..."
+                                    , text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
+                                    ]
 
-                                    Just FailedSolarSystem ->
-                                        column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
-                                            [ text "failed."
-                                            , text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
-                                            ]
+                            Just LoadedEmptyHex ->
+                                column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                                    [ text "[empty]"
+                                    , text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
+                                    ]
 
-                                    Nothing ->
-                                        column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
-                                            [ text "No solar system data found for system."
-                                            , text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
-                                            ]
+                            Just FailedSolarSystem ->
+                                column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                                    [ text "failed."
+                                    , text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
+                                    ]
 
                             Nothing ->
                                 column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
-                                    [ text "Click a hex to view system details."
+                                    [ text "No solar system data found for system."
+                                    , text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
                                     ]
 
-                    _ ->
-                        text "No loaded sector data yet"
+                    Nothing ->
+                        column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                            [ text "Click a hex to view system details."
+                            ]
                 ]
 
         renderError : String -> UnstyledHtml.Html msg
@@ -1533,8 +1572,8 @@ view model =
             column []
                 [ Element.html <|
                     -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
-                    case ( model.solarSystems, model.viewport ) of
-                        ( RemoteData.Success solarSystems, Just viewport ) ->
+                    case model.viewport of
+                        Just viewport ->
                             let
                                 defaultViewport =
                                     { screenVp = viewport, hexmapVp = Nothing }
@@ -1558,23 +1597,23 @@ view model =
                             viewHexes
                                 model.upperLeftHex
                                 viewPortConfig
-                                solarSystems
+                                model.solarSystems
                                 model.playerHex
                                 model.hexScale
                                 |> Html.toUnstyled
 
-                        ( RemoteData.Failure httpError, _ ) ->
-                            renderHttpError httpError
-
-                        ( NotAsked, _ ) ->
-                            Html.toUnstyled <|
-                                Html.div [ Html.Styled.Attributes.css [ Css.color (Css.rgb 100 100 100) ] ]
-                                    [ Html.text "Not yet asked" ]
-
-                        ( Loading, _ ) ->
-                            Html.toUnstyled <| Html.text "Loading..."
-
-                        ( Success _, Nothing ) ->
+                        -- ( RemoteData.Failure httpError, _ ) ->
+                        --     renderHttpError httpError
+                        --
+                        -- ( NotAsked, _ ) ->
+                        --     Html.toUnstyled <|
+                        --         Html.div [ Html.Styled.Attributes.css [ Css.color (Css.rgb 100 100 100) ] ]
+                        --             [ Html.text "Not yet asked" ]
+                        --
+                        -- ( Loading, _ ) ->
+                        --     Html.toUnstyled <| Html.text "Loading..."
+                        --
+                        Nothing ->
                             Html.toUnstyled <| Html.text "Have sector data but no viewport"
                 ]
     in
@@ -1585,25 +1624,27 @@ view model =
             , el [ Element.width <| Element.fillPortion 9, Element.alignTop ] <|
                 hexesColumn
             ]
-        , -- displaying json errors for SectorData
-          case model.solarSystems of
-            Failure (Http.BadBody error) ->
-                (-- use <pre> to preserve whitespace
-                 Html.pre [ Html.Styled.Attributes.css [ Css.overflow Css.hidden ] ]
-                    [ Html.text error ]
-                    -- convert from elm-css's HTML
-                    |> Html.toUnstyled
-                    -- turn html into elm-ui
-                    |> Element.html
-                )
 
-            _ ->
-                Element.none
+        -- , -- TODO: bring this back
+        -- displaying json errors for SectorData
+        --   case model.solarSystems of
+        --     Failure (Http.BadBody error) ->
+        --         (-- use <pre> to preserve whitespace
+        --          Html.pre [ Html.Styled.Attributes.css [ Css.overflow Css.hidden ] ]
+        --             [ Html.text error ]
+        --             -- convert from elm-css's HTML
+        --             |> Html.toUnstyled
+        --             -- turn html into elm-ui
+        --             |> Element.html
+        --         )
+        --
+        --     _ ->
+        --         Element.none
         ]
 
 
-sendSolarSystemRequest : RequestNum -> HostConfig -> HexAddress -> HexAddress -> Cmd Msg
-sendSolarSystemRequest requestNum hostConfig upperLeft lowerRight =
+sendSolarSystemRequest : RequestEntry -> HostConfig -> HexAddress -> HexAddress -> Cmd Msg
+sendSolarSystemRequest requestEntry hostConfig upperLeft lowerRight =
     let
         solarSystemsDecoder : JsDecode.Decoder (List SolarSystem)
         solarSystemsDecoder =
@@ -1616,11 +1657,13 @@ sendSolarSystemRequest requestNum hostConfig upperLeft lowerRight =
         url =
             Url.Builder.crossOrigin urlHostRoot
                 urlHostPath
-                [ Url.Builder.int "ulsx" upperLeft.sectorX
+                [ --upper left hex address
+                  Url.Builder.int "ulsx" upperLeft.sectorX
                 , Url.Builder.int "ulsy" upperLeft.sectorY
                 , Url.Builder.int "ulhx" upperLeft.x
                 , Url.Builder.int "ulhy" upperLeft.y
-                , Url.Builder.int "lrsx" lowerRight.sectorX
+                , -- lower right hex address
+                  Url.Builder.int "lrsx" lowerRight.sectorX
                 , Url.Builder.int "lrsy" lowerRight.sectorY
                 , Url.Builder.int "lrhx" lowerRight.x
                 , Url.Builder.int "lrhy" lowerRight.y
@@ -1633,7 +1676,7 @@ sendSolarSystemRequest requestNum hostConfig upperLeft lowerRight =
                 , headers = []
                 , url = url
                 , body = Http.emptyBody
-                , expect = Http.expectJson (DownloadedSolarSystems requestNum) solarSystemsDecoder
+                , expect = Http.expectJson (DownloadedSolarSystems requestEntry) solarSystemsDecoder
                 , timeout = Just 5000
                 , tracker = Nothing
                 }
@@ -1652,42 +1695,58 @@ update msg model =
 
         DownloadSolarSystems ->
             let
-                ( nextRequestEntry, newRequestHistory ) =
-                    prepNextRequest model.requestHistory model.upperLeftHex model.lowerRightHex
+                ( nextRequestEntry, ( newSolarSystemDict, newRequestHistory ) ) =
+                    prepNextRequest ( model.solarSystems, model.requestHistory ) model.upperLeftHex model.lowerRightHex
             in
             ( { model
                 | requestHistory = newRequestHistory
+                , solarSystems = newSolarSystemDict
               }
-            , sendSolarSystemRequest nextRequestEntry.requestNum model.hostConfig model.upperLeftHex model.lowerRightHex
+            , sendSolarSystemRequest nextRequestEntry model.hostConfig model.upperLeftHex model.lowerRightHex
             )
 
-        DownloadedSolarSystems requestNum (Ok solarSystems) ->
+        DownloadedSolarSystems requestEntry (Ok solarSystems) ->
             let
+                rangeAsKey =
+                    HexAddress.between hexRules requestEntry.upperLeftHex model.lowerRightHex
+                        |> List.map
+                            (\addr ->
+                                let
+                                    addrKey =
+                                        HexAddress.toKey addr
+                                in
+                                ( addrKey
+                                , Dict.get addrKey sortedSolarSystems |> Maybe.withDefault LoadedEmptyHex
+                                )
+                            )
+
                 sortedSolarSystems =
-                    solarSystems |> List.sortBy (HexAddress.toKey << .address)
+                    solarSystems
+                        |> List.sortBy (HexAddress.toKey << .address)
+                        |> List.map
+                            (\system ->
+                                ( HexAddress.toKey system.address
+                                , LoadedSolarSystem system
+                                )
+                            )
+                        |> Dict.fromList
 
                 solarSystemDict =
-                    sortedSolarSystems
-                        |> List.map (\system -> ( HexAddress.toKey system.address, LoadedSolarSystem system ))
+                    rangeAsKey
                         |> Dict.fromList
                         |> (\newDict ->
-                                -- `Dict.union` merges the dict, and prefers the left arg's to resolve dupes, so we want to prefer the new one
+                                -- `Dict.union` merges the dict, preferring the left arg's to resolve dupes, so we want to prefer the new one
                                 Dict.union newDict existingDict
                            )
 
                 existingDict =
-                    case model.solarSystems of
-                        RemoteData.Success existingSolarSystems ->
-                            existingSolarSystems
-
-                        _ ->
-                            Dict.empty
+                    model.solarSystems
 
                 newRequestHistory =
-                    markRequestComplete requestNum (RemoteData.Success ()) model.requestHistory
+                    markRequestComplete requestEntry (RemoteData.Success ()) model.requestHistory
             in
             ( { model
-                | solarSystems = solarSystemDict |> RemoteData.Success
+                | solarSystems = solarSystemDict
                 , requestHistory = newRequestHistory
               }
             , Cmd.batch
@@ -1699,10 +1758,11 @@ update msg model =
         DownloadedSolarSystems requestNum (Err err) ->
             let
                 newRequestHistory =
-                    markRequestComplete requestNum (RemoteData.Success ()) model.requestHistory
+                    markRequestComplete requestNum (RemoteData.Failure err) model.requestHistory
             in
             ( { model
-                | solarSystems = RemoteData.Failure err
+                -- | solarSystems = RemoteData.Failure err
+                | lastSolarSystemError = Just err
                 , requestHistory = newRequestHistory
               }
             , Cmd.none
@@ -1752,14 +1812,15 @@ update msg model =
 
         MapMouseUp ->
             let
-                ( nextRequestEntry, newRequestHistory ) =
-                    prepNextRequest model.requestHistory model.upperLeftHex model.lowerRightHex
+                ( nextRequestEntry, ( newSolarSystemDict, newRequestHistory ) ) =
+                    prepNextRequest ( model.solarSystems, model.requestHistory ) model.upperLeftHex model.lowerRightHex
             in
             ( { model
                 | dragMode = NoDragging
                 , requestHistory = newRequestHistory
+                , solarSystems = newSolarSystemDict
               }
-            , sendSolarSystemRequest nextRequestEntry.requestNum model.hostConfig model.upperLeftHex model.lowerRightHex
+            , sendSolarSystemRequest nextRequestEntry model.hostConfig model.upperLeftHex model.lowerRightHex
             )
 
         MapMouseMove ( newX, newY ) ->
@@ -1816,12 +1877,12 @@ stripDataFromRemoteData remoteData =
             RemoteData.Loading
 
 
-markRequestComplete : RequestNum -> RemoteData Http.Error () -> RequestHistory -> RequestHistory
-markRequestComplete requestNum remoteData requestHistory =
+markRequestComplete : RequestEntry -> RemoteData Http.Error () -> RequestHistory -> RequestHistory
+markRequestComplete requestEntry remoteData requestHistory =
     requestHistory
         |> List.map
             (\entry ->
-                if entry.requestNum == requestNum then
+                if entry.requestNum == requestEntry.requestNum then
                     { entry | status = stripDataFromRemoteData remoteData }
 
                 else
