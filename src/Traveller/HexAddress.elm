@@ -139,7 +139,7 @@ between hexRules firstAddr secondAddr =
             , max firstAddr.sectorY secondAddr.sectorY
             )
 
-        hexesInSector ( sectorX, sectorY ) =
+        hexesInSector sectorX sectorY =
             let
                 startX =
                     if sectorX == minSectorX then
@@ -183,13 +183,17 @@ between hexRules firstAddr secondAddr =
                                 )
                     )
     in
-    List.concatMap
-        (\sectorX ->
-            List.map (\sectorY -> ( sectorX, sectorY ))
-                (List.range minSectorY maxSectorY)
-        )
-        (List.range minSectorX maxSectorX)
-        |> List.concatMap hexesInSector
+    -- for every sector X in ranges and for every sector Y in range,
+    -- create a hex address for every sector
+    List.range minSectorX maxSectorX
+        |> List.concatMap
+            (\sectorX ->
+                List.range minSectorY maxSectorY
+                    |> List.concatMap
+                        (\sectorY ->
+                            hexesInSector sectorX sectorY
+                        )
+            )
         |> List.concat
 
 
