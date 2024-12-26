@@ -95,9 +95,11 @@ between hexRules firstAddr secondAddr =
         ( numCols, numRows ) =
             ( hexRules.maxX, hexRules.maxY )
 
+        {- Returns the universal x coordinate of a hex address, so it can be compared to all others across sectors. -}
         universalHexX hexAddr =
             hexAddr.x + hexAddr.sectorX * numCols
 
+        {- Returns the universal y coordinate of a hex address, so it can be compared to all others across sectors. -}
         universalHexY hexAddr =
             hexAddr.y + hexAddr.sectorY * numRows
 
