@@ -187,8 +187,7 @@ between hexRules firstAddr secondAddr =
                 (List.range minSectorY maxSectorY)
         )
         (List.range minSectorX maxSectorX)
-        |> List.map hexesInSector
-        |> List.concat
+        |> List.concatMap hexesInSector
         |> List.concat
 
 

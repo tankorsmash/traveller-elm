@@ -9,6 +9,27 @@ import Traveller
 import Traveller.HexAddress as HexAddress exposing (HexAddress)
 
 
+{-| replaces any zeroes with a 1 instead.
+-}
+fuzzNoZeroes : Fuzz.Fuzzer Int -> Fuzz.Fuzzer Int
+fuzzNoZeroes intFuzzer =
+    intFuzzer
+        |> Fuzz.map
+            (\x ->
+                if x == 0 then
+                    1
+
+                else
+                    x
+            )
+
+
+fuzzAddTen : Fuzz.Fuzzer Int -> Fuzz.Fuzzer Int
+fuzzAddTen intFuzzer =
+    intFuzzer
+        |> Fuzz.map ((+) 10)
+
+
 suite : Test
 suite =
     let
@@ -106,14 +127,20 @@ suite =
                         , .y >> Expect.notEqual 0
                         ]
         , Test.fuzz2
-            (Fuzz.intRange -10 10)
-            (Fuzz.intRange -10 10)
+            (Fuzz.pair
+                (Fuzz.intRange 1 20)
+                (Fuzz.intRange 1 20)
+            )
+            (Fuzz.pair
+                (Fuzz.intRange -10 10)
+                (Fuzz.intRange -10 10)
+            )
             "HexAddress.between'ing an address never returns a hex with 0 in either hex coordinates"
           <|
-            \deltaX deltaY ->
+            \( startingX, startingY ) ( deltaX, deltaY ) ->
                 let
                     sourceHexAddress =
-                        hexAddressOne
+                        { hexAddressOne | x = startingX, y = startingY }
 
                     otherHexAddress =
                         HexAddress.shiftAddressBy
@@ -121,6 +148,7 @@ suite =
                             { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
                             sourceHexAddress
 
+                    hexRange : List HexAddress
                     hexRange =
                         HexAddress.between hexRules sourceHexAddress otherHexAddress
                 in
