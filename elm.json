@@ -8,6 +8,7 @@
         "direct": {
             "NoRedInk/elm-json-decode-pipeline": "1.0.1",
             "Punie/elm-parser-extras": "1.0.0",
+            "TSFoster/elm-md5": "2.0.1",
             "avh4/elm-color": "1.0.0",
             "dillonkearns/elm-ts-json": "2.1.1",
             "dzuk-mutant/elm-css": "3.0.1",

@@ -2,6 +2,8 @@ module Tests exposing (..)
 
 import Expect
 import Fuzz
+import MD5
+import Set
 import Test exposing (Test, describe)
 import Traveller
 import Traveller.HexAddress as HexAddress exposing (HexAddress)
@@ -124,18 +126,48 @@ suite =
 
                     _ ->
                         Expect.fail "too many hexes in range"
+        , Test.test "`between` with 1 space horizontally works" <|
+            \() ->
+                let
+                    sourceHexAddress =
+                        hexAddressOne
 
-        -- , Test.test "`between` with 1 space horizontally works" <|
-        --     \() ->
-        --         let
-        --             sourceHexAddress =
-        --                 hexAddressOne
-        --
-        --             targetHexAddress =
-        --                 hexAddressOne
-        --
-        --             hexesBetween =
-        --                 HexAddress.between hexRules sourceHexAddress targetHexAddress
-        --         in
-        --         Expect.equal 0 <| List.length hexesBetween
+                    targetHexAddress =
+                        { hexAddressOne | x = 3 }
+
+                    hexesBetween =
+                        HexAddress.between hexRules sourceHexAddress targetHexAddress
+                in
+                Expect.equal 3 <| List.length hexesBetween
+        , Test.test "`between` with 3x3 works" <|
+            \() ->
+                let
+                    sourceHexAddress =
+                        hexAddressOne
+
+                    targetHexAddress =
+                        { hexAddressOne | x = 3, y = 3 }
+
+                    hexesBetween =
+                        HexAddress.between hexRules sourceHexAddress targetHexAddress
+
+                    hashAddr : HexAddress -> String
+                    hashAddr addr =
+                        MD5.fromBytes [ addr.sectorX, addr.sectorY, addr.x, addr.y ]
+                            |> List.map String.fromInt
+                            |> String.join ""
+
+                    countUniqueHexes : List HexAddress -> Int
+                    countUniqueHexes hexes =
+                        hexes
+                            |> List.map hashAddr
+                            |> Set.fromList
+                            |> Set.size
+                in
+                Expect.all
+                    [ Expect.equal 9 << List.length
+                    , \hexes ->
+                        Expect.equal (List.length hexes) (countUniqueHexes hexes) 
+                    ]
+                    hexesBetween
         ]
