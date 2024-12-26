@@ -1,4 +1,4 @@
-module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, addVal, create, createFromSolarSystem, hexLabel, shiftAddressBy, toKey)
+module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, addVal, between, create, createFromSolarSystem, hexLabel, shiftAddressBy, toKey)
 
 
 type alias HexAddress =
@@ -85,6 +85,24 @@ toKey { sectorX, sectorY, x, y } =
         ++ String.fromInt x
         ++ "."
         ++ String.fromInt y
+
+
+between : HexAddress -> HexAddress -> List HexAddress
+between firstAddr secondAddr =
+    let
+        ( minX, minY ) =
+            ( min firstAddr.x secondAddr.x, min firstAddr.y secondAddr.y )
+
+        ( maxX, maxY ) =
+            ( max firstAddr.x secondAddr.x, max firstAddr.y secondAddr.y )
+
+        ( minSectorX, minSectorY ) =
+            ( min firstAddr.sectorX secondAddr.sectorX, min firstAddr.sectorY secondAddr.sectorY )
+
+        ( maxSectorX, maxSectorY ) =
+            ( max firstAddr.sectorX secondAddr.sectorX, max firstAddr.sectorY secondAddr.sectorY )
+    in
+    []
 
 
 hexLabel : HexAddress -> String

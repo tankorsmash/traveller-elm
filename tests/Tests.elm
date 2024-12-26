@@ -9,25 +9,24 @@ import Traveller.HexAddress as HexAddress exposing (HexAddress)
 
 suite : Test
 suite =
+    let
+        hexAddressOne =
+            HexAddress.create
+                { sectorX = 1
+                , sectorY = 1
+                , x = 1
+                , y = 1
+                }
+    in
     describe "HexAddress"
         [ Test.test "adding 0 does nothing" <|
             \() ->
                 let
                     sourceHexAddress =
-                        HexAddress.create
-                            { sectorX = 1
-                            , sectorY = 1
-                            , x = 1
-                            , y = 1
-                            }
+                        hexAddressOne
 
                     targetHexAddress =
-                        HexAddress.create
-                            { sectorX = 1
-                            , sectorY = 1
-                            , x = 1
-                            , y = 1
-                            }
+                        hexAddressOne
 
                     res =
                         HexAddress.shiftAddressBy
@@ -40,19 +39,13 @@ suite =
             \() ->
                 let
                     sourceHexAddress =
-                        HexAddress.create
-                            { sectorX = 1
-                            , sectorY = 1
-                            , x = 1
-                            , y = 1
-                            }
+                        hexAddressOne
 
                     targetHexAddress =
                         HexAddress.create
-                            { sectorX = 1
-                            , sectorY = 1
-                            , x = 2
-                            , y = 2
+                            { hexAddressOne
+                                | x = 2
+                                , y = 2
                             }
 
                     res =
@@ -70,19 +63,13 @@ suite =
             \deltaX deltaY ->
                 let
                     sourceHexAddress =
-                        HexAddress.create
-                            { sectorX = 1
-                            , sectorY = 1
-                            , x = 1
-                            , y = 1
-                            }
+                        hexAddressOne
 
                     targetHexAddress =
                         HexAddress.create
-                            { sectorX = 1
-                            , sectorY = 1
-                            , x = 1 + deltaX
-                            , y = 1 + deltaY
+                            { hexAddressOne
+                                | x = hexAddressOne.x + deltaX
+                                , y = hexAddressOne.y + deltaY
                             }
 
                     res =
@@ -100,12 +87,7 @@ suite =
             \deltaX deltaY ->
                 let
                     sourceHexAddress =
-                        HexAddress.create
-                            { sectorX = 1
-                            , sectorY = 1
-                            , x = 1
-                            , y = 1
-                            }
+                        hexAddressOne
 
                     res =
                         HexAddress.shiftAddressBy
@@ -118,4 +100,17 @@ suite =
                         [ .x >> Expect.notEqual 0
                         , .y >> Expect.notEqual 0
                         ]
+        , Test.test "`between` with same everything returns nothing" <|
+            \() ->
+                let
+                    sourceHexAddress =
+                        hexAddressOne
+
+                    targetHexAddress =
+                        hexAddressOne
+
+                    hexesBetween =
+                        HexAddress.between sourceHexAddress targetHexAddress
+                in
+                Expect.equalLists hexesBetween []
         ]
