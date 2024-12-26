@@ -105,6 +105,35 @@ suite =
                         [ .x >> Expect.notEqual 0
                         , .y >> Expect.notEqual 0
                         ]
+        , Test.fuzz2
+            (Fuzz.intRange -10 10)
+            (Fuzz.intRange -10 10)
+            "HexAddress.between'ing an address never returns a hex with 0 in either hex coordinates"
+          <|
+            \deltaX deltaY ->
+                let
+                    sourceHexAddress =
+                        hexAddressOne
+
+                    otherHexAddress =
+                        HexAddress.shiftAddressBy
+                            { deltaX = deltaX, deltaY = deltaY }
+                            { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
+                            sourceHexAddress
+
+                    hexRange =
+                        HexAddress.between hexRules sourceHexAddress otherHexAddress
+                in
+                hexRange
+                    |> (\hexes ->
+                            ( hexes |> List.map .x |> List.sum
+                            , hexes |> List.map .y |> List.sum
+                            )
+                       )
+                    |> Expect.all
+                        [ Tuple.first >> Expect.notEqual 0 >> Expect.onFail "one of the x's was 0"
+                        , Tuple.second >> Expect.notEqual 0 >> Expect.onFail "one of the y's was 0"
+                        ]
         , Test.test "`between` with same input twice returns itself" <|
             \() ->
                 let
