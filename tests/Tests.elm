@@ -167,7 +167,20 @@ suite =
                 Expect.all
                     [ Expect.equal 9 << List.length
                     , \hexes ->
-                        Expect.equal (List.length hexes) (countUniqueHexes hexes) 
+                        Expect.equal (List.length hexes) (countUniqueHexes hexes)
                     ]
                     hexesBetween
+        , Test.test "`between` across sectors right at the border returns two different sector hexes" <|
+            \() ->
+                let
+                    sourceHexAddress =
+                        { hexAddressOne | x = 31, y = 1, sectorX = 1 }
+
+                    targetHexAddress =
+                        { hexAddressOne | x = 1, y = 1, sectorX = 2 }
+
+                    hexesBetween =
+                        HexAddress.between hexRules sourceHexAddress targetHexAddress
+                in
+                Expect.all [ Expect.equal 3 << List.length ] hexesBetween
         ]

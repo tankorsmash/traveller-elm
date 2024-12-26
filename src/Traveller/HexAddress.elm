@@ -87,24 +87,55 @@ toKey { sectorX, sectorY, x, y } =
         ++ String.fromInt y
 
 
-{-| Returns a list of hex addresses between two hex addresses, inclusive. -}
+{-| Returns a list of hex addresses between two hex addresses, inclusive.
+-}
 between : { maxX : Int, maxY : Int } -> HexAddress -> HexAddress -> List HexAddress
 between hexRules firstAddr secondAddr =
     let
         ( numCols, numRows ) =
             ( hexRules.maxX, hexRules.maxY )
 
+        universalHexX hexAddr =
+            hexAddr.x + hexAddr.sectorX * numCols
+
+        universalHexY hexAddr =
+            hexAddr.y + hexAddr.sectorY * numRows
+
         ( minX, minY ) =
-            ( min firstAddr.x secondAddr.x, min firstAddr.y secondAddr.y )
+            ( if universalHexX firstAddr < universalHexX secondAddr then
+                firstAddr.x
+
+              else
+                secondAddr.x
+            , if universalHexY firstAddr < universalHexY secondAddr then
+                firstAddr.y
+
+              else
+                secondAddr.y
+            )
 
         ( maxX, maxY ) =
-            ( max firstAddr.x secondAddr.x, max firstAddr.y secondAddr.y )
+            ( if universalHexX firstAddr > universalHexX secondAddr then
+                firstAddr.x
+
+              else
+                secondAddr.x
+            , if universalHexY firstAddr > universalHexY secondAddr then
+                firstAddr.y
+
+              else
+                secondAddr.y
+            )
 
         ( minSectorX, minSectorY ) =
-            ( min firstAddr.sectorX secondAddr.sectorX, min firstAddr.sectorY secondAddr.sectorY )
+            ( min firstAddr.sectorX secondAddr.sectorX
+            , min firstAddr.sectorY secondAddr.sectorY
+            )
 
         ( maxSectorX, maxSectorY ) =
-            ( max firstAddr.sectorX secondAddr.sectorX, max firstAddr.sectorY secondAddr.sectorY )
+            ( max firstAddr.sectorX secondAddr.sectorX
+            , max firstAddr.sectorY secondAddr.sectorY
+            )
 
         hexesInSector ( sectorX, sectorY ) =
             let
