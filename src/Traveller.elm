@@ -42,7 +42,7 @@ import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
 import Task
-import Traveller.HexAddress as HexAddress exposing (HexAddress)
+import Traveller.HexAddress as HexAddress exposing (HexAddress, universalHexX, universalHexY)
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
@@ -648,8 +648,8 @@ hexColOffset row =
         1
 
 
-calcOrigin : Float -> Int -> Int -> HexOrigin
-calcOrigin hexSize row col =
+calcVisualOrigin : Float -> Int -> Int -> HexOrigin
+calcVisualOrigin hexSize row col =
     let
         a =
             2 * pi / 6
@@ -808,41 +808,94 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
                 Just hexmapViewport ->
                     hexmapViewport
 
-        viewHexRow : Int -> List ( Maybe (Svg Msg), Int )
-        viewHexRow rowIdx =
-            List.range 0 numHexCols
-                |> List.map (calcOrigin hexSize rowIdx)
-                |> List.indexedMap
-                    (\colIdx hexOrigin ->
-                        let
-                            hexAddress : HexAddress
-                            hexAddress =
-                                { upperLeftHex | y = rowIdx + upperLeftHex.y, x = colIdx + upperLeftHex.x }
-                        in
-                        viewHex
-                            widestViewport
-                            hexSize
-                            solarSystemDict
-                            ( viewportWidthIsh, viewportHeightIsh )
-                            hexAddress
-                            hexOrigin
-                            playerHexId
-                    )
-    in
-    List.range 0 numHexRows
-        |> List.map viewHexRow
-        |> List.concat
-        |> List.filterMap
-            (\( maybeHex, condition ) ->
-                case maybeHex of
-                    Just hex ->
-                        Just ( hex, condition )
+        -- viewHexRow : Int -> List ( Maybe (Svg Msg), Int )
+        -- viewHexRow rowIdx =
+        --     List.range 0 numHexCols
+        --         |> List.map (\colIdx -> calcOrigin hexSize rowIdx colIdx)
+        --         |> List.indexedMap
+        --             (\colIdx hexOrigin ->
+        --                 let
+        --                     hexAddress : HexAddress
+        --                     hexAddress =
+        --                         { upperLeftHex | y = rowIdx + upperLeftHex.y, x = colIdx + upperLeftHex.x }
+        --                 in
+        --                 viewHex
+        --                     widestViewport
+        --                     hexSize
+        --                     solarSystemDict
+        --                     ( viewportWidthIsh, viewportHeightIsh )
+        --                     hexAddress
+        --                     hexOrigin
+        --                     playerHexId
+        --             )
+        lowerRightHex =
+            upperLeftHex |> Debug.log "upperLeftHex.x" |> HexAddress.shiftAddressBy { deltaX = 30, deltaY = 30 } hexRules
 
-                    Nothing ->
-                        Nothing
+        ( uul_vox, uul_voy ) =
+            calcVisualOrigin hexSize
+                (universalHexY numHexRows upperLeftHex)
+                (universalHexX numHexCols upperLeftHex)
+
+        hexRange =
+            HexAddress.between hexRules upperLeftHex lowerRightHex
+
+        -- _ = Debug.log "num hexRange" <| List.length hexRange
+        ( uulx, uuly ) =
+            ( HexAddress.universalHexX numHexCols upperLeftHex
+            , HexAddress.universalHexY numHexRows upperLeftHex
             )
-        |> List.sortBy Tuple.second
-        |> List.map Tuple.first
+                |> Debug.log "uulx, uuly"
+
+        _ =
+            Debug.log "first hex range"
+                (hexRange
+                    |> List.head
+                    |> Maybe.withDefault { sectorX = 0, sectorY = 0, x = 0, y = 0 }
+                    |> (\first_addr ->
+                            ( uul_vox - HexAddress.universalHexX numHexCols first_addr
+                            , uul_voy - HexAddress.universalHexY numHexRows first_addr
+                            )
+                       )
+                )
+    in
+    -- List.range 0 numHexRows
+    --     |> List.map viewHexRow
+    --     |> List.concat
+    --     |> List.filterMap
+    --         (\( maybeHex, condition ) ->
+    --             case maybeHex of
+    --                 Just hex ->
+    --                     Just ( hex, condition )
+    --
+    --                 Nothing ->
+    --                     Nothing
+    --         )
+    --     |> List.sortBy Tuple.second
+    -- |> List.map Tuple.first
+    hexRange
+        |> List.map
+            (\hexAddr ->
+                let
+                    hexOrigin =
+                        -- calcOrigin hexSize (hexAddr.y - 1) (hexAddr.x - 1)
+                        calcVisualOrigin hexSize
+                            -- (universalHexY numHexRows hexAddr - 1)
+                            -- (universalHexX numHexCols hexAddr - 1)
+                            -- |> (\( x, y ) -> ( uul_vox - x, uul_voy - y ))
+                            (universalHexY numHexRows hexAddr - 1)
+                            (universalHexX numHexCols hexAddr - 1)
+                            |> (\( x, y ) -> ( uul_vox - x, uul_voy - y ))
+                in
+                viewHex
+                    widestViewport
+                    hexSize
+                    solarSystemDict
+                    ( viewportWidthIsh, viewportHeightIsh )
+                    hexAddr
+                    hexOrigin
+                    playerHexId
+            )
+        |> List.filterMap Tuple.first
         |> (let
                 stringWidth =
                     String.fromFloat <| viewportWidthIsh

@@ -1,4 +1,4 @@
-module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, addVal, between, create, createFromSolarSystem, hexLabel, shiftAddressBy, toKey, toString)
+module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, addVal, between, create, createFromSolarSystem, hexLabel, shiftAddressBy, toKey, toString, universalHexX, universalHexY)
 
 
 type alias HexAddress =
@@ -86,6 +86,7 @@ toKey { sectorX, sectorY, x, y } =
         ++ "."
         ++ String.fromInt y
 
+
 toString : HexAddress -> String
 toString { sectorX, sectorY, x, y } =
     "Sector: "
@@ -98,6 +99,18 @@ toString { sectorX, sectorY, x, y } =
         ++ String.fromInt y
 
 
+{-| Returns the universal x coordinate of a hex address, so it can be compared to all others across sectors.
+-}
+universalHexX numCols hexAddr =
+    hexAddr.x + hexAddr.sectorX * numCols
+
+
+{-| Returns the universal y coordinate of a hex address, so it can be compared to all others across sectors.
+-}
+universalHexY numRows hexAddr =
+    hexAddr.y + hexAddr.sectorY * numRows
+
+
 {-| Returns a list of hex addresses between two hex addresses, inclusive.
 -}
 between : { maxX : Int, maxY : Int } -> HexAddress -> HexAddress -> List HexAddress
@@ -106,21 +119,13 @@ between hexRules firstAddr secondAddr =
         ( numCols, numRows ) =
             ( hexRules.maxX, hexRules.maxY )
 
-        {- Returns the universal x coordinate of a hex address, so it can be compared to all others across sectors. -}
-        universalHexX hexAddr =
-            hexAddr.x + hexAddr.sectorX * numCols
-
-        {- Returns the universal y coordinate of a hex address, so it can be compared to all others across sectors. -}
-        universalHexY hexAddr =
-            hexAddr.y + hexAddr.sectorY * numRows
-
         ( minX, minY ) =
-            ( if universalHexX firstAddr < universalHexX secondAddr then
+            ( if universalHexX numCols firstAddr < universalHexX numCols secondAddr then
                 firstAddr.x
 
               else
                 secondAddr.x
-            , if universalHexY firstAddr < universalHexY secondAddr then
+            , if universalHexY numRows firstAddr < universalHexY numRows secondAddr then
                 firstAddr.y
 
               else
@@ -128,12 +133,12 @@ between hexRules firstAddr secondAddr =
             )
 
         ( maxX, maxY ) =
-            ( if universalHexX firstAddr > universalHexX secondAddr then
+            ( if universalHexX numCols firstAddr > universalHexX numCols secondAddr then
                 firstAddr.x
 
               else
                 secondAddr.x
-            , if universalHexY firstAddr > universalHexY secondAddr then
+            , if universalHexY numRows firstAddr > universalHexY numRows secondAddr then
                 firstAddr.y
 
               else
