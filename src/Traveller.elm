@@ -212,7 +212,9 @@ type Msg
     | MapMouseMove ( Float, Float )
 
 
-type alias HexOrigin =
+{-| Where the Hex is on the screen, in pixel coordinates
+-}
+type alias VisualHexOrigin =
     ( Int, Int )
 
 
@@ -348,7 +350,7 @@ rotatePoint hexSize idx ( x_, y_ ) degrees_ distance =
     )
 
 
-viewHexEmpty : HexAddress -> HexAddress -> HexOrigin -> Float -> Svg Msg -> Svg Msg
+viewHexEmpty : HexAddress -> HexAddress -> VisualHexOrigin -> Float -> Svg Msg -> Svg Msg
 viewHexEmpty playerHexAddress hexAddress (( x, y ) as origin) size childSvg =
     let
         si =
@@ -414,8 +416,8 @@ viewHexEmpty playerHexAddress hexAddress (( x, y ) as origin) size childSvg =
         ]
 
 
-viewHexDetailed : SolarSystem -> HexAddress -> HexAddress -> HexOrigin -> Float -> Svg Msg
-viewHexDetailed solarSystem _ hexAddress (( x, y ) as origin) size =
+viewHexDetailed : SolarSystem -> HexAddress -> HexAddress -> VisualHexOrigin -> Float -> Svg Msg
+viewHexDetailed solarSystem _ hexAddress (( vox, voy ) as visualOrigin) size =
     let
         si =
             solarSystem.surveyIndex
@@ -466,7 +468,7 @@ viewHexDetailed solarSystem _ hexAddress (( x, y ) as origin) size =
         ]
         [ -- background hex
           Svg.polygon
-            [ points (hexagonPoints origin size)
+            [ points (hexagonPoints visualOrigin size)
             , SvgAttrs.fill defaultHexBg
             , SvgAttrs.stroke "#CCCCCC"
             , SvgAttrs.strokeWidth "1"
@@ -478,7 +480,7 @@ viewHexDetailed solarSystem _ hexAddress (( x, y ) as origin) size =
           if hasStar then
             let
                 primaryPos =
-                    ( toFloat x, toFloat y )
+                    ( toFloat vox, toFloat voy )
 
                 primaryStar =
                     getInnerStarData solarSystem.primaryStar
@@ -532,8 +534,8 @@ viewHexDetailed solarSystem _ hexAddress (( x, y ) as origin) size =
 
           else
             Svg.text_
-                [ SvgAttrs.x <| String.fromInt <| x
-                , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
+                [ SvgAttrs.x <| String.fromInt <| vox
+                , SvgAttrs.y <| String.fromInt <| voy - (floor <| size * 0.65)
                 , SvgAttrs.fontSize
                     (if size > 15 then
                         "10"
@@ -549,8 +551,8 @@ viewHexDetailed solarSystem _ hexAddress (( x, y ) as origin) size =
             Svg.g []
                 [ -- hex index
                   Svg.text_
-                    [ SvgAttrs.x <| String.fromInt <| x
-                    , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
+                    [ SvgAttrs.x <| String.fromInt <| vox
+                    , SvgAttrs.y <| String.fromInt <| voy - (floor <| size * 0.65)
                     , SvgAttrs.fontSize
                         (if size > 15 then
                             "10"
@@ -563,8 +565,8 @@ viewHexDetailed solarSystem _ hexAddress (( x, y ) as origin) size =
                     [ HexAddress.hexLabel hexAddress |> Svg.text
                     ]
                 , Svg.text_
-                    [ SvgAttrs.x <| String.fromInt <| x
-                    , SvgAttrs.y <| String.fromInt <| y + (floor <| size * 0.85)
+                    [ SvgAttrs.x <| String.fromInt <| vox
+                    , SvgAttrs.y <| String.fromInt <| voy + (floor <| size * 0.85)
                     , SvgAttrs.fontSize "12"
                     , SvgAttrs.textAnchor "middle"
                     ]
@@ -648,7 +650,7 @@ hexColOffset row =
         1
 
 
-calcVisualOrigin : Float -> Int -> Int -> HexOrigin
+calcVisualOrigin : Float -> Int -> Int -> VisualHexOrigin
 calcVisualOrigin hexSize row col =
     let
         a =
@@ -669,16 +671,16 @@ viewHex :
     -> SolarSystemDict
     -> ( Float, Float )
     -> HexAddress
-    -> HexOrigin
+    -> VisualHexOrigin
     -> HexAddress
     -> ( Maybe (Svg Msg), Int )
-viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress ( ox, oy ) playerHexId =
+viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress ( vox, voy ) playerHexId =
     let
         -- idx =
         --     rowIdx + colIdx * 100
         --
         ( fox, foy ) =
-            ( toFloat ox, toFloat oy )
+            ( toFloat vox, toFloat voy )
 
         outsideX =
             let
@@ -704,46 +706,46 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
             Dict.get (HexAddress.toKey hexAddress) solarSystemDict
 
         hexSVG =
-            if not (outsideX || outsideY) then
+            if True || not (outsideX || outsideY) then
                 Just
                     (case solarSystem of
                         Just (LoadedSolarSystem ss) ->
                             viewHexDetailed ss
                                 playerHexId
                                 hexAddress
-                                ( ox, oy )
+                                ( vox, voy )
                                 hexSize
 
                         Just LoadingSolarSystem ->
                             Svg.text_
-                                [ SvgAttrs.x <| String.fromInt ox
-                                , SvgAttrs.y <| String.fromInt oy
+                                [ SvgAttrs.x <| String.fromInt vox
+                                , SvgAttrs.y <| String.fromInt voy
                                 , SvgAttrs.fontSize "10"
                                 , SvgAttrs.textAnchor "middle"
                                 ]
                                 [ Svg.text "Loading..." ]
-                                |> viewHexEmpty playerHexId hexAddress ( ox, oy ) hexSize
+                                |> viewHexEmpty playerHexId hexAddress ( vox, voy ) hexSize
 
                         Just (FailedSolarSystem httpError) ->
                             Svg.text_
-                                [ SvgAttrs.x <| String.fromInt ox
-                                , SvgAttrs.y <| String.fromInt oy
+                                [ SvgAttrs.x <| String.fromInt vox
+                                , SvgAttrs.y <| String.fromInt voy
                                 , SvgAttrs.fontSize "10"
                                 , SvgAttrs.textAnchor "middle"
                                 ]
                                 [ Svg.text "Failed." ]
-                                |> viewHexEmpty playerHexId hexAddress ( ox, oy ) hexSize
+                                |> viewHexEmpty playerHexId hexAddress ( vox, voy ) hexSize
 
                         Just LoadedEmptyHex ->
                             Svg.text_
-                                [ SvgAttrs.x <| String.fromInt ox
-                                , SvgAttrs.y <| String.fromInt oy
+                                [ SvgAttrs.x <| String.fromInt vox
+                                , SvgAttrs.y <| String.fromInt voy
                                 , SvgAttrs.fontSize "6"
                                 , SvgAttrs.textAnchor "middle"
                                 , SvgAttrs.fill "#cccccc"
                                 ]
                                 [ Svg.text "Empty" ]
-                                |> viewHexEmpty playerHexId hexAddress ( ox, oy ) hexSize
+                                |> viewHexEmpty playerHexId hexAddress ( vox, voy ) hexSize
 
                         Nothing ->
                             -- Svg.text_
@@ -754,7 +756,7 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
                             --     ]
                             --     [ Svg.text "Nothing" ]
                             Svg.text ""
-                                |> viewHexEmpty playerHexId hexAddress ( ox, oy ) hexSize
+                                |> viewHexEmpty playerHexId hexAddress ( vox, voy ) hexSize
                     )
 
             else
@@ -833,8 +835,8 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
 
         ( uul_vox, uul_voy ) =
             calcVisualOrigin hexSize
-                (universalHexY numHexRows upperLeftHex)
-                (universalHexX numHexCols upperLeftHex)
+                (universalHexY numHexRows upperLeftHex + 1)
+                (universalHexX numHexCols upperLeftHex + 1)
 
         hexRange =
             HexAddress.between hexRules upperLeftHex lowerRightHex
@@ -846,17 +848,17 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
             )
                 |> Debug.log "uulx, uuly"
 
-        _ =
-            Debug.log "first hex range"
-                (hexRange
-                    |> List.head
-                    |> Maybe.withDefault { sectorX = 0, sectorY = 0, x = 0, y = 0 }
-                    |> (\first_addr ->
-                            ( uul_vox - HexAddress.universalHexX numHexCols first_addr
-                            , uul_voy - HexAddress.universalHexY numHexRows first_addr
-                            )
-                       )
-                )
+        -- _ =
+        --     Debug.log "first hex range"
+        --         (hexRange
+        --             |> List.head
+        --             |> Maybe.withDefault { sectorX = 0, sectorY = 0, x = 0, y = 0 }
+        --             |> (\first_addr ->
+        --                     ( uul_vox - HexAddress.universalHexX numHexCols first_addr
+        --                     , uul_voy - HexAddress.universalHexY numHexRows first_addr
+        --                     )
+        --                )
+        --         )
     in
     -- List.range 0 numHexRows
     --     |> List.map viewHexRow
@@ -872,7 +874,42 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
     --         )
     --     |> List.sortBy Tuple.second
     -- |> List.map Tuple.first
-    hexRange
+    --
+    -- hexRange
+    --
+    [ -- col 22
+      { sectorX = -10
+      , sectorY = -2
+      , x = 22
+      , y = 13
+      }
+    , { sectorX = -10
+      , sectorY = -2
+      , x = 22
+      , y = 14
+      }
+    , { sectorX = -10
+      , sectorY = -2
+      , x = 22
+      , y = 15
+      }
+    , -- col 23
+      { sectorX = -10
+      , sectorY = -2
+      , x = 23
+      , y = 13
+      }
+    , { sectorX = -10
+      , sectorY = -2
+      , x = 23
+      , y = 14
+      }
+    , { sectorX = -10
+      , sectorY = -2
+      , x = 23
+      , y = 15
+      }
+    ]
         |> List.map
             (\hexAddr ->
                 let
