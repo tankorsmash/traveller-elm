@@ -386,6 +386,7 @@ viewHexEmpty playerHexAddress hexAddress (( x, y ) as origin) size childSvg =
           SvgEvents.on "mousedown" downDecoder
         , SvgEvents.on "mousemove" moveDecoder
         , SvgAttrs.style "cursor: pointer; user-select: none"
+        , SvgAttrs.id <| HexAddress.toKey hexAddress
         ]
         [ -- background hex
           Svg.polygon
