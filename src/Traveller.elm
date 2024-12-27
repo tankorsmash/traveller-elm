@@ -724,7 +724,7 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
                                 [ Svg.text "Loading..." ]
                                 |> viewHexEmpty playerHexId hexAddress ( ox, oy ) hexSize
 
-                        Just FailedSolarSystem ->
+                        Just (FailedSolarSystem httpError) ->
                             Svg.text_
                                 [ SvgAttrs.x <| String.fromInt ox
                                 , SvgAttrs.y <| String.fromInt oy
@@ -767,7 +767,7 @@ type RemoteSolarSystem
     = LoadedSolarSystem SolarSystem
     | LoadedEmptyHex
     | LoadingSolarSystem
-    | FailedSolarSystem
+    | FailedSolarSystem Http.Error
 
 
 type alias SolarSystemDict =
@@ -1527,7 +1527,7 @@ view model =
                                     , text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
                                     ]
 
-                            Just FailedSolarSystem ->
+                            Just (FailedSolarSystem httpError) ->
                                 column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
                                     [ text "failed."
                                     , text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
@@ -1755,14 +1755,38 @@ update msg model =
                 ]
             )
 
-        DownloadedSolarSystems requestNum (Err err) ->
+        DownloadedSolarSystems requestEntry (Err err) ->
             let
                 newRequestHistory =
-                    markRequestComplete requestNum (RemoteData.Failure err) model.requestHistory
+                    markRequestComplete requestEntry (RemoteData.Failure err) model.requestHistory
+
+                rangeAsKey =
+                    HexAddress.between hexRules requestEntry.upperLeftHex model.lowerRightHex
+                        |> List.map
+                            (\addr ->
+                                let
+                                    addrKey =
+                                        HexAddress.toKey addr
+                                in
+                                ( addrKey
+                                , Dict.get addrKey existingDict |> Maybe.withDefault (FailedSolarSystem err)
+                                )
+                            )
+
+                solarSystemDict =
+                    rangeAsKey
+                        |> Dict.fromList
+                        |> (\newDict ->
+                                -- `Dict.union` merges the dict, preferring the left arg's to resolve dupes, so we want to prefer the new one
+                                Dict.union newDict existingDict
+                           )
+
+                existingDict =
+                    model.solarSystems
             in
             ( { model
-                -- | solarSystems = RemoteData.Failure err
-                | lastSolarSystemError = Just err
+                | solarSystems = solarSystemDict
+                , lastSolarSystemError = Just err
                 , requestHistory = newRequestHistory
               }
             , Cmd.none
