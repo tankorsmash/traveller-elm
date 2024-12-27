@@ -1,4 +1,4 @@
-module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, addVal, between, create, createFromSolarSystem, hexLabel, shiftAddressBy, toKey)
+module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, addVal, between, create, createFromSolarSystem, hexLabel, shiftAddressBy, toKey, toString)
 
 
 type alias HexAddress =
@@ -84,6 +84,17 @@ toKey { sectorX, sectorY, x, y } =
         ++ "."
         ++ String.fromInt x
         ++ "."
+        ++ String.fromInt y
+
+toString : HexAddress -> String
+toString { sectorX, sectorY, x, y } =
+    "Sector: "
+        ++ String.fromInt sectorX
+        ++ ", "
+        ++ String.fromInt sectorY
+        ++ " Hex: "
+        ++ String.fromInt x
+        ++ ", "
         ++ String.fromInt y
 
 

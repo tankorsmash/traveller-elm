@@ -1518,25 +1518,25 @@ view model =
                             Just LoadingSolarSystem ->
                                 column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
                                     [ text "loading..."
-                                    , text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
+                                    , text <| "Hex Address: " ++ HexAddress.toString viewingAddress
                                     ]
 
                             Just LoadedEmptyHex ->
                                 column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
                                     [ text "[empty]"
-                                    , text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
+                                    , text <| "Hex Address: " ++ HexAddress.toString viewingAddress
                                     ]
 
                             Just (FailedSolarSystem httpError) ->
                                 column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
                                     [ text "failed."
-                                    , text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
+                                    , text <| "Hex Address: " ++ HexAddress.toString viewingAddress
                                     ]
 
                             Nothing ->
                                 column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
                                     [ text "No solar system data found for system."
-                                    , text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
+                                    , text <| "Hex Address: " ++ HexAddress.toString viewingAddress
                                     ]
 
                     Nothing ->
@@ -1707,7 +1707,7 @@ update msg model =
 
         DownloadedSolarSystems requestEntry (Ok solarSystems) ->
             let
-                rangeAsKey =
+                rangeAsPairs =
                     HexAddress.between hexRules requestEntry.upperLeftHex model.lowerRightHex
                         |> List.map
                             (\addr ->
@@ -1732,7 +1732,7 @@ update msg model =
                         |> Dict.fromList
 
                 solarSystemDict =
-                    rangeAsKey
+                    rangeAsPairs
                         |> Dict.fromList
                         |> (\newDict ->
                                 -- `Dict.union` merges the dict, preferring the left arg's to resolve dupes, so we want to prefer the new one
@@ -1760,7 +1760,7 @@ update msg model =
                 newRequestHistory =
                     markRequestComplete requestEntry (RemoteData.Failure err) model.requestHistory
 
-                rangeAsKey =
+                rangeAsPairs =
                     HexAddress.between hexRules requestEntry.upperLeftHex model.lowerRightHex
                         |> List.map
                             (\addr ->
@@ -1774,7 +1774,7 @@ update msg model =
                             )
 
                 solarSystemDict =
-                    rangeAsKey
+                    rangeAsPairs
                         |> Dict.fromList
                         |> (\newDict ->
                                 -- `Dict.union` merges the dict, preferring the left arg's to resolve dupes, so we want to prefer the new one
