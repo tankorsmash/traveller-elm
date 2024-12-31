@@ -45,6 +45,7 @@ import Task
 import Traveller.HexAddress as HexAddress exposing (HexAddress)
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
+import Traveller.Sector exposing (Sector, SectorDict, codecSector, sectorKey)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.SolarSystemStars exposing (StarSystem, StarType, StarTypeData, getStarTypeData, starSystemCodec)
 import Traveller.StarColour exposing (starColourRGB)
@@ -183,6 +184,7 @@ type alias Model =
     , lastSolarSystemError : Maybe Http.Error
     , requestHistory : RequestHistory
     , dragMode : DragMode
+    , sectors : SectorDict
     , playerHex : HexAddress
     , hoveringHex : Maybe HexAddress
     , selectedHex : Maybe HexAddress
@@ -202,6 +204,7 @@ type Msg
     | ZoomScaleChanged Float
     | DownloadSolarSystems
     | DownloadedSolarSystems RequestEntry (Result Http.Error (List StarSystem))
+    | DownloadedSectors RequestEntry (Result Http.Error (List Sector))
     | HoveringHex HexAddress
     | ViewingHex ( HexAddress, Int )
     | GotViewport Browser.Dom.Viewport
@@ -263,11 +266,13 @@ init key hostConfig =
             , upperLeftHex = upperLeftHex
             , lowerRightHex = lowerRightHex
             , hostConfig = hostConfig
+            , sectors = Dict.empty
             }
     in
     ( model
     , Cmd.batch
         [ sendSolarSystemRequest requestEntry model.hostConfig model.upperLeftHex model.lowerRightHex
+        , sendSectorRequest requestEntry model.hostConfig
         , Browser.Dom.getViewport
             |> Task.perform GotViewport
         ]
@@ -1717,6 +1722,25 @@ update msg model =
                 ]
             )
 
+        DownloadedSectors requestEntry (Ok sectors) ->
+            let
+                sectorDict =
+                    List.foldl
+                        (\sector acc ->
+                            Dict.insert (sectorKey sector) sector acc
+                        )
+                        Dict.empty
+                        sectors
+            in
+            ( { model
+                | sectors = sectorDict
+              }
+            , Cmd.none
+            )
+
+        DownloadedSectors requestEntry (Err err) ->
+            ( model, Cmd.none )
+
         DownloadedSolarSystems requestEntry (Err err) ->
             let
                 newRequestHistory =
@@ -1874,3 +1898,35 @@ markRequestComplete requestEntry remoteData requestHistory =
                 else
                     entry
             )
+
+
+sendSectorRequest : RequestEntry -> HostConfig -> Cmd Msg
+sendSectorRequest requestEntry hostConfig =
+    let
+        sectorDecoder : JsDecode.Decoder (List Sector)
+        sectorDecoder =
+            Codec.list codecSector
+                |> Codec.decoder
+
+        ( urlHostRoot, urlHostPath ) =
+            hostConfig
+
+        url =
+            Url.Builder.crossOrigin
+                urlHostRoot
+                (urlHostPath ++ [ "sectors" ])
+                []
+
+        requestCmd =
+            -- using Http.request instead of Http.get, to allow setting a timeout
+            Http.request
+                { method = "GET"
+                , headers = []
+                , url = url
+                , body = Http.emptyBody
+                , expect = Http.expectJson (DownloadedSectors requestEntry) sectorDecoder
+                , timeout = Just 5000
+                , tracker = Nothing
+                }
+    in
+    requestCmd
