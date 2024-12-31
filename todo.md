@@ -4,6 +4,8 @@
 * [X] Account for offsets when dragging
 * [X] Display sector coordinates in sidebar
 * [X] click to drag map
+* [ ] use stars instead of solarsystems
+** [ ] fetch solar system when clicked
 * [ ] fix clipping of map to viewport boundaries
 * [ ] table'd sidebar (recursively render the columns, account for SVG's width, since its HTML and elm-ui isn't aware of that size)
 * [X] support multi-sector viewing

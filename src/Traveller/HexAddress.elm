@@ -1,4 +1,4 @@
-module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, addVal, between, create, createFromSolarSystem, hexLabel, shiftAddressBy, toKey)
+module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, addVal, between, create, createFromSolarSystem, createFromStarSystem, hexLabel, shiftAddressBy, toKey)
 
 
 type alias HexAddress =
@@ -64,6 +64,11 @@ shiftAddressBy { deltaX, deltaY } { maxX, maxY } hexAddress =
 
 createFromSolarSystem : { a | sectorX : Int, sectorY : Int, x : Int, y : Int } -> HexAddress
 createFromSolarSystem { sectorX, sectorY, x, y } =
+    create { sectorX = sectorX, sectorY = sectorY, x = x, y = y }
+
+
+createFromStarSystem : { a | sectorX : Int, sectorY : Int, x : Int, y : Int } -> HexAddress
+createFromStarSystem { sectorX, sectorY, x, y } =
     create { sectorX = sectorX, sectorY = sectorY, x = x, y = y }
 
 

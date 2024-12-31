@@ -1,84 +1,10 @@
-module Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, codecStarData, codecStellarObject, getInnerStarData, getSafeJumpTime, getStellarOrbit, starColourRGB)
+module Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, codecStarData, codecStellarObject, getInnerStarData, getSafeJumpTime, getStellarOrbit)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
-import Json.Decode.Pipeline as Decode
-import Json.Encode as JsEncode
-import Parser exposing ((|.), (|=), Parser)
-import Parser.Extras as Parser
-import Random.Char as Codec
-import Traveller.Atmosphere as Atmosphere exposing (StellarAtmosphere)
-import Traveller.Hydrographics as Hydrographics exposing (StellarHydrographics)
 import Traveller.Moon as Moon exposing (Moon)
-import Traveller.Orbit as Orbit exposing (StellarOrbit)
 import Traveller.Point as Point exposing (StellarPoint)
-import Traveller.Population as Population exposing (StellarPopulation)
-
-
-type StarColour
-    = Blue
-    | BlueWhite
-    | White
-    | YellowWhite
-    | Yellow
-    | LightOrange
-    | OrangeRed
-    | Red
-    | Brown
-    | DeepDimRed
-
-
-codecStarColour : Codec StarColour
-codecStarColour =
-    Codec.enum Codec.string
-        [ ( "Blue", Blue )
-        , ( "Blue White", BlueWhite )
-        , ( "White", White )
-        , ( "Yellow White", YellowWhite )
-        , ( "Yellow", Yellow )
-        , ( "Light Orange", LightOrange )
-        , ( "Orange Red", OrangeRed )
-        , ( "Red", Red )
-        , ( "Brown", Brown )
-        , ( "Deep Dim Red", DeepDimRed )
-        ]
-
-
-starColourRGB : Maybe StarColour -> String
-starColourRGB colour =
-    case colour of
-        Just Blue ->
-            "#000077"
-
-        Just BlueWhite ->
-            "#87cefa"
-
-        Just White ->
-            "#FFFFFF"
-
-        Just YellowWhite ->
-            "#ffffe0"
-
-        Just Yellow ->
-            "#ffff00"
-
-        Just LightOrange ->
-            "#ffbf00"
-
-        Just OrangeRed ->
-            "#ff4500"
-
-        Just Red ->
-            "#ff0000"
-
-        Just Brown ->
-            "#f4a460"
-
-        Just DeepDimRed ->
-            "#800000"
-
-        Nothing ->
-            "#000000"
+import Traveller.StarColour exposing (StarColour, codecStarColour)
 
 
 type alias TerrestrialData =
