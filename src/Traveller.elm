@@ -42,7 +42,7 @@ import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
 import Task
-import Traveller.HexAddress as HexAddress exposing (HexAddress)
+import Traveller.HexAddress as HexAddress exposing (HexAddress, hexLabel, toSectorKey)
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
 import Traveller.Sector exposing (Sector, SectorDict, codecSector, sectorKey)
@@ -1501,8 +1501,20 @@ view model =
                     ]
                 , case model.selectedHex of
                     Just viewingAddress ->
+                        let
+                            key =
+                                toSectorKey viewingAddress
+
+                            hexDescription =
+                                case Dict.get key model.sectors of
+                                    Just sector ->
+                                        sector.name ++ " " ++ hexLabel viewingAddress
+
+                                    Nothing ->
+                                        "Hex Address: " ++ HexAddress.toKey viewingAddress
+                        in
                         column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
-                            [ text <| "Hex Address: " ++ HexAddress.toKey viewingAddress
+                            [ text <| hexDescription
                             ]
 
                     Nothing ->
