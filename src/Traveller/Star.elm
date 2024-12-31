@@ -2,7 +2,7 @@ module Traveller.Star exposing (Star(..), StarData, codecStar, getStarData, samp
 
 import Codec exposing (Codec)
 import Traveller.Point as Point exposing (StellarPoint)
-import Traveller.StarColour exposing (StarColour)
+import Traveller.StarColour exposing (StarColour, codecStarColour)
 import Traveller.StellarObject exposing (StellarObject, codecStellarObject)
 
 
