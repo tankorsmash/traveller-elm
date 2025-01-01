@@ -18,7 +18,6 @@ import Element
         , column
         , el
         , fill
-        , rgb
         , row
         , text
         , width
@@ -204,9 +203,10 @@ type Msg
     | ZoomScaleChanged Float
     | DownloadSolarSystems
     | DownloadedSolarSystems RequestEntry (Result Http.Error (List StarSystem))
+    | FetchedSolarSystem (Result Http.Error SolarSystem)
     | DownloadedSectors RequestEntry (Result Http.Error (List Sector))
     | HoveringHex HexAddress
-    | ViewingHex ( HexAddress, Int )
+    | ViewingHex HexAddress
     | GotViewport Browser.Dom.Viewport
     | GotHexMapViewport (Result Browser.Dom.Error Browser.Dom.Viewport)
     | GotResize Int Int
@@ -313,23 +313,24 @@ hexagonPoints ( xOrigin, yOrigin ) size =
         |> String.join " "
 
 
-isStarOrbit : StellarObject -> Bool
-isStarOrbit obj =
-    case obj of
-        GasGiant gasGiantData ->
-            gasGiantData.orbitType < 10
 
-        TerrestrialPlanet terrestrialData ->
-            terrestrialData.orbitType < 10
-
-        PlanetoidBelt planetoidBeltData ->
-            planetoidBeltData.orbitType < 10
-
-        Planetoid planetoidData ->
-            planetoidData.orbitType < 10
-
-        Star (StarDataWrap starDataConfig) ->
-            starDataConfig.orbitType < 10
+--isStarOrbit : StellarObject -> Bool
+--isStarOrbit obj =
+--    case obj of
+--        GasGiant gasGiantData ->
+--            gasGiantData.orbitType < 10
+--
+--        TerrestrialPlanet terrestrialData ->
+--            terrestrialData.orbitType < 10
+--
+--        PlanetoidBelt planetoidBeltData ->
+--            planetoidBeltData.orbitType < 10
+--
+--        Planetoid planetoidData ->
+--            planetoidData.orbitType < 10
+--
+--        Star (StarDataWrap starDataConfig) ->
+--            starDataConfig.orbitType < 10
 
 
 scaleAttr : Float -> Int -> Float
@@ -386,7 +387,7 @@ viewHexEmpty playerHexAddress hexAddress (( x, y ) as origin) size childSvg =
     in
     Svg.g
         [ SvgEvents.onMouseOver (HoveringHex hexAddress)
-        , SvgEvents.onClick (ViewingHex ( hexAddress, si ))
+        , SvgEvents.onClick (ViewingHex hexAddress)
         , SvgEvents.onMouseUp MapMouseUp
         , -- listens for the JS 'mousedown' event and then runs the `downDecoder` on the JS Event, returning the Msg
           SvgEvents.on "mousedown" downDecoder
@@ -465,7 +466,7 @@ renderHexWithStar starSystem _ hexAddress (( x, y ) as origin) size =
     in
     Svg.g
         [ SvgEvents.onMouseOver (HoveringHex hexAddress)
-        , SvgEvents.onClick (ViewingHex ( hexAddress, si ))
+        , SvgEvents.onClick (ViewingHex hexAddress)
         , SvgEvents.onMouseUp MapMouseUp
         , -- listens for the JS 'mousedown' event and then runs the `downDecoder` on the JS Event, returning the Msg
           SvgEvents.on "mousedown" downDecoder
@@ -1338,8 +1339,8 @@ renderDescription stellarObject =
     el [ Font.family [ Font.monospace ] ] description
 
 
-viewSystemDetailsSidebar : ( HexAddress, Int ) -> Maybe String -> SolarSystem -> Maybe StellarObject -> Element Msg
-viewSystemDetailsSidebar ( viewingHexId, si ) sidebarHoverText solarSystem selectedStellarObject =
+viewSystemDetailsSidebar : Maybe String -> SolarSystem -> Maybe StellarObject -> Element Msg
+viewSystemDetailsSidebar sidebarHoverText solarSystem selectedStellarObject =
     let
         primaryStar : StarData
         primaryStar =
@@ -1521,6 +1522,17 @@ view model =
                         column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
                             [ text "Click a hex to view system details."
                             ]
+                , case model.selectedSystem of
+                    Just solarSystem ->
+                        viewSystemDetailsSidebar
+                            model.sidebarHoverText
+                            solarSystem
+                            model.selectedStellarObject
+
+                    Nothing ->
+                        column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                            [ text "Click a hex to view system details."
+                            ]
                 ]
 
         renderError : String -> UnstyledHtml.Html msg
@@ -1663,6 +1675,41 @@ sendSolarSystemRequest requestEntry hostConfig upperLeft lowerRight =
     requestCmd
 
 
+fetchSingleSolarSystemRequest : HostConfig -> HexAddress -> Cmd Msg
+fetchSingleSolarSystemRequest hostConfig hex =
+    let
+        solarSystemDecoder : JsDecode.Decoder SolarSystem
+        solarSystemDecoder =
+            SolarSystem.codec |> Codec.decoder
+
+        ( urlHostRoot, urlHostPath ) =
+            hostConfig
+
+        url =
+            Url.Builder.crossOrigin
+                urlHostRoot
+                (urlHostPath ++ [ "solarsystem" ])
+                [ Url.Builder.int "sx" hex.sectorX
+                , Url.Builder.int "sy" hex.sectorY
+                , Url.Builder.int "hx" hex.x
+                , Url.Builder.int "hy" hex.y
+                ]
+
+        requestCmd =
+            -- using Http.request instead of Http.get, to allow setting a timeout
+            Http.request
+                { method = "GET"
+                , headers = []
+                , url = url
+                , body = Http.emptyBody
+                , expect = Http.expectJson FetchedSolarSystem solarSystemDecoder
+                , timeout = Just 5000
+                , tracker = Nothing
+                }
+    in
+    requestCmd
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -1750,7 +1797,17 @@ update msg model =
             , Cmd.none
             )
 
-        DownloadedSectors requestEntry (Err err) ->
+        FetchedSolarSystem (Ok solarSystem) ->
+            ( { model
+                | selectedSystem = Just solarSystem
+              }
+            , Cmd.none
+            )
+
+        FetchedSolarSystem (Err _) ->
+            ( model, Cmd.none )
+
+        DownloadedSectors requestEntry (Err _) ->
             ( model, Cmd.none )
 
         DownloadedSolarSystems requestEntry (Err err) ->
@@ -1812,12 +1869,12 @@ update msg model =
                 ]
             )
 
-        ViewingHex ( hexAddress, si ) ->
+        ViewingHex hexAddress ->
             ( { model
                 | selectedHex = Just hexAddress
                 , selectedStellarObject = Nothing
               }
-            , Cmd.none
+            , fetchSingleSolarSystemRequest model.hostConfig hexAddress
             )
 
         FocusInSidebar stellarObject ->
