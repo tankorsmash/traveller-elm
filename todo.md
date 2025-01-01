@@ -1,6 +1,9 @@
 # To Do
 
 ## MVP
+* [ ] Correct display of hex numbers across sectors
+* [ ] Ensure call to get star sectors includes all hexes on the map
+* [ ] Resolve issue with "Loading..." being displayed and never removed when scrolling
 * [X] Account for offsets when dragging
 * [X] Display sector coordinates in sidebar
 * [X] click to drag map
