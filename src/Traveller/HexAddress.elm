@@ -1,4 +1,4 @@
-module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, addVal, between, create, createFromSolarSystem, hexLabel, shiftAddressBy, toKey)
+module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, addVal, between, create, createFromSolarSystem, createFromStarSystem, hexLabel, shiftAddressBy, toKey, toSectorKey)
 
 
 type alias HexAddress =
@@ -67,6 +67,11 @@ createFromSolarSystem { sectorX, sectorY, x, y } =
     create { sectorX = sectorX, sectorY = sectorY, x = x, y = y }
 
 
+createFromStarSystem : { a | sectorX : Int, sectorY : Int, x : Int, y : Int } -> HexAddress
+createFromStarSystem { sectorX, sectorY, x, y } =
+    create { sectorX = sectorX, sectorY = sectorY, x = x, y = y }
+
+
 create : { sectorX : Int, sectorY : Int, x : Int, y : Int } -> HexAddress
 create { sectorX, sectorY, x, y } =
     { sectorX = sectorX
@@ -85,6 +90,13 @@ toKey { sectorX, sectorY, x, y } =
         ++ String.fromInt x
         ++ "."
         ++ String.fromInt y
+
+
+toSectorKey : HexAddress -> String
+toSectorKey { sectorX, sectorY } =
+    String.fromInt sectorX
+        ++ "."
+        ++ String.fromInt sectorY
 
 
 {-| Returns a list of hex addresses between two hex addresses, inclusive.

@@ -1,11 +1,8 @@
-module Traveller.Star exposing (Star(..), StarColour, StarData, codecStar, getStarData, sampleSystemText, starColourRGB)
+module Traveller.Star exposing (Star(..), StarData, codecStar, getStarData, sampleSystemText)
 
 import Codec exposing (Codec)
-import Json.Decode as JsDecode
-import Json.Encode as JsEncode
-import Parser exposing ((|.), (|=), Parser)
-import Parser.Extras as Parser
-import Traveller.Point exposing (StellarPoint, codecStellarPoint)
+import Traveller.Point as Point exposing (StellarPoint)
+import Traveller.StarColour exposing (StarColour, codecStarColour)
 import Traveller.StellarObject exposing (StellarObject, codecStellarObject)
 
 
@@ -59,69 +56,6 @@ sampleSystemText =
   "jump": 3.0392399646555845
 }
 """
-
-
-type StarColour
-    = Blue
-    | BlueWhite
-    | White
-    | YellowWhite
-    | Yellow
-    | LightOrange
-    | OrangeRed
-    | Red
-    | Brown
-    | DeepDimRed
-
-
-codecStarColour : Codec StarColour
-codecStarColour =
-    Codec.enum Codec.string
-        [ ( "Blue", Blue )
-        , ( "Blue White", BlueWhite )
-        , ( "White", White )
-        , ( "Yellow White", YellowWhite )
-        , ( "Yellow", Yellow )
-        , ( "Light Orange", LightOrange )
-        , ( "Orange Red", OrangeRed )
-        , ( "Red", Red )
-        , ( "Brown", Brown )
-        , ( "Deep Dim Red", DeepDimRed )
-        ]
-
-
-starColourRGB : StarColour -> String
-starColourRGB colour =
-    case colour of
-        Blue ->
-            "#000077"
-
-        BlueWhite ->
-            "#87cefa"
-
-        White ->
-            "#FFFFFF"
-
-        YellowWhite ->
-            "#ffffe0"
-
-        Yellow ->
-            "#ffff00"
-
-        LightOrange ->
-            "#ffbf00"
-
-        OrangeRed ->
-            "#ff4500"
-
-        Red ->
-            "#ff0000"
-
-        Brown ->
-            "#f4a460"
-
-        DeepDimRed ->
-            "#800000"
 
 
 type Star
@@ -190,7 +124,7 @@ buildStarData orbitPosition_ inclination_ eccentricity_ effectiveHZCODeviation_ 
 codecStar : Codec Star
 codecStar =
     Codec.object buildStarData
-        |> Codec.field "orbitPosition" .orbitPosition codecStellarPoint
+        |> Codec.field "orbitPosition" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.int
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
