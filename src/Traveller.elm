@@ -38,6 +38,7 @@ import Json.Decode as JsDecode
 import Parser
 import RemoteData exposing (RemoteData(..))
 import Round
+import Set
 import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
@@ -707,10 +708,7 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
             Dict.get (HexAddress.toKey hexAddress) solarSystemDict
 
         hexSVG =
-            if True || not (outsideX || outsideY) then
-                -- let
-                --     _= Debug.log "Rendering hex" hexAddress
-                -- in
+            if not (outsideX || outsideY) then
                 Just
                     (case solarSystem of
                         Just (LoadedSolarSystem ss) ->
@@ -746,9 +744,9 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
                                 , SvgAttrs.y <| String.fromInt voy
                                 , SvgAttrs.fontSize "12"
                                 , SvgAttrs.textAnchor "middle"
-                                , SvgAttrs.fill "#00000"
+                                , SvgAttrs.fill "#ccc"
                                 ]
-                                [ Svg.text <| HexAddress.toKey hexAddress ]
+                                []
                                 |> viewHexEmpty playerHexId hexAddress ( vox, voy ) hexSize
 
                         Nothing ->
@@ -797,16 +795,6 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
         viewportWidthIsh =
             screenVp.viewport.width * 0.9
 
-        -- -- min (screenVp.viewport.width * 0.9)
-        -- --     (screenVp.viewport.width - 500.0)
-        xOffset =
-            -- view horizontal offset
-            "0"
-
-        yOffset =
-            -- view vertical offset
-            "0"
-
         widestViewport =
             case hexmapVp of
                 Nothing ->
@@ -826,9 +814,6 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
 
         hexRange =
             HexAddress.between hexRules upperLeftHex lowerRightHex
-
-        _ =
-            Debug.log "hexRange" <| List.length hexRange
     in
     hexRange
         |> List.map
@@ -1635,9 +1620,9 @@ view model =
             , Font.color <| fontTextColor
             , Element.paddingXY 15 0
             ]
-            -- [ el [ Element.width <| Element.px 400, Element.alignTop, Element.alignLeft ] <|
-            --     sidebarColumn
-            [ el [ Element.alignTop ] <|
+            [ el [ Element.width <| Element.px 400, Element.alignTop, Element.alignLeft ] <|
+                sidebarColumn
+            , el [ Element.alignTop ] <|
                 hexesColumn
             ]
 
@@ -1886,7 +1871,7 @@ update msg model =
                             { model
                                 | dragMode = IsDragging ( newX, newY )
                                 , lowerRightHex = shiftAddress model.lowerRightHex
-                                , upperLeftHex = shiftAddress model.upperLeftHex
+                                , upperLeftHex = Debug.log "new UL" <| shiftAddress model.upperLeftHex
                             }
                     in
                     if xDelta /= 0 || yDelta /= 0 then

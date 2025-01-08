@@ -108,7 +108,7 @@ universalHexX numCols hexAddr =
 {-| Returns the universal y coordinate of a hex address, so it can be compared to all others across sectors.
 -}
 universalHexY numRows hexAddr =
-    hexAddr.y + hexAddr.sectorY * numRows
+    hexAddr.y - hexAddr.sectorY * numRows
 
 
 {-| Returns a list of hex addresses between two hex addresses, inclusive.
@@ -116,7 +116,6 @@ universalHexY numRows hexAddr =
 between : { maxX : Int, maxY : Int } -> HexAddress -> HexAddress -> List HexAddress
 between hexRules firstAddr secondAddr =
     let
-        _ = Debug.log" first and second addr" (firstAddr, secondAddr)
         ( numCols, numRows ) = ( hexRules.maxX, hexRules.maxY )
         ( minX, minY ) = (firstAddr.x, firstAddr.y)
         ( maxX, maxY ) = (secondAddr.x, secondAddr.y)

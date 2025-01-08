@@ -152,7 +152,7 @@ suite =
             \_ ->
                 let
                     sourceHexAddress =
-                        { hexAddressOne | x = 1, y = 11}
+                        { hexAddressOne | x = 1, y = 11 }
 
                     expectedHexAddress =
                         { hexAddressOne
@@ -168,7 +168,32 @@ suite =
                             { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
                             sourceHexAddress
                 in
-                    Expect.equal expectedHexAddress res
+                Expect.equal expectedHexAddress res
+        , Test.test "foo" <|
+            \_ ->
+                let
+                    sourceHexAddress =
+                        { sectorX = -10
+                        , sectorY = -2
+                        , x = 22
+                        , y = 38
+                        }
+
+                    expectedHexAddress =
+                        { hexAddressOne
+                            | sectorX = -9
+                            , sectorY = -3
+                            , x = 20
+                            , y = 28
+                        }
+
+                    res =
+                        HexAddress.shiftAddressBy
+                            { deltaX = 30, deltaY = 30 }
+                            { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
+                            sourceHexAddress
+                in
+                Expect.equal expectedHexAddress res
         , Test.fuzz2
             (Fuzz.pair
                 (Fuzz.intRange 1 20)
@@ -280,10 +305,10 @@ suite =
                         { leftHexAddr | x = leftHexAddr.x + 1 }
 
                     leftX =
-                         universalHexX Traveller.numHexCols leftHexAddr
+                        universalHexX Traveller.numHexCols leftHexAddr
 
                     rightX =
-                         universalHexX Traveller.numHexCols rightHexAddr
+                        universalHexX Traveller.numHexCols rightHexAddr
                 in
                 Expect.greaterThan leftX rightX
         , Test.test "`between` across sectors right at the border returns two different sector hexes" <|
