@@ -1463,7 +1463,7 @@ view model =
             column []
                 [ el [ Font.size 20 ] <|
                     text <|
-                        "Welcome to the Traveller app!"
+                        "Deepnight Revelation Navigation Console"
                 , el [ Font.size 14, Font.color <| fontDarkTextColor ] <|
                     text <|
                         "Viewing "
