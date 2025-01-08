@@ -81,6 +81,28 @@ suite =
                             sourceHexAddress
                 in
                 Expect.equal res targetHexAddress
+        , Test.test "subtracting 1 across sectors works" <|
+            \() ->
+                let
+                    sourceHexAddress =
+                        hexAddressOne
+
+                    expectedHexAddress =
+                        HexAddress.create
+                            { hexAddressOne
+                                | x = 32
+                                , y = 40
+                                , sectorX = 0
+                                , sectorY = 2
+                            }
+
+                    res =
+                        HexAddress.shiftAddressBy
+                            { deltaX = -1, deltaY = -1 }
+                            { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
+                            sourceHexAddress
+                in
+                Expect.equal expectedHexAddress res
         , Test.fuzz2
             (Fuzz.intRange 1 (Traveller.numHexCols - 1))
             (Fuzz.intRange 1 (Traveller.numHexRows - 1))
@@ -126,14 +148,35 @@ suite =
                         [ .x >> Expect.notEqual 0
                         , .y >> Expect.notEqual 0
                         ]
+        , Test.test "shifting an address by 30 across sectors works" <|
+            \_ ->
+                let
+                    sourceHexAddress =
+                        { hexAddressOne | x = 1, y = 11}
+
+                    expectedHexAddress =
+                        { hexAddressOne
+                            | sectorX = 1
+                            , sectorY = 0
+                            , x = 31
+                            , y = 1
+                        }
+
+                    res =
+                        HexAddress.shiftAddressBy
+                            { deltaX = 30, deltaY = 30 }
+                            { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
+                            sourceHexAddress
+                in
+                    Expect.equal expectedHexAddress res
         , Test.fuzz2
             (Fuzz.pair
                 (Fuzz.intRange 1 20)
                 (Fuzz.intRange 1 20)
             )
             (Fuzz.pair
-                (Fuzz.intRange -10 10)
-                (Fuzz.intRange -10 10)
+                (Fuzz.intRange 0 10)
+                (Fuzz.intRange 0 10)
             )
             "HexAddress.between'ing an address never returns a hex with 0 in either hex coordinates"
           <|

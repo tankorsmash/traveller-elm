@@ -116,87 +116,25 @@ universalHexY numRows hexAddr =
 between : { maxX : Int, maxY : Int } -> HexAddress -> HexAddress -> List HexAddress
 between hexRules firstAddr secondAddr =
     let
-        ( numCols, numRows ) =
-            ( hexRules.maxX, hexRules.maxY )
-
-        ( minX, minY ) =
-            ( if universalHexX numCols firstAddr < universalHexX numCols secondAddr then
-                firstAddr.x
-
-              else
-                secondAddr.x
-            , if universalHexY numRows firstAddr < universalHexY numRows secondAddr then
-                firstAddr.y
-
-              else
-                secondAddr.y
-            )
-
-        ( maxX, maxY ) =
-            ( if universalHexX numCols firstAddr > universalHexX numCols secondAddr then
-                firstAddr.x
-
-              else
-                secondAddr.x
-            , if universalHexY numRows firstAddr > universalHexY numRows secondAddr then
-                firstAddr.y
-
-              else
-                secondAddr.y
-            )
-
-        ( minSectorX, minSectorY ) =
-            ( min firstAddr.sectorX secondAddr.sectorX
-            , min firstAddr.sectorY secondAddr.sectorY
-            )
-
-        ( maxSectorX, maxSectorY ) =
-            ( max firstAddr.sectorX secondAddr.sectorX
-            , max firstAddr.sectorY secondAddr.sectorY
-            )
+        _ = Debug.log" first and second addr" (firstAddr, secondAddr)
+        ( numCols, numRows ) = ( hexRules.maxX, hexRules.maxY )
+        ( minX, minY ) = (firstAddr.x, firstAddr.y)
+        ( maxX, maxY ) = (secondAddr.x, secondAddr.y)
+        ( minSectorX, minSectorY ) = ( firstAddr.sectorX , firstAddr.sectorY )
+        ( maxSectorX, maxSectorY ) = ( secondAddr.sectorX , secondAddr.sectorY )
 
         hexesInSector sectorX sectorY =
             let
-                startX =
-                    if sectorX == minSectorX then
-                        minX
-
-                    else
-                        1
-
-                endX =
-                    if sectorX == maxSectorX then
-                        maxX
-
-                    else
-                        numCols
-
-                startY =
-                    if sectorY == minSectorY then
-                        minY
-
-                    else
-                        1
-
-                endY =
-                    if sectorY == maxSectorY then
-                        maxY
-
-                    else
-                        numRows
+                startHexX = if sectorX == minSectorX then minX else 1
+                endHexX = if sectorX == maxSectorX then maxX else numCols
+                startHexY = if sectorY == minSectorY then minY else 1
+                endHexY = if sectorY == maxSectorY then maxY else numRows
             in
-            List.range startY endY
+            List.range startHexY endHexY
                 |> List.map
                     (\y ->
-                        List.range startX endX
-                            |> List.map
-                                (\x ->
-                                    { sectorX = sectorX
-                                    , sectorY = sectorY
-                                    , x = x
-                                    , y = y
-                                    }
-                                )
+                        List.range startHexX endHexX
+                            |> List.map (\x -> { sectorX = sectorX , sectorY = sectorY , x = x , y = y })
                     )
     in
     -- for every sector X in ranges and for every sector Y in range,
@@ -204,7 +142,7 @@ between hexRules firstAddr secondAddr =
     List.range minSectorX maxSectorX
         |> List.concatMap
             (\sectorX ->
-                List.range minSectorY maxSectorY
+                List.range maxSectorY minSectorY |> List.reverse
                     |> List.concatMap
                         (\sectorY ->
                             hexesInSector sectorX sectorY

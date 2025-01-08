@@ -708,6 +708,9 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
 
         hexSVG =
             if True || not (outsideX || outsideY) then
+                -- let
+                --     _= Debug.log "Rendering hex" hexAddress
+                -- in
                 Just
                     (case solarSystem of
                         Just (LoadedSolarSystem ss) ->
@@ -741,11 +744,11 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
                             Svg.text_
                                 [ SvgAttrs.x <| String.fromInt vox
                                 , SvgAttrs.y <| String.fromInt voy
-                                , SvgAttrs.fontSize "6"
+                                , SvgAttrs.fontSize "12"
                                 , SvgAttrs.textAnchor "middle"
-                                , SvgAttrs.fill "#cccccc"
+                                , SvgAttrs.fill "#00000"
                                 ]
-                                [ Svg.text "Empty" ]
+                                [ Svg.text <| HexAddress.toKey hexAddress ]
                                 |> viewHexEmpty playerHexId hexAddress ( vox, voy ) hexSize
 
                         Nothing ->
@@ -792,9 +795,10 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
             screenVp.viewport.height * 0.9
 
         viewportWidthIsh =
-            min (screenVp.viewport.width * 0.9)
-                (screenVp.viewport.width - 500.0)
+            screenVp.viewport.width * 0.9
 
+        -- -- min (screenVp.viewport.width * 0.9)
+        -- --     (screenVp.viewport.width - 500.0)
         xOffset =
             -- view horizontal offset
             "0"
@@ -811,117 +815,34 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
                 Just hexmapViewport ->
                     hexmapViewport
 
-        -- viewHexRow : Int -> List ( Maybe (Svg Msg), Int )
-        -- viewHexRow rowIdx =
-        --     List.range 0 numHexCols
-        --         |> List.map (\colIdx -> calcOrigin hexSize rowIdx colIdx)
-        --         |> List.indexedMap
-        --             (\colIdx hexOrigin ->
-        --                 let
-        --                     hexAddress : HexAddress
-        --                     hexAddress =
-        --                         { upperLeftHex | y = rowIdx + upperLeftHex.y, x = colIdx + upperLeftHex.x }
-        --                 in
-        --                 viewHex
-        --                     widestViewport
-        --                     hexSize
-        --                     solarSystemDict
-        --                     ( viewportWidthIsh, viewportHeightIsh )
-        --                     hexAddress
-        --                     hexOrigin
-        --                     playerHexId
-        --             )
         lowerRightHex =
-            upperLeftHex |> Debug.log "upperLeftHex.x" |> HexAddress.shiftAddressBy { deltaX = 30, deltaY = 30 } hexRules
+            upperLeftHex
+                |> HexAddress.shiftAddressBy { deltaX = 30, deltaY = 30 } hexRules
 
         ( uul_vox, uul_voy ) =
             calcVisualOrigin hexSize
-                (universalHexY numHexRows upperLeftHex + 1)
-                (universalHexX numHexCols upperLeftHex + 1)
+                (universalHexY numHexRows upperLeftHex)
+                (universalHexX numHexCols upperLeftHex)
 
         hexRange =
             HexAddress.between hexRules upperLeftHex lowerRightHex
 
-        -- _ = Debug.log "num hexRange" <| List.length hexRange
-        ( uulx, uuly ) =
-            ( HexAddress.universalHexX numHexCols upperLeftHex
-            , HexAddress.universalHexY numHexRows upperLeftHex
-            )
-
-        -- _ =
-        --     Debug.log "first hex range"
-        --         (hexRange
-        --             |> List.head
-        --             |> Maybe.withDefault { sectorX = 0, sectorY = 0, x = 0, y = 0 }
-        --             |> (\first_addr ->
-        --                     ( uul_vox - HexAddress.universalHexX numHexCols first_addr
-        --                     , uul_voy - HexAddress.universalHexY numHexRows first_addr
-        --                     )
-        --                )
-        --         )
+        _ =
+            Debug.log "hexRange" <| List.length hexRange
     in
-    -- List.range 0 numHexRows
-    --     |> List.map viewHexRow
-    --     |> List.concat
-    --     |> List.filterMap
-    --         (\( maybeHex, condition ) ->
-    --             case maybeHex of
-    --                 Just hex ->
-    --                     Just ( hex, condition )
-    --
-    --                 Nothing ->
-    --                     Nothing
-    --         )
-    --     |> List.sortBy Tuple.second
-    -- |> List.map Tuple.first
-    --
     hexRange
-        --
-        -- [ -- col 22
-        --   { sectorX = 10
-        --   , sectorY = 2
-        --   , x = 22
-        --   , y = 13
-        --   }
-        -- , { sectorX = 10
-        --   , sectorY = 2
-        --   , x = 22
-        --   , y = 14
-        --   }
-        -- , { sectorX = 10
-        --   , sectorY = 2
-        --   , x = 22
-        --   , y = 15
-        --   }
-        -- , -- col 23
-        --   { sectorX = 10
-        --   , sectorY = 2
-        --   , x = 23
-        --   , y = 13
-        --   }
-        -- , { sectorX = 10
-        --   , sectorY = 2
-        --   , x = 23
-        --   , y = 14
-        --   }
-        -- , { sectorX = 10
-        --   , sectorY = 2
-        --   , x = 23
-        --   , y = 15
-        --   }
-        -- ]
         |> List.map
             (\hexAddr ->
                 let
                     hexOrigin =
-                        -- calcOrigin hexSize (hexAddr.y - 1) (hexAddr.x - 1)
                         calcVisualOrigin hexSize
-                            -- (universalHexY numHexRows hexAddr - 1)
-                            -- (universalHexX numHexCols hexAddr - 1)
-                            -- |> (\( x, y ) -> ( uul_vox - x, uul_voy - y ))
-                            (universalHexY numHexRows hexAddr - 1)
-                            (universalHexX numHexCols hexAddr - 1)
-                            |> (\( x, y ) -> ( x - uul_vox + (floor hexSize * 4), y - uul_voy + (floor <| hexSize * 4.0 * 1.6) ))
+                            (universalHexY numHexRows hexAddr + 0)
+                            (universalHexX numHexCols hexAddr + 0)
+                            |> (\( x, y ) ->
+                                    ( x - uul_vox
+                                    , y - uul_voy
+                                    )
+                               )
                 in
                 viewHex
                     widestViewport
@@ -958,9 +879,9 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
                     ]
                 , SvgAttrs.id "hexmap"
                 , viewBox <|
-                    xOffset
+                    "0"
                         ++ " "
-                        ++ yOffset
+                        ++ "0"
                         ++ " "
                         ++ stringWidth
                         ++ " "
@@ -1708,10 +1629,15 @@ view model =
                 ]
     in
     column [ width fill ]
-        [ row [ width fill, Font.size 20, Font.color <| fontTextColor, Element.paddingXY 15 0 ]
-            [ el [ Element.width <| Element.px 400, Element.alignTop, Element.alignLeft ] <|
-                sidebarColumn
-            , el [ Element.width <| Element.fillPortion 9, Element.alignTop ] <|
+        [ row
+            [ width fill
+            , Font.size 20
+            , Font.color <| fontTextColor
+            , Element.paddingXY 15 0
+            ]
+            -- [ el [ Element.width <| Element.px 400, Element.alignTop, Element.alignLeft ] <|
+            --     sidebarColumn
+            [ el [ Element.alignTop ] <|
                 hexesColumn
             ]
 
@@ -1953,11 +1879,14 @@ update msg model =
                                 { maxX = numHexCols, maxY = numHexRows }
                                 hex
 
+                        _ =
+                            Debug.log "-----------  done draggin -------------" 123
+
                         newModel =
                             { model
                                 | dragMode = IsDragging ( newX, newY )
-                                , upperLeftHex = shiftAddress model.upperLeftHex
                                 , lowerRightHex = shiftAddress model.lowerRightHex
+                                , upperLeftHex = shiftAddress model.upperLeftHex
                             }
                     in
                     if xDelta /= 0 || yDelta /= 0 then
