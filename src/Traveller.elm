@@ -847,7 +847,6 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
             ( HexAddress.universalHexX numHexCols upperLeftHex
             , HexAddress.universalHexY numHexRows upperLeftHex
             )
-                |> Debug.log "uulx, uuly"
 
         -- _ =
         --     Debug.log "first hex range"
@@ -876,41 +875,41 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
     --     |> List.sortBy Tuple.second
     -- |> List.map Tuple.first
     --
-    -- hexRange
-    --
-    [ -- col 22
-      { sectorX = -10
-      , sectorY = -2
-      , x = 22
-      , y = 13
-      }
-    , { sectorX = -10
-      , sectorY = -2
-      , x = 22
-      , y = 14
-      }
-    , { sectorX = -10
-      , sectorY = -2
-      , x = 22
-      , y = 15
-      }
-    , -- col 23
-      { sectorX = -10
-      , sectorY = -2
-      , x = 23
-      , y = 13
-      }
-    , { sectorX = -10
-      , sectorY = -2
-      , x = 23
-      , y = 14
-      }
-    , { sectorX = -10
-      , sectorY = -2
-      , x = 23
-      , y = 15
-      }
-    ]
+    hexRange
+        --
+        -- [ -- col 22
+        --   { sectorX = 10
+        --   , sectorY = 2
+        --   , x = 22
+        --   , y = 13
+        --   }
+        -- , { sectorX = 10
+        --   , sectorY = 2
+        --   , x = 22
+        --   , y = 14
+        --   }
+        -- , { sectorX = 10
+        --   , sectorY = 2
+        --   , x = 22
+        --   , y = 15
+        --   }
+        -- , -- col 23
+        --   { sectorX = 10
+        --   , sectorY = 2
+        --   , x = 23
+        --   , y = 13
+        --   }
+        -- , { sectorX = 10
+        --   , sectorY = 2
+        --   , x = 23
+        --   , y = 14
+        --   }
+        -- , { sectorX = 10
+        --   , sectorY = 2
+        --   , x = 23
+        --   , y = 15
+        --   }
+        -- ]
         |> List.map
             (\hexAddr ->
                 let
@@ -922,7 +921,7 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
                             -- |> (\( x, y ) -> ( uul_vox - x, uul_voy - y ))
                             (universalHexY numHexRows hexAddr - 1)
                             (universalHexX numHexCols hexAddr - 1)
-                            |> (\( x, y ) -> ( uul_vox - x, uul_voy - y ))
+                            |> (\( x, y ) -> ( x - uul_vox + (floor hexSize * 4), y - uul_voy + (floor <| hexSize * 4.0 * 1.6) ))
                 in
                 viewHex
                     widestViewport

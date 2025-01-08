@@ -6,7 +6,7 @@ import MD5
 import Set
 import Test exposing (Test, describe)
 import Traveller
-import Traveller.HexAddress as HexAddress exposing (HexAddress)
+import Traveller.HexAddress as HexAddress exposing (HexAddress, universalHexX)
 
 
 {-| replaces any zeroes with a 1 instead.
@@ -227,6 +227,22 @@ suite =
                         Expect.equal (List.length hexes) (countUniqueHexes hexes)
                     ]
                     hexesBetween
+        , Test.test "ensure universal to the right is larger than one to the left" <|
+            \() ->
+                let
+                    leftHexAddr =
+                        { hexAddressOne | x = 22, y = 1, sectorX = -10 }
+
+                    rightHexAddr =
+                        { leftHexAddr | x = leftHexAddr.x + 1 }
+
+                    leftX =
+                         universalHexX Traveller.numHexCols leftHexAddr
+
+                    rightX =
+                         universalHexX Traveller.numHexCols rightHexAddr
+                in
+                Expect.greaterThan leftX rightX
         , Test.test "`between` across sectors right at the border returns two different sector hexes" <|
             \() ->
                 let
