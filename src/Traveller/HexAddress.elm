@@ -106,14 +106,14 @@ toString { sectorX, sectorY, x, y } =
 
 {-| Returns the universal x coordinate of a hex address, so it can be compared to all others across sectors.
 -}
-universalHexX numCols hexAddr =
-    hexAddr.x + hexAddr.sectorX * numCols
+universalHexX hexAddr =
+    hexAddr.x + hexAddr.sectorX * 32
 
 
 {-| Returns the universal y coordinate of a hex address, so it can be compared to all others across sectors.
 -}
-universalHexY numRows hexAddr =
-    hexAddr.y - hexAddr.sectorY * numRows
+universalHexY hexAddr =
+    hexAddr.sectorY * 40 - hexAddr.y
 
 
 toSectorKey : HexAddress -> String

@@ -804,8 +804,8 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
 
         ( uul_vox, uul_voy ) =
             calcVisualOrigin hexSize
-                (universalHexY numHexRows upperLeftHex)
-                (universalHexX numHexCols upperLeftHex)
+                (universalHexY upperLeftHex)
+                (universalHexX upperLeftHex)
 
         hexRange =
             HexAddress.between hexRules upperLeftHex lowerRightHex
@@ -816,8 +816,8 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
                 let
                     hexOrigin =
                         calcVisualOrigin hexSize
-                            (universalHexY numHexRows hexAddr + 0)
-                            (universalHexX numHexCols hexAddr + 0)
+                            (universalHexY hexAddr + 0)
+                            (universalHexX hexAddr + 0)
                             |> (\( x, y ) ->
                                     ( x - uul_vox
                                     , y - uul_voy
@@ -1553,6 +1553,7 @@ view model =
                             model.sidebarHoverText
                             solarSystem
                             model.selectedStellarObject
+
                     Nothing ->
                         column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
                             [ text "Click a hex to view system details."
@@ -1673,20 +1674,34 @@ sendSolarSystemRequest requestEntry hostConfig upperLeft lowerRight =
         ( urlHostRoot, urlHostPath ) =
             hostConfig
 
+        ulx =
+            universalHexX upperLeft
+
+        uly =
+            universalHexY upperLeft
+
+        lrx =
+            universalHexX lowerRight
+
+        lry =
+            universalHexY lowerRight
+
+        _ =
+            Debug.log "upperLeft" upperLeft
+
+        _ =
+            Debug.log "lowerRight" lowerRight
+
         url =
             Url.Builder.crossOrigin
                 urlHostRoot
                 (urlHostPath ++ [ "stars" ])
                 [ --upper left hex address
-                  Url.Builder.int "ulsx" upperLeft.sectorX
-                , Url.Builder.int "ulsy" upperLeft.sectorY
-                , Url.Builder.int "ulhx" upperLeft.x
-                , Url.Builder.int "ulhy" upperLeft.y
+                  Url.Builder.int "ulx" ulx
+                , Url.Builder.int "uly" uly
                 , -- lower right hex address
-                  Url.Builder.int "lrsx" lowerRight.sectorX
-                , Url.Builder.int "lrsy" lowerRight.sectorY
-                , Url.Builder.int "lrhx" lowerRight.x
-                , Url.Builder.int "lrhy" lowerRight.y
+                  Url.Builder.int "lrx" lrx
+                , Url.Builder.int "lry" lry
                 ]
 
         requestCmd =
