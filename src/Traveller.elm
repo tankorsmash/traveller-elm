@@ -820,7 +820,7 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
                             (universalHexX hexAddr + 0)
                             |> (\( x, y ) ->
                                     ( x - uul_vox
-                                    , y - uul_voy
+                                    , uul_voy - y
                                     )
                                )
                 in
@@ -1685,12 +1685,6 @@ sendSolarSystemRequest requestEntry hostConfig upperLeft lowerRight =
 
         lry =
             universalHexY lowerRight
-
-        _ =
-            Debug.log "upperLeft" upperLeft
-
-        _ =
-            Debug.log "lowerRight" lowerRight
 
         url =
             Url.Builder.crossOrigin
