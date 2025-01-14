@@ -1,4 +1,4 @@
-module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, addVal, between, create, createFromSolarSystem, hexLabel, shiftAddressBy, toKey, toString, universalHexX, universalHexY)
+module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, addVal, between, create, createFromSolarSystem, createFromStarSystem, hexLabel, shiftAddressBy, toKey, toSectorKey, toString, universalHexX, universalHexY)
 
 
 type alias HexAddress =
@@ -67,6 +67,11 @@ createFromSolarSystem { sectorX, sectorY, x, y } =
     create { sectorX = sectorX, sectorY = sectorY, x = x, y = y }
 
 
+createFromStarSystem : { a | sectorX : Int, sectorY : Int, x : Int, y : Int } -> HexAddress
+createFromStarSystem { sectorX, sectorY, x, y } =
+    create { sectorX = sectorX, sectorY = sectorY, x = x, y = y }
+
+
 create : { sectorX : Int, sectorY : Int, x : Int, y : Int } -> HexAddress
 create { sectorX, sectorY, x, y } =
     { sectorX = sectorX
@@ -111,29 +116,68 @@ universalHexY numRows hexAddr =
     hexAddr.y - hexAddr.sectorY * numRows
 
 
+toSectorKey : HexAddress -> String
+toSectorKey { sectorX, sectorY } =
+    String.fromInt sectorX
+        ++ "."
+        ++ String.fromInt sectorY
+
+
 {-| Returns a list of hex addresses between two hex addresses, inclusive.
 -}
 between : { maxX : Int, maxY : Int } -> HexAddress -> HexAddress -> List HexAddress
 between hexRules firstAddr secondAddr =
     let
-        ( numCols, numRows ) = ( hexRules.maxX, hexRules.maxY )
-        ( minX, minY ) = (firstAddr.x, firstAddr.y)
-        ( maxX, maxY ) = (secondAddr.x, secondAddr.y)
-        ( minSectorX, minSectorY ) = ( firstAddr.sectorX , firstAddr.sectorY )
-        ( maxSectorX, maxSectorY ) = ( secondAddr.sectorX , secondAddr.sectorY )
+        ( numCols, numRows ) =
+            ( hexRules.maxX, hexRules.maxY )
+
+        ( minX, minY ) =
+            ( firstAddr.x, firstAddr.y )
+
+        ( maxX, maxY ) =
+            ( secondAddr.x, secondAddr.y )
+
+        ( minSectorX, minSectorY ) =
+            ( firstAddr.sectorX, firstAddr.sectorY )
+
+        ( maxSectorX, maxSectorY ) =
+            ( secondAddr.sectorX, secondAddr.sectorY )
 
         hexesInSector sectorX sectorY =
             let
-                startHexX = if sectorX == minSectorX then minX else 1
-                endHexX = if sectorX == maxSectorX then maxX else numCols
-                startHexY = if sectorY == minSectorY then minY else 1
-                endHexY = if sectorY == maxSectorY then maxY else numRows
+                startHexX =
+                    if sectorX == minSectorX then
+                        minX
+
+                    else
+                        1
+
+                endHexX =
+                    if sectorX == maxSectorX then
+                        maxX
+
+                    else
+                        numCols
+
+                startHexY =
+                    if sectorY == minSectorY then
+                        minY
+
+                    else
+                        1
+
+                endHexY =
+                    if sectorY == maxSectorY then
+                        maxY
+
+                    else
+                        numRows
             in
             List.range startHexY endHexY
                 |> List.map
                     (\y ->
                         List.range startHexX endHexX
-                            |> List.map (\x -> { sectorX = sectorX , sectorY = sectorY , x = x , y = y })
+                            |> List.map (\x -> { sectorX = sectorX, sectorY = sectorY, x = x, y = y })
                     )
     in
     -- for every sector X in ranges and for every sector Y in range,
@@ -141,7 +185,8 @@ between hexRules firstAddr secondAddr =
     List.range minSectorX maxSectorX
         |> List.concatMap
             (\sectorX ->
-                List.range maxSectorY minSectorY |> List.reverse
+                List.range maxSectorY minSectorY
+                    |> List.reverse
                     |> List.concatMap
                         (\sectorY ->
                             hexesInSector sectorX sectorY
