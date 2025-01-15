@@ -7,7 +7,7 @@ import Traveller.StarColour exposing (StarColour, codecStarColour)
 
 type alias StarTypeData =
     { au : Float
-    , subtype : Int
+    , subtype : Maybe Int
     , companion : Maybe StarType
     , stellarType : String
     , stellarClass : String
@@ -29,7 +29,7 @@ starTypeCodec : Codec StarType
 starTypeCodec =
     object StarTypeData
         |> Codec.field "au" .au Codec.float
-        |> Codec.field "subtype" .subtype Codec.int
+        |> Codec.field "subtype" .subtype (Codec.nullable Codec.int)
         |> Codec.field "companion" .companion (Codec.nullable <| Codec.lazy (\_ -> starTypeCodec))
         |> Codec.field "stellarType" .stellarType Codec.string
         |> Codec.field "stellarClass" .stellarClass Codec.string

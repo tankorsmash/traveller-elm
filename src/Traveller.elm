@@ -692,61 +692,57 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
             Dict.get (HexAddress.toKey hexAddress) solarSystemDict
 
         hexSVG =
-            if not (outsideX || outsideY) then
-                Just
-                    (case solarSystem of
-                        Just (LoadedSolarSystem ss) ->
-                            renderHexWithStar ss
-                                playerHexAddress
-                                hexAddress
-                                ( vox, voy )
-                                hexSize
+            Just
+                (case solarSystem of
+                    Just (LoadedSolarSystem ss) ->
+                        renderHexWithStar ss
+                            playerHexAddress
+                            hexAddress
+                            ( vox, voy )
+                            hexSize
 
-                        Just LoadingSolarSystem ->
-                            Svg.text_
-                                [ SvgAttrs.x <| String.fromInt vox
-                                , SvgAttrs.y <| String.fromInt voy
-                                , SvgAttrs.fontSize "10"
-                                , SvgAttrs.textAnchor "middle"
-                                ]
-                                [ Svg.text "Loading..." ]
-                                |> viewHexEmpty playerHexAddress hexAddress ( vox, voy ) hexSize
+                    Just LoadingSolarSystem ->
+                        Svg.text_
+                            [ SvgAttrs.x <| String.fromInt vox
+                            , SvgAttrs.y <| String.fromInt voy
+                            , SvgAttrs.fontSize "10"
+                            , SvgAttrs.textAnchor "middle"
+                            ]
+                            [ Svg.text "Loading..." ]
+                            |> viewHexEmpty playerHexAddress hexAddress ( vox, voy ) hexSize
 
-                        Just (FailedSolarSystem httpError) ->
-                            Svg.text_
-                                [ SvgAttrs.x <| String.fromInt vox
-                                , SvgAttrs.y <| String.fromInt voy
-                                , SvgAttrs.fontSize "10"
-                                , SvgAttrs.textAnchor "middle"
-                                ]
-                                [ Svg.text "Failed." ]
-                                |> viewHexEmpty playerHexAddress hexAddress ( vox, voy ) hexSize
+                    Just (FailedSolarSystem httpError) ->
+                        Svg.text_
+                            [ SvgAttrs.x <| String.fromInt vox
+                            , SvgAttrs.y <| String.fromInt voy
+                            , SvgAttrs.fontSize "10"
+                            , SvgAttrs.textAnchor "middle"
+                            ]
+                            [ Svg.text "Failed." ]
+                            |> viewHexEmpty playerHexAddress hexAddress ( vox, voy ) hexSize
 
-                        Just LoadedEmptyHex ->
-                            Svg.text_
-                                [ SvgAttrs.x <| String.fromInt vox
-                                , SvgAttrs.y <| String.fromInt voy
-                                , SvgAttrs.fontSize "12"
-                                , SvgAttrs.textAnchor "middle"
-                                , SvgAttrs.fill "#ccc"
-                                ]
-                                []
-                                |> viewHexEmpty playerHexAddress hexAddress ( vox, voy ) hexSize
+                    Just LoadedEmptyHex ->
+                        Svg.text_
+                            [ SvgAttrs.x <| String.fromInt vox
+                            , SvgAttrs.y <| String.fromInt voy
+                            , SvgAttrs.fontSize "12"
+                            , SvgAttrs.textAnchor "middle"
+                            , SvgAttrs.fill "#ccc"
+                            ]
+                            []
+                            |> viewHexEmpty playerHexAddress hexAddress ( vox, voy ) hexSize
 
-                        Nothing ->
-                            -- Svg.text_
-                            --     [ SvgAttrs.x <| String.fromInt ox
-                            --     , SvgAttrs.y <| String.fromInt oy
-                            --     , SvgAttrs.fontSize "10"
-                            --     , SvgAttrs.textAnchor "middle"
-                            --     ]
-                            --     [ Svg.text "Nothing" ]
-                            Svg.text ""
-                                |> viewHexEmpty playerHexAddress hexAddress ( vox, voy ) hexSize
-                    )
-
-            else
-                Nothing
+                    Nothing ->
+                        -- Svg.text_
+                        --     [ SvgAttrs.x <| String.fromInt ox
+                        --     , SvgAttrs.y <| String.fromInt oy
+                        --     , SvgAttrs.fontSize "10"
+                        --     , SvgAttrs.textAnchor "middle"
+                        --     ]
+                        --     [ Svg.text "Nothing" ]
+                        Svg.text ""
+                            |> viewHexEmpty playerHexAddress hexAddress ( vox, voy ) hexSize
+                )
     in
     ( hexSVG, isEmptyHex solarSystem )
 
@@ -804,7 +800,7 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
         |> List.map
             (\hexAddr ->
                 let
-                    hexOrigin =
+                    hexSVGOrigin =
                         calcVisualOrigin hexSize
                             { row = upperLeftHex.y - hexAddr.y, col = hexAddr.x - upperLeftHex.x }
                             |> (\( x, y ) ->
@@ -819,7 +815,7 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
                     solarSystemDict
                     ( viewportWidthIsh, viewportHeightIsh )
                     hexAddr
-                    hexOrigin
+                    hexSVGOrigin
                     playerHexId
             )
         |> List.filterMap Tuple.first
@@ -1675,11 +1671,9 @@ sendSolarSystemRequest requestEntry hostConfig upperLeft lowerRight =
             Url.Builder.crossOrigin
                 urlHostRoot
                 (urlHostPath ++ [ "stars" ])
-                [ --upper left hex address
-                  Url.Builder.int "ulx" upperLeft.x
+                [ Url.Builder.int "ulx" upperLeft.x
                 , Url.Builder.int "uly" upperLeft.y
-                , -- lower right hex address
-                  Url.Builder.int "lrx" lowerRight.x
+                , Url.Builder.int "lrx" lowerRight.x
                 , Url.Builder.int "lry" lowerRight.y
                 ]
 
@@ -1768,6 +1762,9 @@ update msg model =
                                 , Dict.get addrKey sortedSolarSystems |> Maybe.withDefault LoadedEmptyHex
                                 )
                             )
+
+                _ =
+                    Debug.log "pairs" rangeAsPairs
 
                 sortedSolarSystems =
                     solarSystems
