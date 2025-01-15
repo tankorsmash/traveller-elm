@@ -1763,9 +1763,6 @@ update msg model =
                                 )
                             )
 
-                _ =
-                    Debug.log "pairs" rangeAsPairs
-
                 sortedSolarSystems =
                     solarSystems
                         |> List.sortBy (HexAddress.toKey << .address)
