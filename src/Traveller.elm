@@ -42,7 +42,7 @@ import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
 import Task
-import Traveller.HexAddress as HexAddress exposing (HexAddress, hexLabel, toSectorKey, universalHexX, universalHexY)
+import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, hexLabel, sectorColumns, sectorRows, toSectorKey, toUniversalAddress, universalHexX, universalHexY, universalToSector)
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
 import Traveller.Sector exposing (Sector, SectorDict, codecSector, sectorKey)
@@ -155,7 +155,7 @@ prepNextRequest ( oldSolarSystemDict, requestHistory ) upperLeftHex lowerRightHe
             }
 
         hexRange =
-            HexAddress.between hexRules upperLeftHex lowerRightHex
+            HexAddress.between upperLeftHex lowerRightHex
 
         newSolarSystemDict =
             hexRange
@@ -237,18 +237,20 @@ init key hostConfig =
             prepNextRequest ( Dict.empty, [] ) upperLeftHex lowerRightHex
 
         upperLeftHex =
-            { sectorX = -10
-            , sectorY = -2
-            , x = 22
-            , y = 13
-            }
+            toUniversalAddress
+                { sectorX = -10
+                , sectorY = -2
+                , x = 22
+                , y = 13
+                }
 
         lowerRightHex =
-            { sectorX = -10
-            , sectorY = -2
-            , x = 32
-            , y = 24
-            }
+            toUniversalAddress
+                { sectorX = -10
+                , sectorY = -2
+                , x = 32
+                , y = 24
+                }
 
         model : Model
         model =
@@ -257,7 +259,7 @@ init key hostConfig =
             , lastSolarSystemError = Nothing
             , requestHistory = requestHistory
             , dragMode = NoDragging
-            , playerHex = { sectorX = -10, sectorY = -2, x = 31, y = 24 }
+            , playerHex = toUniversalAddress { sectorX = -10, sectorY = -2, x = 31, y = 24 }
             , hoveringHex = Nothing
             , selectedHex = Nothing
             , selectedSystem = Nothing
@@ -617,14 +619,6 @@ defaultHexSize =
     40
 
 
-numHexCols =
-    32 * 1
-
-
-numHexRows =
-    40 * 1
-
-
 hexRules =
     { maxX = numHexCols, maxY = numHexRows }
 
@@ -671,7 +665,7 @@ viewHex :
     -> VisualHexOrigin
     -> HexAddress
     -> ( Maybe (Svg Msg), Int )
-viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress ( vox, voy ) playerHexId =
+viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress ( vox, voy ) playerHexAddress =
     let
         -- idx =
         --     rowIdx + colIdx * 100
@@ -708,7 +702,7 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
                     (case solarSystem of
                         Just (LoadedSolarSystem ss) ->
                             renderHexWithStar ss
-                                playerHexId
+                                playerHexAddress
                                 hexAddress
                                 ( vox, voy )
                                 hexSize
@@ -721,7 +715,7 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
                                 , SvgAttrs.textAnchor "middle"
                                 ]
                                 [ Svg.text "Loading..." ]
-                                |> viewHexEmpty playerHexId hexAddress ( vox, voy ) hexSize
+                                |> viewHexEmpty playerHexAddress hexAddress ( vox, voy ) hexSize
 
                         Just (FailedSolarSystem httpError) ->
                             Svg.text_
@@ -731,7 +725,7 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
                                 , SvgAttrs.textAnchor "middle"
                                 ]
                                 [ Svg.text "Failed." ]
-                                |> viewHexEmpty playerHexId hexAddress ( vox, voy ) hexSize
+                                |> viewHexEmpty playerHexAddress hexAddress ( vox, voy ) hexSize
 
                         Just LoadedEmptyHex ->
                             Svg.text_
@@ -742,7 +736,7 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
                                 , SvgAttrs.fill "#ccc"
                                 ]
                                 []
-                                |> viewHexEmpty playerHexId hexAddress ( vox, voy ) hexSize
+                                |> viewHexEmpty playerHexAddress hexAddress ( vox, voy ) hexSize
 
                         Nothing ->
                             -- Svg.text_
@@ -753,7 +747,7 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
                             --     ]
                             --     [ Svg.text "Nothing" ]
                             Svg.text ""
-                                |> viewHexEmpty playerHexId hexAddress ( vox, voy ) hexSize
+                                |> viewHexEmpty playerHexAddress hexAddress ( vox, voy ) hexSize
                     )
 
             else
@@ -800,15 +794,15 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
 
         lowerRightHex =
             upperLeftHex
-                |> HexAddress.shiftAddressBy { deltaX = 30, deltaY = 30 } hexRules
+                |> HexAddress.shiftAddressBy { deltaX = 30, deltaY = 30 }
 
         ( uul_vox, uul_voy ) =
             calcVisualOrigin hexSize
-                (universalHexY upperLeftHex)
-                (universalHexX upperLeftHex)
+                upperLeftHex.x
+                upperLeftHex.y
 
         hexRange =
-            HexAddress.between hexRules upperLeftHex lowerRightHex
+            HexAddress.between upperLeftHex lowerRightHex
     in
     hexRange
         |> List.map
@@ -816,8 +810,8 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
                 let
                     hexOrigin =
                         calcVisualOrigin hexSize
-                            (universalHexY hexAddr + 0)
-                            (universalHexX hexAddr + 0)
+                            hexAddr.y
+                            hexAddr.x
                             |> (\( x, y ) ->
                                     ( x - uul_vox
                                     , uul_voy - y
@@ -1452,6 +1446,14 @@ zoomSlider hexScale =
         }
 
 
+numHexCols =
+    sectorColumns
+
+
+numHexRows =
+    sectorRows
+
+
 view : Model -> Element.Element Msg
 view model =
     let
@@ -1502,7 +1504,7 @@ view model =
                             Just (LoadedSolarSystem s) ->
                                 let
                                     key =
-                                        toSectorKey viewingAddress
+                                        toSectorKey <| universalToSector viewingAddress
 
                                     hexDescription =
                                         case Dict.get key model.sectors of
@@ -1522,25 +1524,25 @@ view model =
                             Just LoadingSolarSystem ->
                                 column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
                                     [ text "loading..."
-                                    , text <| "Hex Address: " ++ HexAddress.toString viewingAddress
+                                    , text <| "Hex Address: " ++ HexAddress.hexAddressToString viewingAddress
                                     ]
 
                             Just LoadedEmptyHex ->
                                 column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
                                     [ text "[empty]"
-                                    , text <| "Hex Address: " ++ HexAddress.toString viewingAddress
+                                    , text <| "Hex Address: " ++ HexAddress.hexAddressToString viewingAddress
                                     ]
 
                             Just (FailedSolarSystem httpError) ->
                                 column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
                                     [ text "failed."
-                                    , text <| "Hex Address: " ++ HexAddress.toString viewingAddress
+                                    , text <| "Hex Address: " ++ HexAddress.hexAddressToString viewingAddress
                                     ]
 
                             Nothing ->
                                 column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
                                     [ text "No solar system data found for system."
-                                    , text <| "Hex Address: " ++ HexAddress.toString viewingAddress
+                                    , text <| "Hex Address: " ++ HexAddress.hexAddressToString viewingAddress
                                     ]
 
                     Nothing ->
@@ -1674,28 +1676,16 @@ sendSolarSystemRequest requestEntry hostConfig upperLeft lowerRight =
         ( urlHostRoot, urlHostPath ) =
             hostConfig
 
-        ulx =
-            universalHexX upperLeft
-
-        uly =
-            universalHexY upperLeft
-
-        lrx =
-            universalHexX lowerRight
-
-        lry =
-            universalHexY lowerRight
-
         url =
             Url.Builder.crossOrigin
                 urlHostRoot
                 (urlHostPath ++ [ "stars" ])
                 [ --upper left hex address
-                  Url.Builder.int "ulx" ulx
-                , Url.Builder.int "uly" uly
+                  Url.Builder.int "ulx" upperLeft.x
+                , Url.Builder.int "uly" upperLeft.y
                 , -- lower right hex address
-                  Url.Builder.int "lrx" lrx
-                , Url.Builder.int "lry" lry
+                  Url.Builder.int "lrx" lowerRight.x
+                , Url.Builder.int "lry" lowerRight.y
                 ]
 
         requestCmd =
@@ -1713,7 +1703,7 @@ sendSolarSystemRequest requestEntry hostConfig upperLeft lowerRight =
     requestCmd
 
 
-fetchSingleSolarSystemRequest : HostConfig -> HexAddress -> Cmd Msg
+fetchSingleSolarSystemRequest : HostConfig -> SectorHexAddress -> Cmd Msg
 fetchSingleSolarSystemRequest hostConfig hex =
     let
         solarSystemDecoder : JsDecode.Decoder SolarSystem
@@ -1772,7 +1762,7 @@ update msg model =
         DownloadedSolarSystems requestEntry (Ok solarSystems) ->
             let
                 rangeAsPairs =
-                    HexAddress.between hexRules requestEntry.upperLeftHex model.lowerRightHex
+                    HexAddress.between requestEntry.upperLeftHex model.lowerRightHex
                         |> List.map
                             (\addr ->
                                 let
@@ -1854,7 +1844,7 @@ update msg model =
                     markRequestComplete requestEntry (RemoteData.Failure err) model.requestHistory
 
                 rangeAsPairs =
-                    HexAddress.between hexRules requestEntry.upperLeftHex model.lowerRightHex
+                    HexAddress.between requestEntry.upperLeftHex model.lowerRightHex
                         |> List.map
                             (\addr ->
                                 let
@@ -1912,7 +1902,7 @@ update msg model =
                 | selectedHex = Just hexAddress
                 , selectedStellarObject = Nothing
               }
-            , fetchSingleSolarSystemRequest model.hostConfig hexAddress
+            , fetchSingleSolarSystemRequest model.hostConfig <| universalToSector hexAddress
             )
 
         FocusInSidebar stellarObject ->
@@ -1953,7 +1943,6 @@ update msg model =
                         shiftAddress hex =
                             HexAddress.shiftAddressBy
                                 { deltaX = xDelta, deltaY = yDelta }
-                                { maxX = numHexCols, maxY = numHexRows }
                                 hex
 
                         _ =

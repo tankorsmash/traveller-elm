@@ -94,14 +94,10 @@ rawStarSystemToStarSystem rawStarSystem =
 
 starSystemToRawStarSystem : StarSystem -> RawStarSystem
 starSystemToRawStarSystem starSystem =
-    let
-        { sectorX, sectorY, x, y } =
-            starSystem.address
-    in
-    { x = x
-    , y = y
-    , sectorX = sectorX
-    , sectorY = sectorY
+    { x = 99999999
+    , y = 99999999
+    , sectorX = 99999999
+    , sectorY = 99999999
     , gasGiantCount = starSystem.gasGiantCount
     , planetoidBeltCount = starSystem.planetoidBeltCount
     , terrestrialPlanetCount = starSystem.terrestrialPlanetCount

@@ -44,7 +44,7 @@ codec =
 rawToFinal : RawSolarSystem -> Codec.Codec SolarSystem
 rawToFinal rawSolarSystem =
     Codec.succeed
-        { address = HexAddress.createFromSolarSystem rawSolarSystem
+        { address = HexAddress.createFromStarSystem rawSolarSystem
         , primaryStar = rawSolarSystem.primaryStar
         , gasGiants = rawSolarSystem.gasGiants
         , planetoidBelts = rawSolarSystem.planetoidBelts
@@ -58,12 +58,8 @@ rawToFinal rawSolarSystem =
 
 finalToRaw : SolarSystem -> RawSolarSystem
 finalToRaw solarSystem =
-    let
-        { sectorX, sectorY, x, y } =
-            solarSystem.address
-    in
-    { x = x
-    , y = y
+    { x = 9999999999
+    , y = 9999999999
     , primaryStar = solarSystem.primaryStar
     , gasGiants = solarSystem.gasGiants
     , planetoidBelts = solarSystem.planetoidBelts
@@ -71,8 +67,8 @@ finalToRaw solarSystem =
     , surveyIndex = solarSystem.surveyIndex
     , nativeSophont = solarSystem.nativeSophont
     , extinctSophont = solarSystem.extinctSophont
-    , sectorX = sectorX
-    , sectorY = sectorY
+    , sectorX = 9999999999
+    , sectorY = 9999999999
     , sectorName = solarSystem.sectorName
     }
 
