@@ -641,8 +641,8 @@ hexColOffset row =
         1
 
 
-calcVisualOrigin : Float -> Int -> Int -> VisualHexOrigin
-calcVisualOrigin hexSize row col =
+calcVisualOrigin : Float -> { row : Int, col : Int } -> VisualHexOrigin
+calcVisualOrigin hexSize { row, col } =
     let
         a =
             2 * pi / 6
@@ -798,8 +798,9 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
 
         ( uul_vox, uul_voy ) =
             calcVisualOrigin hexSize
-                upperLeftHex.x
-                upperLeftHex.y
+                { row = upperLeftHex.y
+                , col = upperLeftHex.y
+                }
 
         hexRange =
             HexAddress.between upperLeftHex lowerRightHex
@@ -808,25 +809,24 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
         |> List.map
             (\hexAddr ->
                 let
-                    _ =
-                        Debug.log "vox" uul_vox
-
-                    _ =
-                        Debug.log "voy" uul_voy
-
-                    _ =
-                        Debug.log "hexAddr" hexAddr
-
+                    -- _ =
+                    --     Debug.log "vox" uul_vox
+                    --
+                    -- _ =
+                    --     Debug.log "voy" uul_voy
+                    --
+                    -- _ =
+                    --     Debug.log "hexAddr" hexAddr
                     hexOrigin =
                         calcVisualOrigin hexSize
-                            hexAddr.y
-                            hexAddr.x
+                            { row = hexAddr.y, col = hexAddr.x }
                             |> (\( x, y ) ->
-                                    ( x - uul_vox
+                                    ( uul_vox - x
                                     , uul_voy - y
                                     )
                                )
-                            |> Debug.log "hexOrigin"
+
+                    -- |> Debug.log "hexOrigin"
                 in
                 viewHex
                     widestViewport
@@ -1955,14 +1955,11 @@ update msg model =
                                 { deltaX = xDelta, deltaY = yDelta }
                                 hex
 
-                        _ =
-                            Debug.log "-----------  done draggin -------------" 123
-
                         newModel =
                             { model
                                 | dragMode = IsDragging ( newX, newY )
                                 , lowerRightHex = shiftAddress model.lowerRightHex
-                                , upperLeftHex = Debug.log "new UL" <| shiftAddress model.upperLeftHex
+                                , upperLeftHex = shiftAddress model.upperLeftHex
                             }
                     in
                     if xDelta /= 0 || yDelta /= 0 then
