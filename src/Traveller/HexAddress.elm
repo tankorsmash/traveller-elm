@@ -147,13 +147,13 @@ between upperLeftHex lowerRightHex =
 
 
 hexLabel : HexAddress -> String
-hexLabel { x, y } =
-    Debug.todo "Adjust for sector x, y"
-
-
-
---(String.fromInt x |> String.pad 2 '0')
---    ++ (String.fromInt y |> String.pad 2 '0')
+hexLabel hex =
+    let
+        sectorHex =
+            universalToSector hex
+    in
+    (String.fromInt (sectorHex.x + 1) |> String.pad 2 '0')
+        ++ (String.fromInt (sectorHex.y + 1) |> String.pad 2 '0')
 
 
 universalToSectorX : HexAddress -> Int

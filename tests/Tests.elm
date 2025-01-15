@@ -34,15 +34,9 @@ suite : Test
 suite =
     let
         hexAddressOne =
-            HexAddress.create
-                { sectorX = 1
-                , sectorY = 1
-                , x = 1
-                , y = 1
-                }
-
-        hexRules =
-            { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
+            { x = 1
+            , y = 1
+            }
     in
     describe "HexAddress"
         [ Test.test "adding 0 does nothing" <|
@@ -57,7 +51,6 @@ suite =
                     res =
                         HexAddress.shiftAddressBy
                             { deltaX = 0, deltaY = 0 }
-                            { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
                             sourceHexAddress
                 in
                 Expect.equal res targetHexAddress
@@ -68,16 +61,13 @@ suite =
                         hexAddressOne
 
                     targetHexAddress =
-                        HexAddress.create
-                            { hexAddressOne
-                                | x = 2
-                                , y = 2
-                            }
+                        { x = 2
+                        , y = 2
+                        }
 
                     res =
                         HexAddress.shiftAddressBy
                             { deltaX = 1, deltaY = 1 }
-                            { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
                             sourceHexAddress
                 in
                 Expect.equal res targetHexAddress
@@ -88,18 +78,13 @@ suite =
                         hexAddressOne
 
                     expectedHexAddress =
-                        HexAddress.create
-                            { hexAddressOne
-                                | x = 32
-                                , y = 40
-                                , sectorX = 0
-                                , sectorY = 2
-                            }
+                        { x = 32
+                        , y = 40
+                        }
 
                     res =
                         HexAddress.shiftAddressBy
                             { deltaX = -1, deltaY = -1 }
-                            { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
                             sourceHexAddress
                 in
                 Expect.equal expectedHexAddress res
@@ -114,16 +99,14 @@ suite =
                         hexAddressOne
 
                     targetHexAddress =
-                        HexAddress.create
-                            { hexAddressOne
-                                | x = hexAddressOne.x + deltaX
-                                , y = hexAddressOne.y + deltaY
-                            }
+                        { hexAddressOne
+                            | x = hexAddressOne.x + deltaX
+                            , y = hexAddressOne.y + deltaY
+                        }
 
                     res =
                         HexAddress.shiftAddressBy
                             { deltaX = deltaX, deltaY = deltaY }
-                            { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
                             sourceHexAddress
                 in
                 Expect.equal res targetHexAddress
@@ -140,7 +123,6 @@ suite =
                     res =
                         HexAddress.shiftAddressBy
                             { deltaX = deltaX, deltaY = deltaY }
-                            { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
                             sourceHexAddress
                 in
                 { x = res.x, y = res.y }
@@ -155,17 +137,13 @@ suite =
                         { hexAddressOne | x = 1, y = 11 }
 
                     expectedHexAddress =
-                        { hexAddressOne
-                            | sectorX = 1
-                            , sectorY = 0
-                            , x = 31
-                            , y = 1
+                        { x = 31
+                        , y = 1
                         }
 
                     res =
                         HexAddress.shiftAddressBy
                             { deltaX = 30, deltaY = 30 }
-                            { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
                             sourceHexAddress
                 in
                 Expect.equal expectedHexAddress res
@@ -173,24 +151,18 @@ suite =
             \_ ->
                 let
                     sourceHexAddress =
-                        { sectorX = -10
-                        , sectorY = -2
-                        , x = 22
+                        { x = 22
                         , y = 38
                         }
 
                     expectedHexAddress =
-                        { hexAddressOne
-                            | sectorX = -9
-                            , sectorY = -3
-                            , x = 20
-                            , y = 28
+                        { x = 20
+                        , y = 28
                         }
 
                     res =
                         HexAddress.shiftAddressBy
                             { deltaX = 30, deltaY = 30 }
-                            { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
                             sourceHexAddress
                 in
                 Expect.equal expectedHexAddress res
@@ -213,12 +185,11 @@ suite =
                     otherHexAddress =
                         HexAddress.shiftAddressBy
                             { deltaX = deltaX, deltaY = deltaY }
-                            { maxX = Traveller.numHexCols, maxY = Traveller.numHexRows }
                             sourceHexAddress
 
                     hexRange : List HexAddress
                     hexRange =
-                        HexAddress.between hexRules sourceHexAddress otherHexAddress
+                        HexAddress.between sourceHexAddress otherHexAddress
                 in
                 hexRange
                     |> (\hexes ->
@@ -240,7 +211,7 @@ suite =
                         hexAddressOne
 
                     hexesBetween =
-                        HexAddress.between hexRules sourceHexAddress targetHexAddress
+                        HexAddress.between sourceHexAddress targetHexAddress
                 in
                 case hexesBetween of
                     [] ->
@@ -261,7 +232,7 @@ suite =
                         { hexAddressOne | x = 3 }
 
                     hexesBetween =
-                        HexAddress.between hexRules sourceHexAddress targetHexAddress
+                        HexAddress.between sourceHexAddress targetHexAddress
                 in
                 Expect.equal 3 <| List.length hexesBetween
         , Test.test "`between` with 3x3 works" <|
@@ -274,11 +245,11 @@ suite =
                         { hexAddressOne | x = 3, y = 3 }
 
                     hexesBetween =
-                        HexAddress.between hexRules sourceHexAddress targetHexAddress
+                        HexAddress.between sourceHexAddress targetHexAddress
 
                     hashAddr : HexAddress -> String
                     hashAddr addr =
-                        MD5.fromBytes [ addr.sectorX, addr.sectorY, addr.x, addr.y ]
+                        MD5.fromBytes [ addr.x, addr.y ]
                             |> List.map String.fromInt
                             |> String.join ""
 
@@ -299,29 +270,29 @@ suite =
             \() ->
                 let
                     leftHexAddr =
-                        { hexAddressOne | x = 22, y = 1, sectorX = -10 }
+                        { hexAddressOne | x = 22, y = 1 }
 
                     rightHexAddr =
                         { leftHexAddr | x = leftHexAddr.x + 1 }
 
                     leftX =
-                        universalHexX Traveller.numHexCols leftHexAddr
+                        leftHexAddr.x
 
                     rightX =
-                        universalHexX Traveller.numHexCols rightHexAddr
+                        rightHexAddr.x
                 in
                 Expect.greaterThan leftX rightX
         , Test.test "`between` across sectors right at the border returns two different sector hexes" <|
             \() ->
                 let
                     sourceHexAddress =
-                        { hexAddressOne | x = 31, y = 1, sectorX = 1 }
+                        { hexAddressOne | x = 31, y = 1 }
 
                     targetHexAddress =
-                        { hexAddressOne | x = 1, y = 1, sectorX = 2 }
+                        { hexAddressOne | x = 1, y = 1 }
 
                     hexesBetween =
-                        HexAddress.between hexRules sourceHexAddress targetHexAddress
+                        HexAddress.between sourceHexAddress targetHexAddress
                 in
                 Expect.all
                     [ Expect.equal 3 << List.length

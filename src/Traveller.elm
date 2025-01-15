@@ -240,16 +240,16 @@ init key hostConfig =
             toUniversalAddress
                 { sectorX = -10
                 , sectorY = -2
-                , x = 22
-                , y = 13
+                , x = 21
+                , y = 12
                 }
 
         lowerRightHex =
             toUniversalAddress
                 { sectorX = -10
                 , sectorY = -2
-                , x = 32
-                , y = 24
+                , x = 31
+                , y = 23
                 }
 
         model : Model
@@ -808,6 +808,15 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
         |> List.map
             (\hexAddr ->
                 let
+                    _ =
+                        Debug.log "vox" uul_vox
+
+                    _ =
+                        Debug.log "voy" uul_voy
+
+                    _ =
+                        Debug.log "hexAddr" hexAddr
+
                     hexOrigin =
                         calcVisualOrigin hexSize
                             hexAddr.y
@@ -817,6 +826,7 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
                                     , uul_voy - y
                                     )
                                )
+                            |> Debug.log "hexOrigin"
                 in
                 viewHex
                     widestViewport
