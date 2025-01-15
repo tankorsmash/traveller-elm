@@ -37,7 +37,6 @@ import Json.Decode as JsDecode
 import Parser
 import RemoteData exposing (RemoteData(..))
 import Round
-import Set
 import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
@@ -619,10 +618,6 @@ defaultHexSize =
     40
 
 
-hexRules =
-    { maxX = numHexCols, maxY = numHexRows }
-
-
 isEmptyHex : Maybe a -> Int
 isEmptyHex maybeSolarSystem =
     case maybeSolarSystem of
@@ -796,10 +791,10 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
             upperLeftHex
                 |> HexAddress.shiftAddressBy { deltaX = 30, deltaY = 30 }
 
-        ( uul_vox, uul_voy ) =
+        ( zero_x, zero_y ) =
             calcVisualOrigin hexSize
-                { row = upperLeftHex.y
-                , col = upperLeftHex.y
+                { row = 0
+                , col = 0
                 }
 
         hexRange =
@@ -809,24 +804,14 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
         |> List.map
             (\hexAddr ->
                 let
-                    -- _ =
-                    --     Debug.log "vox" uul_vox
-                    --
-                    -- _ =
-                    --     Debug.log "voy" uul_voy
-                    --
-                    -- _ =
-                    --     Debug.log "hexAddr" hexAddr
                     hexOrigin =
                         calcVisualOrigin hexSize
-                            { row = hexAddr.y, col = hexAddr.x }
+                            { row = upperLeftHex.y - hexAddr.y, col = hexAddr.x - upperLeftHex.x }
                             |> (\( x, y ) ->
-                                    ( uul_vox - x
-                                    , uul_voy - y
+                                    ( x - zero_x
+                                    , y - zero_y
                                     )
                                )
-
-                    -- |> Debug.log "hexOrigin"
                 in
                 viewHex
                     widestViewport
