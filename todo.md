@@ -13,6 +13,7 @@
 ** [X] display sector name in sidebar
 * [X] fix clipping of map to viewport boundaries
 * [ ] table'd sidebar (recursively render the columns, account for SVG's width, since its HTML and elm-ui isn't aware of that size)
+** [ ] like https://thriggle.netlify.app/traveller/subsector#$seed=Hide90811&$density=Standard&$size=Subsector&$rules=T5
 * [X] support multi-sector viewing
 * [X] making nicer function for turning a HexId into a row,col pair
 * [ ] making HexAddress fail on invalid addresses
