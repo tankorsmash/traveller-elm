@@ -883,7 +883,7 @@ renderArrow self selected =
 renderTravelTime : StellarObject -> Maybe StellarObject -> String
 renderTravelTime destination origin =
     let
-        playerGravDrive =
+        shipMDrive =
             4
 
         travelTimeStr =
@@ -900,7 +900,7 @@ renderTravelTime destination origin =
                             dist =
                                 calcDistance2F destPosition objPosition
                         in
-                        travelTime dist playerGravDrive False
+                        travelTime dist shipMDrive False
 
                     else
                         ""
