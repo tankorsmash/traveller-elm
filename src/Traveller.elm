@@ -18,6 +18,7 @@ import Element
         , column
         , el
         , fill
+        , height
         , row
         , text
         , width
@@ -922,6 +923,38 @@ renderJumpTime time =
         ]
 
 
+renderImage : String -> Element.Element Msg
+renderImage uwp =
+    let
+        gasGiantUwps =
+            [ "GS", "GM", "GL" ]
+
+        hydrographics =
+            if String.length uwp == 9 then
+                String.slice 3 4 uwp
+
+            else
+                ""
+
+        imageUrl =
+            if List.member uwp gasGiantUwps then
+                "public/gasgiant-small.png"
+
+            else if hydrographics == "A" then
+                "public/waterworld-small.png"
+
+            else if hydrographics == "0" then
+                "public/desertworld-small.png"
+
+            else
+                "public/moon-small.png"
+    in
+    Element.image [ width <| Element.px 18, height <| Element.px 18 ]
+        { src = imageUrl
+        , description = ""
+        }
+
+
 renderTravelTime : StellarObject -> Maybe StellarObject -> Element.Element Msg
 renderTravelTime destination origin =
     let
@@ -1075,7 +1108,7 @@ renderGasGiant newNestingLevel gasGiantData selectedStellarObject =
         [ renderRawOrbit gasGiantData.au
         , renderOrbitSequence gasGiantData.orbitSequence
         , renderSODescription gasGiantData.code
-        , text "🛢"
+        , renderImage gasGiantData.code
         , renderJumpTime gasGiantData.safeJumpTime
         , renderTravelTime stellarObject selectedStellarObject
         ]
@@ -1096,7 +1129,7 @@ renderTerrestrialPlanet newNestingLevel terrestrialData selectedStellarObject =
         [ renderRawOrbit terrestrialData.au
         , renderOrbitSequence terrestrialData.orbitSequence
         , renderSODescription terrestrialData.uwp
-        , text "🌍"
+        , renderImage terrestrialData.uwp
         , renderJumpTime terrestrialData.safeJumpTime
         , renderTravelTime planet selectedStellarObject
         ]
@@ -1117,7 +1150,7 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData selectedStellarObject =
         [ renderRawOrbit planetoidBeltData.au
         , renderOrbitSequence planetoidBeltData.orbitSequence
         , renderSODescription planetoidBeltData.uwp
-        , text "🗿"
+        , renderImage planetoidBeltData.uwp
         , renderJumpTime planetoidBeltData.safeJumpTime
         , renderTravelTime belt selectedStellarObject
         ]
@@ -1138,7 +1171,7 @@ renderPlanetoid newNestingLevel planetoidData selectedStellarObject =
         [ renderRawOrbit planetoidData.au
         , renderOrbitSequence planetoidData.orbitSequence
         , renderSODescription planetoidData.uwp
-        , text "🌎"
+        , renderImage planetoidData.uwp
         , renderJumpTime planetoidData.safeJumpTime
         , renderTravelTime planet selectedStellarObject
         ]
