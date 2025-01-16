@@ -864,51 +864,17 @@ imageStyle =
     ]
 
 
+travelStyle : List (Element.Attribute msg)
+travelStyle =
+    [ width <| Element.px 60
+    ]
+
+
 {-| Builds a monospace text element
 -}
 monospaceText : String -> Element.Element msg
 monospaceText someString =
     text someString |> el [ Font.family [ Font.monospace ] ]
-
-
-renderArrow : StellarObject -> Maybe StellarObject -> String
-renderArrow self selected =
-    if Just self == selected then
-        ">"
-
-    else
-        ""
-
-
-renderTravelTime : StellarObject -> Maybe StellarObject -> String
-renderTravelTime destination origin =
-    let
-        shipMDrive =
-            4
-
-        travelTimeStr =
-            case origin of
-                Just obj ->
-                    if obj /= destination then
-                        let
-                            destPosition =
-                                (getStellarOrbit destination).orbitPosition
-
-                            objPosition =
-                                (getStellarOrbit obj).orbitPosition
-
-                            dist =
-                                calcDistance2F destPosition objPosition
-                        in
-                        travelTime dist shipMDrive False
-
-                    else
-                        ""
-
-                Nothing ->
-                    ""
-    in
-    travelTimeStr
 
 
 calcNestedOffset : Int -> Float
@@ -954,6 +920,50 @@ renderJumpTime time =
         [ Element.html (Icon.arrowUpFromBracket |> Icon.styled [ Icon.lg ] |> Icon.view)
         , monospaceText <| time
         ]
+
+
+renderTravelTime : StellarObject -> Maybe StellarObject -> Element.Element Msg
+renderTravelTime destination origin =
+    let
+        shipMDrive =
+            4
+
+        travelTimeStr =
+            case origin of
+                Just obj ->
+                    if obj /= destination then
+                        let
+                            destPosition =
+                                (getStellarOrbit destination).orbitPosition
+
+                            objPosition =
+                                (getStellarOrbit obj).orbitPosition
+
+                            dist =
+                                calcDistance2F destPosition objPosition
+                        in
+                        travelTime dist shipMDrive False
+
+                    else
+                        ""
+
+                Nothing ->
+                    ""
+    in
+    case origin of
+        Just obj ->
+            if obj /= destination then
+                Element.el
+                    travelStyle
+                    (monospaceText <| travelTimeStr)
+
+            else
+                Element.row travelStyle
+                    [ Element.html (Icon.upDown |> Icon.styled [ Icon.lg ] |> Icon.view)
+                    ]
+
+        Nothing ->
+            monospaceText <| ""
 
 
 
@@ -1062,13 +1072,12 @@ renderGasGiant newNestingLevel gasGiantData selectedStellarObject =
         , Font.size 14
         , Element.Events.onClick <| FocusInSidebar stellarObject
         ]
-        [ text <| renderArrow stellarObject selectedStellarObject
-        , renderRawOrbit gasGiantData.au
+        [ renderRawOrbit gasGiantData.au
         , renderOrbitSequence gasGiantData.orbitSequence
         , renderSODescription gasGiantData.code
         , text "🛢"
         , renderJumpTime gasGiantData.safeJumpTime
-        , text <| renderTravelTime stellarObject selectedStellarObject
+        , renderTravelTime stellarObject selectedStellarObject
         ]
 
 
@@ -1084,14 +1093,12 @@ renderTerrestrialPlanet newNestingLevel terrestrialData selectedStellarObject =
         , Font.size 14
         , Element.Events.onClick <| FocusInSidebar planet
         ]
-        [ text <| renderArrow planet selectedStellarObject
-        , renderRawOrbit terrestrialData.au
+        [ renderRawOrbit terrestrialData.au
         , renderOrbitSequence terrestrialData.orbitSequence
         , renderSODescription terrestrialData.uwp
         , text "🌍"
         , renderJumpTime terrestrialData.safeJumpTime
-        , text <|
-            renderTravelTime planet selectedStellarObject
+        , renderTravelTime planet selectedStellarObject
         ]
 
 
@@ -1107,13 +1114,12 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData selectedStellarObject =
         , Font.size 14
         , Element.Events.onClick <| FocusInSidebar belt
         ]
-        [ text <| renderArrow belt selectedStellarObject
-        , renderRawOrbit planetoidBeltData.au
+        [ renderRawOrbit planetoidBeltData.au
         , renderOrbitSequence planetoidBeltData.orbitSequence
         , renderSODescription planetoidBeltData.uwp
         , text "🗿"
         , renderJumpTime planetoidBeltData.safeJumpTime
-        , text <| renderTravelTime belt selectedStellarObject
+        , renderTravelTime belt selectedStellarObject
         ]
 
 
@@ -1129,13 +1135,12 @@ renderPlanetoid newNestingLevel planetoidData selectedStellarObject =
         , Font.size 14
         , Element.Events.onClick <| FocusInSidebar planet
         ]
-        [ text <| renderArrow planet selectedStellarObject
-        , renderRawOrbit planetoidData.au
+        [ renderRawOrbit planetoidData.au
         , renderOrbitSequence planetoidData.orbitSequence
         , renderSODescription planetoidData.uwp
         , text "🌎"
         , renderJumpTime planetoidData.safeJumpTime
-        , text <| renderTravelTime planet selectedStellarObject
+        , renderTravelTime planet selectedStellarObject
         ]
 
 
