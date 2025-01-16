@@ -1350,33 +1350,34 @@ viewSystemDetailsSidebar sidebarHoverText solarSystem selectedStellarObject =
     in
     column [ Element.spacing 10, Element.paddingXY 0 10 ] <|
         [ text <| solarSystem.sectorName ++ " " ++ addressToString solarSystem
-        , let
-            tableColumn desc viewFunc =
-                { header = text ""
-                , width = Element.fill
-                , view =
-                    Element.el [ Element.Events.onMouseEnter <| TableColumnHovered (Just desc) ]
-                        << viewFunc
-                }
 
-            table =
-                Element.table [ Element.spacingXY 5 0, Element.Events.onMouseLeave (TableColumnHovered Nothing) ]
-                    { data = stellarObjects
-                    , columns =
-                        [ tableColumn "Orbit" renderOrbit
-                        , tableColumn "Sequence" renderSequence
-                        , tableColumn "UWP/Desc" renderDescription
-                        , tableColumn "???" (always (text "col"))
-                        , tableColumn "Safe Jump Time" renderSafeJump
-                        , tableColumn "???" (always (text "col"))
-                        ]
-                    }
-          in
-          column []
-            [ el [ Font.size 12, Font.italic, centerX ] <|
-                text (sidebarHoverText |> Maybe.withDefault "--")
-            , table
-            ]
+        --, let
+        --    tableColumn desc viewFunc =
+        --        { header = text ""
+        --        , width = Element.fill
+        --        , view =
+        --            Element.el [ Element.Events.onMouseEnter <| TableColumnHovered (Just desc) ]
+        --                << viewFunc
+        --        }
+        --
+        --    table =
+        --        Element.table [ Element.spacingXY 5 0, Element.Events.onMouseLeave (TableColumnHovered Nothing) ]
+        --            { data = stellarObjects
+        --            , columns =
+        --                [ tableColumn "Orbit" renderOrbit
+        --                , tableColumn "Sequence" renderSequence
+        --                , tableColumn "UWP/Desc" renderDescription
+        --                , tableColumn "???" (always (text "col"))
+        --                , tableColumn "Safe Jump Time" renderSafeJump
+        --                , tableColumn "???" (always (text "col"))
+        --                ]
+        --            }
+        --  in
+        --  column []
+        --    [ el [ Font.size 12, Font.italic, centerX ] <|
+        --        text (sidebarHoverText |> Maybe.withDefault "--")
+        --    , table
+        --    ]
         , -- render the nested chart of the system
           let
             comparePos =
