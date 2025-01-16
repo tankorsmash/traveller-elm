@@ -30,6 +30,7 @@
             "elm-explorations/test": "2.2.0",
             "ianmackenzie/elm-units": "2.10.0",
             "krisajenkins/remotedata": "6.0.1",
+            "lattyware/elm-fontawesome": "7.2.0",
             "mdgriffith/elm-ui": "1.1.8",
             "miniBill/elm-codec": "2.1.0",
             "mpizenberg/elm-pointer-events": "5.0.0",

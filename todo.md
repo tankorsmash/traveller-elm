@@ -1,3 +1,7 @@
+# Installs
+
+* elm install lattyware/elm-fontawesome
+
 # To Do
 
 ## MVP

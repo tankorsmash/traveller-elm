@@ -27,6 +27,10 @@ import Element.Border as Border
 import Element.Events
 import Element.Font as Font
 import Element.Input as Input
+import FontAwesome as Icon exposing (Icon)
+import FontAwesome.Attributes as Icon
+import FontAwesome.Solid as Icon
+import FontAwesome.Styles as Icon
 import HostConfig exposing (HostConfig)
 import Html as UnstyledHtml
 import Html.Events.Extra.Mouse
@@ -829,33 +833,42 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
            )
 
 
+orbitStyle : List (Element.Attribute msg)
+orbitStyle =
+    [ width <| Element.px 40
+    , Element.alignRight
+    ]
+
+
+descriptionStyle : List (Element.Attribute msg)
+descriptionStyle =
+    [ width <| Element.px 74
+    ]
+
+
+sequenceStyle : List (Element.Attribute msg)
+sequenceStyle =
+    [ width <| Element.px 60
+    ]
+
+
+safeJumpStyle : List (Element.Attribute msg)
+safeJumpStyle =
+    [ width <| Element.px 60
+    ]
+
+
+imageStyle : List (Element.Attribute msg)
+imageStyle =
+    [ width <| Element.px 40
+    ]
+
+
 {-| Builds a monospace text element
 -}
 monospaceText : String -> Element.Element msg
 monospaceText someString =
     text someString |> el [ Font.family [ Font.monospace ] ]
-
-
-renderGasGiant : Int -> GasGiantData -> Maybe StellarObject -> Element.Element Msg
-renderGasGiant newNestingLevel gasGiantData selectedStellarObject =
-    let
-        stellarObject =
-            GasGiant gasGiantData
-    in
-    row
-        [ Element.spacing 8
-        , Element.moveRight <| calcNestedOffset newNestingLevel
-        , Font.size 14
-        , Element.Events.onClick <| FocusInSidebar stellarObject
-        ]
-        [ text <| renderArrow stellarObject selectedStellarObject
-        , renderRawOrbit gasGiantData.au
-        , text gasGiantData.orbitSequence
-        , text gasGiantData.code
-        , text "🛢"
-        , text <| "j: " ++ gasGiantData.safeJumpTime
-        , text <| renderTravelTime stellarObject selectedStellarObject
-        ]
 
 
 renderArrow : StellarObject -> Maybe StellarObject -> String
@@ -898,38 +911,6 @@ renderTravelTime destination origin =
     travelTimeStr
 
 
-renderTerrestrialPlanet : Int -> TerrestrialData -> Maybe StellarObject -> Element.Element Msg
-renderTerrestrialPlanet newNestingLevel terrestrialData selectedStellarObject =
-    let
-        planet =
-            TerrestrialPlanet terrestrialData
-    in
-    row
-        [ Element.spacing 8
-        , Element.moveRight <| calcNestedOffset newNestingLevel
-        , Font.size 14
-        , Element.Events.onClick <| FocusInSidebar planet
-        ]
-        [ text <| renderArrow planet selectedStellarObject
-        , renderRawOrbit terrestrialData.au
-        , text terrestrialData.orbitSequence
-        , let
-            rawUwp =
-                terrestrialData.uwp
-          in
-          case Parser.run TravellerParser.uwp rawUwp of
-            Ok uwpData ->
-                column [] [ monospaceText <| rawUwp ]
-
-            Err _ ->
-                monospaceText <| rawUwp
-        , text "🌍"
-        , text <| "j: " ++ terrestrialData.safeJumpTime
-        , text <|
-            renderTravelTime planet selectedStellarObject
-        ]
-
-
 calcNestedOffset : Int -> Float
 calcNestedOffset newNestingLevel =
     toFloat <| newNestingLevel * 10
@@ -937,8 +918,41 @@ calcNestedOffset newNestingLevel =
 
 renderRawOrbit : Float -> Element.Element msg
 renderRawOrbit au =
-    row []
-        [ monospaceText <| Round.round 2 au
+    let
+        roundedAU =
+            if au < 1 then
+                Round.round 2 au
+
+            else if au < 100 then
+                Round.round 1 au
+
+            else
+                Round.round 0 au
+    in
+    Element.el
+        orbitStyle
+        (monospaceText <| roundedAU)
+
+
+renderOrbitSequence : String -> Element.Element msg
+renderOrbitSequence sequence =
+    Element.el
+        sequenceStyle
+        (monospaceText <| sequence)
+
+
+renderSODescription : String -> Element.Element msg
+renderSODescription description =
+    Element.el
+        descriptionStyle
+        (monospaceText <| description)
+
+
+renderJumpTime : String -> Element.Element Msg
+renderJumpTime time =
+    Element.row safeJumpStyle
+        [ Element.html (Icon.arrowUpFromBracket |> Icon.styled [ Icon.lg ] |> Icon.view)
+        , monospaceText <| time
         ]
 
 
@@ -1036,6 +1050,51 @@ calcDistance2F p1 p2 =
     distance
 
 
+renderGasGiant : Int -> GasGiantData -> Maybe StellarObject -> Element.Element Msg
+renderGasGiant newNestingLevel gasGiantData selectedStellarObject =
+    let
+        stellarObject =
+            GasGiant gasGiantData
+    in
+    row
+        [ Element.spacing 8
+        , Element.moveRight <| calcNestedOffset newNestingLevel
+        , Font.size 14
+        , Element.Events.onClick <| FocusInSidebar stellarObject
+        ]
+        [ text <| renderArrow stellarObject selectedStellarObject
+        , renderRawOrbit gasGiantData.au
+        , renderOrbitSequence gasGiantData.orbitSequence
+        , renderSODescription gasGiantData.code
+        , text "🛢"
+        , renderJumpTime gasGiantData.safeJumpTime
+        , text <| renderTravelTime stellarObject selectedStellarObject
+        ]
+
+
+renderTerrestrialPlanet : Int -> TerrestrialData -> Maybe StellarObject -> Element.Element Msg
+renderTerrestrialPlanet newNestingLevel terrestrialData selectedStellarObject =
+    let
+        planet =
+            TerrestrialPlanet terrestrialData
+    in
+    row
+        [ Element.spacing 8
+        , Element.moveRight <| calcNestedOffset newNestingLevel
+        , Font.size 14
+        , Element.Events.onClick <| FocusInSidebar planet
+        ]
+        [ text <| renderArrow planet selectedStellarObject
+        , renderRawOrbit terrestrialData.au
+        , renderOrbitSequence terrestrialData.orbitSequence
+        , renderSODescription terrestrialData.uwp
+        , text "🌍"
+        , renderJumpTime terrestrialData.safeJumpTime
+        , text <|
+            renderTravelTime planet selectedStellarObject
+        ]
+
+
 renderPlanetoidBelt : Int -> PlanetoidBeltData -> Maybe StellarObject -> Element.Element Msg
 renderPlanetoidBelt newNestingLevel planetoidBeltData selectedStellarObject =
     let
@@ -1050,19 +1109,10 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData selectedStellarObject =
         ]
         [ text <| renderArrow belt selectedStellarObject
         , renderRawOrbit planetoidBeltData.au
-        , text planetoidBeltData.orbitSequence
-        , let
-            rawUwp =
-                planetoidBeltData.uwp
-          in
-          case Parser.run TravellerParser.uwp rawUwp of
-            Ok uwpData ->
-                column [] [ monospaceText <| rawUwp ]
-
-            Err _ ->
-                monospaceText <| rawUwp
+        , renderOrbitSequence planetoidBeltData.orbitSequence
+        , renderSODescription planetoidBeltData.uwp
         , text "🗿"
-        , text <| "j: " ++ planetoidBeltData.safeJumpTime
+        , renderJumpTime planetoidBeltData.safeJumpTime
         , text <| renderTravelTime belt selectedStellarObject
         ]
 
@@ -1081,26 +1131,12 @@ renderPlanetoid newNestingLevel planetoidData selectedStellarObject =
         ]
         [ text <| renderArrow planet selectedStellarObject
         , renderRawOrbit planetoidData.au
-        , let
-            rawUwp =
-                planetoidData.uwp
-          in
-          case Parser.run TravellerParser.uwp rawUwp of
-            Ok uwpData ->
-                column [] [ monospaceText <| planetoidData.uwp ]
-
-            Err _ ->
-                monospaceText <| rawUwp
-        , text planetoidData.orbitSequence
+        , renderOrbitSequence planetoidData.orbitSequence
+        , renderSODescription planetoidData.uwp
         , text "🌎"
-        , text <| "j: " ++ planetoidData.safeJumpTime
+        , renderJumpTime planetoidData.safeJumpTime
         , text <| renderTravelTime planet selectedStellarObject
         ]
-
-
-convertColor : Color.Color -> Element.Color
-convertColor color =
-    Element.fromRgb <| Color.toRgba <| color
 
 
 renderStellarObject : ( Float, Float ) -> Int -> StellarObject -> Maybe StellarObject -> Element.Element Msg
@@ -1227,6 +1263,11 @@ renderSimpleStellarObject stellarObject =
 
         Star (StarDataWrap starDataConfig) ->
             text <| "Star: " ++ starDataConfig.safeJumpTime
+
+
+convertColor : Color.Color -> Element.Color
+convertColor color =
+    Element.fromRgb <| Color.toRgba <| color
 
 
 renderOrbit : StellarObject -> Element.Element Msg
