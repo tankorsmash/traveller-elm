@@ -662,32 +662,6 @@ viewHex :
     -> ( Maybe (Svg Msg), Int )
 viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress ( vox, voy ) playerHexAddress =
     let
-        -- idx =
-        --     rowIdx + colIdx * 100
-        --
-        ( fox, foy ) =
-            ( toFloat vox, toFloat voy )
-
-        outsideX =
-            let
-                plus =
-                    fox + hexSize
-
-                minus =
-                    fox - hexSize
-            in
-            (plus < 0) || (minus > widestViewport.viewport.width)
-
-        outsideY =
-            let
-                plus =
-                    foy + hexSize
-
-                minus =
-                    foy - hexSize
-            in
-            (plus < 0) || (minus > widestViewport.viewport.height)
-
         solarSystem =
             Dict.get (HexAddress.toKey hexAddress) solarSystemDict
 

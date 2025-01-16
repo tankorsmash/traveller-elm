@@ -1,17 +1,17 @@
 # To Do
 
 ## MVP
-* [ ] Correct display of hex numbers across sectors
-* [ ] Ensure call to get star sectors includes all hexes on the map
-* [ ] Resolve issue with "Loading..." being displayed and never removed when scrolling
+* [X] Correct display of hex numbers across sectors
+* [X] Ensure call to get star sectors includes all hexes on the map
+* [X] Resolve issue with "Loading..." being displayed and never removed when scrolling
 * [X] Account for offsets when dragging
 * [X] Display sector coordinates in sidebar
 * [X] click to drag map
 * [X] use stars instead of solarsystems
-** [ ] fetch solar system when clicked
+** [X] fetch solar system when clicked
 * [X] load list of sectors
 ** [X] display sector name in sidebar
-* [ ] fix clipping of map to viewport boundaries
+* [X] fix clipping of map to viewport boundaries
 * [ ] table'd sidebar (recursively render the columns, account for SVG's width, since its HTML and elm-ui isn't aware of that size)
 * [X] support multi-sector viewing
 * [X] making nicer function for turning a HexId into a row,col pair
