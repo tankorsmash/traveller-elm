@@ -923,8 +923,8 @@ renderJumpTime time =
         ]
 
 
-renderImage : String -> Element.Element Msg
-renderImage uwp =
+renderImage : String -> Maybe Float -> Element.Element Msg
+renderImage uwp maybeTemp =
     let
         gasGiantUwps =
             [ "GS", "GM", "GL" ]
@@ -936,15 +936,28 @@ renderImage uwp =
             else
                 ""
 
+        atmosphere =
+            if String.length uwp == 9 then
+                String.slice 2 3 uwp
+
+            else
+                ""
+
         imageUrl =
             if List.member uwp gasGiantUwps then
                 "public/gasgiant-small.png"
+
+            else if atmosphere == "B" || atmosphere == "C" then
+                "public/corrosivehellworld-small.png"
 
             else if hydrographics == "A" then
                 "public/waterworld-small.png"
 
             else if hydrographics == "0" then
                 "public/desertworld-small.png"
+
+            else if atmosphere == "1" || atmosphere == "2" || atmosphere == "3" then
+                "public/traceworld-small.png"
 
             else
                 "public/moon-small.png"
@@ -1108,7 +1121,7 @@ renderGasGiant newNestingLevel gasGiantData selectedStellarObject =
         [ renderRawOrbit gasGiantData.au
         , renderOrbitSequence gasGiantData.orbitSequence
         , renderSODescription gasGiantData.code
-        , renderImage gasGiantData.code
+        , renderImage gasGiantData.code Nothing
         , renderJumpTime gasGiantData.safeJumpTime
         , renderTravelTime stellarObject selectedStellarObject
         ]
@@ -1129,7 +1142,7 @@ renderTerrestrialPlanet newNestingLevel terrestrialData selectedStellarObject =
         [ renderRawOrbit terrestrialData.au
         , renderOrbitSequence terrestrialData.orbitSequence
         , renderSODescription terrestrialData.uwp
-        , renderImage terrestrialData.uwp
+        , renderImage terrestrialData.uwp terrestrialData.meanTemperature
         , renderJumpTime terrestrialData.safeJumpTime
         , renderTravelTime planet selectedStellarObject
         ]
@@ -1150,7 +1163,7 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData selectedStellarObject =
         [ renderRawOrbit planetoidBeltData.au
         , renderOrbitSequence planetoidBeltData.orbitSequence
         , renderSODescription planetoidBeltData.uwp
-        , renderImage planetoidBeltData.uwp
+        , renderImage planetoidBeltData.uwp Nothing
         , renderJumpTime planetoidBeltData.safeJumpTime
         , renderTravelTime belt selectedStellarObject
         ]
@@ -1171,7 +1184,7 @@ renderPlanetoid newNestingLevel planetoidData selectedStellarObject =
         [ renderRawOrbit planetoidData.au
         , renderOrbitSequence planetoidData.orbitSequence
         , renderSODescription planetoidData.uwp
-        , renderImage planetoidData.uwp
+        , renderImage planetoidData.uwp planetoidData.meanTemperature
         , renderJumpTime planetoidData.safeJumpTime
         , renderTravelTime planet selectedStellarObject
         ]
