@@ -249,12 +249,15 @@ init key hostConfig =
                 }
 
         lowerRightHex =
-            toUniversalAddress
-                { sectorX = -10
-                , sectorY = -2
-                , x = 31
-                , y = 23
-                }
+            let
+                squareSize =
+                    10
+            in
+            upperLeftHex
+                |> HexAddress.shiftAddressBy
+                    { deltaX = squareSize
+                    , deltaY = squareSize
+                    }
 
         model : Model
         model =
