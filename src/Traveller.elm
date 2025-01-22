@@ -1292,7 +1292,7 @@ renderStar comparePos (StarDataWrap starData) nestingLevel selectedStellarObject
                         , height <| Element.px 4
                         , Element.centerY
                         , Border.rounded 2
-                        , Background.gradient { angle = pi / 2.0, steps = [ Element.rgb 1 0 0, Element.rgba 0 0 0 0.25, Element.rgb 1 0 0 ] }
+                        , Background.gradient { angle = pi / 2.0, steps = [ Element.rgb 0.882 0.024 0, Element.rgba 0 0 0 0.25, Element.rgb 0.882 0.024 0 ] }
                         ]
                     <|
                         text <|
