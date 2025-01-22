@@ -1260,7 +1260,7 @@ renderStar (StarDataWrap starData) nestingLevel selectedStellarObject =
         ]
         [ row [ Font.alignLeft, Element.alignLeft ]
             [ if starData.orbitPosition.x == 0 && starData.orbitPosition.y == 0 then
-                text <| ""
+                Element.none
 
               else
                 renderRawOrbit starData.au
@@ -1325,102 +1325,9 @@ renderStar (StarDataWrap starData) nestingLevel selectedStellarObject =
         ]
 
 
-addressToString : SolarSystem -> String
-addressToString solarSystem =
-    solarSystem.address
-        |> (\{ x, y } ->
-                (String.fromInt x |> String.padLeft 2 '0')
-                    ++ (String.fromInt y |> String.padLeft 2 '0')
-           )
-
-
-renderSimpleStellarObject : StellarObject -> Element.Element Msg
-renderSimpleStellarObject stellarObject =
-    case stellarObject of
-        GasGiant gasGiantData ->
-            text <| "Gas Giant: " ++ gasGiantData.safeJumpTime
-
-        TerrestrialPlanet terrestrialData ->
-            text <| "Terrestrial: " ++ terrestrialData.safeJumpTime
-
-        PlanetoidBelt planetoidBeltData ->
-            text <| "Planetoid Belt: " ++ planetoidBeltData.safeJumpTime
-
-        Planetoid planetoidData ->
-            text <| "Planetoid: " ++ planetoidData.safeJumpTime
-
-        Star (StarDataWrap starDataConfig) ->
-            text <| "Star: " ++ starDataConfig.safeJumpTime
-
-
 convertColor : Color.Color -> Element.Color
 convertColor color =
     Element.fromRgb <| Color.toRgba <| color
-
-
-renderOrbit : StellarObject -> Element.Element Msg
-renderOrbit stellarObject =
-    stellarObject
-        |> getStellarOrbit
-        |> -- this is an anonymous function that gets this field off of what gets passed in
-           .au
-        |> Round.round 2
-        |> String.padLeft 6 ' '
-        |> text
-        |> el [ Font.family [ Font.monospace ] ]
-
-
-renderSequence : StellarObject -> Element.Element Msg
-renderSequence stellarObject =
-    stellarObject
-        |> getStellarOrbit
-        |> -- this is an anonymous function that gets this field off of what gets passed in
-           .orbitSequence
-        |> text
-        |> el [ Font.family [ Font.monospace ] ]
-
-
-renderSafeJump : StellarObject -> Element.Element Msg
-renderSafeJump stellarObject =
-    stellarObject
-        |> getSafeJumpTime
-        |> (\safeJumpTime ->
-                text <| "j: " ++ safeJumpTime
-           )
-        |> el [ Font.family [ Font.monospace ] ]
-
-
-renderDescription : StellarObject -> Element.Element Msg
-renderDescription stellarObject =
-    let
-        description =
-            case stellarObject of
-                GasGiant gasGiantData ->
-                    text gasGiantData.code
-
-                TerrestrialPlanet terrestrialData ->
-                    text terrestrialData.uwp
-
-                PlanetoidBelt planetoidBeltData ->
-                    text planetoidBeltData.uwp
-
-                Planetoid planetoidData ->
-                    text planetoidData.uwp
-
-                Star (StarDataWrap starDataConfig) ->
-                    text <|
-                        starDataConfig.stellarType
-                            ++ (case starDataConfig.subtype of
-                                    Just num ->
-                                        String.fromInt num
-
-                                    Nothing ->
-                                        ""
-                               )
-                            ++ " "
-                            ++ starDataConfig.stellarClass
-    in
-    el [ Font.family [ Font.monospace ] ] description
 
 
 viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Element Msg
@@ -1509,10 +1416,12 @@ zoomSlider hexScale =
         }
 
 
+numHexCols : number
 numHexCols =
     sectorColumns
 
 
+numHexRows : number
 numHexRows =
     sectorRows
 
