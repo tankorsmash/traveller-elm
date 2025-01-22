@@ -855,7 +855,7 @@ sequenceStyle =
 
 safeJumpStyle : List (Element.Attribute msg)
 safeJumpStyle =
-    [ width <| Element.px 60
+    [ width <| Element.px 44
     ]
 
 
@@ -915,10 +915,27 @@ renderSODescription description =
         (monospaceText <| description)
 
 
+iconSizing =
+    [ Element.height <| Element.px 16, Element.width <| Element.px 16 ]
+
+
+renderIcon : Icon a -> Element.Element Msg
+renderIcon icon =
+    let
+        iconSpacing =
+            { top = 0
+            , left = 0
+            , bottom = 0
+            , right = 4
+            }
+    in
+    icon |> Icon.view |> Element.html |> Element.el (iconSizing ++ [ Element.paddingEach iconSpacing ])
+
+
 renderJumpTime : String -> Element.Element Msg
 renderJumpTime time =
     Element.row safeJumpStyle
-        [ Element.html (Icon.arrowUpFromBracket |> Icon.styled [ Icon.lg ] |> Icon.view)
+        [ renderIcon Icon.arrowUpFromBracket
         , monospaceText <| time
         ]
 
@@ -1005,7 +1022,7 @@ renderTravelTime destination origin =
 
             else
                 Element.row travelStyle
-                    [ Element.html (Icon.upDown |> Icon.styled [ Icon.lg ] |> Icon.view)
+                    [ renderIcon Icon.upDown
                     ]
 
         Nothing ->
