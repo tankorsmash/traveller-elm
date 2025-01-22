@@ -1252,6 +1252,8 @@ renderStar comparePos (StarDataWrap starData) nestingLevel selectedStellarObject
             |> convertColor
             |> Background.color
         , Element.width Element.fill
+
+        --, Element.explain Debug.todo
         , Element.moveRight <| toFloat <| nestingLevel * 5
 
         -- , Element.paddingEach {top=10, left=5, right=5, bottom=10}
@@ -1283,16 +1285,29 @@ renderStar comparePos (StarDataWrap starData) nestingLevel selectedStellarObject
                     renderStar comparePos compStarData nextNestingLevel selectedStellarObject
                 )
             |> Maybe.withDefault Element.none
-        , column []
+        , column [ Element.width Element.fill ] <|
+            let
+                red =
+                    Element.el
+                        [ width <| Element.fill
+                        , height <| Element.px 4
+                        , Element.centerY
+                        , Border.rounded 2
+                        , Background.gradient { angle = pi / 2.0, steps = [ Element.rgb 1 0 0, Element.rgba 0 0 0 0.25, Element.rgb 1 0 0 ] }
+                        ]
+                    <|
+                        text <|
+                            " "
+            in
             [ starData.stellarObjects
                 |> List.filter inJumpShadow
                 |> List.map (\so -> renderStellarObject comparePos nextNestingLevel so selectedStellarObject)
                 |> column []
             , -- jump shadow
-              column [ Font.size 14, Font.bold, Element.centerX ]
+              column [ Font.size 14, Font.shadow { blur = 1, color = jumpShadowTextColor, offset = ( 0.5, 0.5 ) }, Element.width Element.fill, Element.behindContent red ]
                 [ case starData.jumpShadow of
                     Just jumpShadow ->
-                        text <| "----  " ++ Round.round 2 jumpShadow ++ "  ----"
+                        Element.el [ Element.centerX ] <| text <| Round.round 2 jumpShadow
 
                     Nothing ->
                         text ""
@@ -1479,6 +1494,14 @@ fontDarkTextColor =
     textColor
         |> Color.Manipulate.desaturate 0.85
         |> Color.Manipulate.darken 0.25
+        |> colorToElementColor
+
+
+jumpShadowTextColor : Element.Color
+jumpShadowTextColor =
+    textColor
+        |> Color.Manipulate.desaturate 0.85
+        |> Color.Manipulate.darken 0.85
         |> colorToElementColor
 
 
