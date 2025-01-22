@@ -1207,8 +1207,8 @@ renderPlanetoid newNestingLevel planetoidData selectedStellarObject =
         ]
 
 
-renderStellarObject : ( Float, Float ) -> Int -> StellarObject -> Maybe StellarObject -> Element.Element Msg
-renderStellarObject comparePos newNestingLevel stellarObject selectedStellarObject =
+renderStellarObject : Int -> StellarObject -> Maybe StellarObject -> Element.Element Msg
+renderStellarObject newNestingLevel stellarObject selectedStellarObject =
     row
         [ Element.spacing 8
         , Font.size 14
@@ -1228,12 +1228,12 @@ renderStellarObject comparePos newNestingLevel stellarObject selectedStellarObje
                 renderPlanetoid newNestingLevel planetoidData selectedStellarObject
 
             Star starDataConfig ->
-                el [ Element.width Element.fill, Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <| renderStar comparePos starDataConfig newNestingLevel selectedStellarObject
+                el [ Element.width Element.fill, Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <| renderStar starDataConfig newNestingLevel selectedStellarObject
         ]
 
 
-renderStar : ( Float, Float ) -> StarData -> Int -> Maybe StellarObject -> Element.Element Msg
-renderStar comparePos (StarDataWrap starData) nestingLevel selectedStellarObject =
+renderStar : StarData -> Int -> Maybe StellarObject -> Element.Element Msg
+renderStar (StarDataWrap starData) nestingLevel selectedStellarObject =
     let
         inJumpShadow obj =
             case starData.jumpShadow of
@@ -1280,7 +1280,7 @@ renderStar comparePos (StarDataWrap starData) nestingLevel selectedStellarObject
         , starData.companion
             |> Maybe.map
                 (\compStarData ->
-                    renderStar comparePos compStarData nextNestingLevel selectedStellarObject
+                    renderStar compStarData nextNestingLevel selectedStellarObject
                 )
             |> Maybe.withDefault Element.none
         , column [ Element.width Element.fill ] <|
@@ -1306,7 +1306,7 @@ renderStar comparePos (StarDataWrap starData) nestingLevel selectedStellarObject
             in
             [ starData.stellarObjects
                 |> List.filter inJumpShadow
-                |> List.map (\so -> renderStellarObject comparePos nextNestingLevel so selectedStellarObject)
+                |> List.map (\so -> renderStellarObject nextNestingLevel so selectedStellarObject)
                 |> column []
             , -- jump shadow
               column [ Font.size 14, Font.shadow { blur = 1, color = jumpShadowTextColor, offset = ( 0.5, 0.5 ) }, Element.width Element.fill, Element.behindContent red ]
@@ -1319,7 +1319,7 @@ renderStar comparePos (StarDataWrap starData) nestingLevel selectedStellarObject
                 ]
             , starData.stellarObjects
                 |> List.filter (not << inJumpShadow)
-                |> List.map (\so -> renderStellarObject comparePos nextNestingLevel so selectedStellarObject)
+                |> List.map (\so -> renderStellarObject nextNestingLevel so selectedStellarObject)
                 |> column []
             ]
         ]
@@ -1426,11 +1426,7 @@ renderDescription stellarObject =
 viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Element Msg
 viewSystemDetailsSidebar solarSystem selectedStellarObject =
     column [ Element.spacing 10, Element.paddingXY 0 10 ] <|
-        [ let
-            comparePos =
-                ( 0, 0 )
-          in
-          renderStar comparePos solarSystem.primaryStar 0 selectedStellarObject
+        [ renderStar solarSystem.primaryStar 0 selectedStellarObject
         ]
 
 
