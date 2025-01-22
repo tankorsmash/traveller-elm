@@ -1278,7 +1278,14 @@ renderStar comparePos (StarDataWrap starData) nestingLevel selectedStellarObject
                         , height <| Element.px 4
                         , Element.centerY
                         , Border.rounded 2
-                        , Background.gradient { angle = pi / 2.0, steps = [ Element.rgb 0.882 0.024 0, Element.rgba 0 0 0 0.25, Element.rgb 0.882 0.024 0 ] }
+                        , Background.gradient
+                            { angle = pi / 2.0
+                            , steps =
+                                [ travellerRed
+                                , Element.rgba 0 0 0 0.25
+                                , travellerRed
+                                ]
+                            }
                         ]
                     <|
                         text <|
@@ -1447,6 +1454,10 @@ jumpShadowTextColor =
         |> Color.Manipulate.desaturate 0.85
         |> Color.Manipulate.darken 0.85
         |> colorToElementColor
+
+travellerRed : Element.Color
+travellerRed =
+    Element.rgb 0.882 0.024 0
 
 
 sliderColors : List Element.Color
