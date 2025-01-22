@@ -668,10 +668,23 @@ viewHex :
     -> VisualHexOrigin
     -> HexAddress
     -> ( Maybe (Svg Msg), Int )
-viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress ( vox, voy ) playerHexAddress =
+viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress visualHexOrigin playerHexAddress =
     let
         solarSystem =
             Dict.get (HexAddress.toKey hexAddress) solarSystemDict
+
+        ( vox, voy ) =
+            visualHexOrigin
+
+        viewEmptyHelper txt =
+            Svg.text_
+                [ SvgAttrs.x <| String.fromInt vox
+                , SvgAttrs.y <| String.fromInt voy
+                , SvgAttrs.fontSize "10"
+                , SvgAttrs.textAnchor "middle"
+                ]
+                [ Svg.text txt ]
+                |> viewHexEmpty playerHexAddress hexAddress visualHexOrigin hexSize
 
         hexSVG =
             Just
@@ -680,50 +693,20 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
                         renderHexWithStar ss
                             playerHexAddress
                             hexAddress
-                            ( vox, voy )
+                            visualHexOrigin
                             hexSize
 
                     Just LoadingSolarSystem ->
-                        Svg.text_
-                            [ SvgAttrs.x <| String.fromInt vox
-                            , SvgAttrs.y <| String.fromInt voy
-                            , SvgAttrs.fontSize "10"
-                            , SvgAttrs.textAnchor "middle"
-                            ]
-                            [ Svg.text "Loading..." ]
-                            |> viewHexEmpty playerHexAddress hexAddress ( vox, voy ) hexSize
+                        viewEmptyHelper "Loading..."
 
                     Just (FailedSolarSystem httpError) ->
-                        Svg.text_
-                            [ SvgAttrs.x <| String.fromInt vox
-                            , SvgAttrs.y <| String.fromInt voy
-                            , SvgAttrs.fontSize "10"
-                            , SvgAttrs.textAnchor "middle"
-                            ]
-                            [ Svg.text "Failed." ]
-                            |> viewHexEmpty playerHexAddress hexAddress ( vox, voy ) hexSize
+                        viewEmptyHelper "Failed."
 
                     Just LoadedEmptyHex ->
-                        Svg.text_
-                            [ SvgAttrs.x <| String.fromInt vox
-                            , SvgAttrs.y <| String.fromInt voy
-                            , SvgAttrs.fontSize "12"
-                            , SvgAttrs.textAnchor "middle"
-                            , SvgAttrs.fill "#ccc"
-                            ]
-                            []
-                            |> viewHexEmpty playerHexAddress hexAddress ( vox, voy ) hexSize
+                        viewEmptyHelper ""
 
                     Nothing ->
-                        -- Svg.text_
-                        --     [ SvgAttrs.x <| String.fromInt ox
-                        --     , SvgAttrs.y <| String.fromInt oy
-                        --     , SvgAttrs.fontSize "10"
-                        --     , SvgAttrs.textAnchor "middle"
-                        --     ]
-                        --     [ Svg.text "Nothing" ]
-                        Svg.text ""
-                            |> viewHexEmpty playerHexAddress hexAddress ( vox, voy ) hexSize
+                        viewEmptyHelper ""
                 )
     in
     ( hexSVG, isEmptyHex solarSystem )
