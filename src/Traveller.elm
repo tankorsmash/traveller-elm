@@ -855,7 +855,8 @@ sequenceStyle =
 
 safeJumpStyle : List (Element.Attribute msg)
 safeJumpStyle =
-    [ width <| Element.px 44
+    [ width <| Element.px 62
+    , Font.size 12
     ]
 
 
@@ -936,7 +937,7 @@ renderJumpTime : String -> Element.Element Msg
 renderJumpTime time =
     Element.row safeJumpStyle
         [ renderIcon Icon.arrowUpFromBracket
-        , monospaceText <| time
+        , text <| time
         ]
 
 
@@ -1228,7 +1229,7 @@ renderStellarObject comparePos newNestingLevel stellarObject selectedStellarObje
                 renderPlanetoid newNestingLevel planetoidData selectedStellarObject
 
             Star starDataConfig ->
-                el [ Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <| renderStar comparePos starDataConfig newNestingLevel selectedStellarObject
+                el [ Element.width Element.fill, Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <| renderStar comparePos starDataConfig newNestingLevel selectedStellarObject
         ]
 
 
@@ -1252,21 +1253,19 @@ renderStar comparePos (StarDataWrap starData) nestingLevel selectedStellarObject
             |> convertColor
             |> Background.color
         , Element.width Element.fill
-
-        --, Element.explain Debug.todo
         , Element.moveRight <| toFloat <| nestingLevel * 5
 
         -- , Element.paddingEach {top=10, left=5, right=5, bottom=10}
         , Element.padding 10
         , Border.rounded 10
         ]
-        [ row []
+        [ row [ Font.alignLeft, Element.alignLeft ]
             [ if starData.orbitPosition.x == 0 && starData.orbitPosition.y == 0 then
                 text <| ""
 
               else
                 renderRawOrbit starData.au
-            , el [ Font.size 16, Font.bold ] <|
+            , el [ Font.alignLeft, Element.alignLeft, Font.size 16, Font.bold ] <|
                 text <|
                     starData.stellarType
                         ++ (case starData.subtype of
