@@ -902,21 +902,34 @@ renderSODescription description =
         (monospaceText <| description)
 
 
+iconSizing : List (Element.Attribute msg)
 iconSizing =
     [ Element.height <| Element.px 16, Element.width <| Element.px 16 ]
+
+
+{-| Zero spacing for padding
+Use with elm-ui to easily add padding to an element. e.g.
+
+        Element.paddingEach { zeroEach | left = 4 }
+        Border.roundEach { zeroEach | right = 2 }
+        Border.widthEach { zeroEach | top = 2 }
+
+-}
+zeroEach : { top : number, left : number, bottom : number, right : number }
+zeroEach =
+    { top = 0, left = 0, bottom = 0, right = 0 }
 
 
 renderIcon : Icon a -> Element.Element Msg
 renderIcon icon =
     let
         iconSpacing =
-            { top = 0
-            , left = 0
-            , bottom = 0
-            , right = 4
-            }
+            { zeroEach | right = 4 }
     in
-    icon |> Icon.view |> Element.html |> Element.el (iconSizing ++ [ Element.paddingEach iconSpacing ])
+    icon
+        |> Icon.view
+        |> Element.html
+        |> Element.el (Element.paddingEach iconSpacing :: iconSizing)
 
 
 renderJumpTime : String -> Element.Element Msg
@@ -1454,6 +1467,7 @@ jumpShadowTextColor =
         |> Color.Manipulate.desaturate 0.85
         |> Color.Manipulate.darken 0.85
         |> colorToElementColor
+
 
 travellerRed : Element.Color
 travellerRed =
