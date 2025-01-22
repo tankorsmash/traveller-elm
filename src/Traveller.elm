@@ -1432,36 +1432,7 @@ viewSystemDetailsSidebar sidebarHoverText solarSystem selectedStellarObject =
     in
     column [ Element.spacing 10, Element.paddingXY 0 10 ] <|
         [ text <| solarSystem.sectorName ++ " " ++ addressToString solarSystem
-
-        --, let
-        --    tableColumn desc viewFunc =
-        --        { header = text ""
-        --        , width = Element.fill
-        --        , view =
-        --            Element.el [ Element.Events.onMouseEnter <| TableColumnHovered (Just desc) ]
-        --                << viewFunc
-        --        }
-        --
-        --    table =
-        --        Element.table [ Element.spacingXY 5 0, Element.Events.onMouseLeave (TableColumnHovered Nothing) ]
-        --            { data = stellarObjects
-        --            , columns =
-        --                [ tableColumn "Orbit" renderOrbit
-        --                , tableColumn "Sequence" renderSequence
-        --                , tableColumn "UWP/Desc" renderDescription
-        --                , tableColumn "???" (always (text "col"))
-        --                , tableColumn "Safe Jump Time" renderSafeJump
-        --                , tableColumn "???" (always (text "col"))
-        --                ]
-        --            }
-        --  in
-        --  column []
-        --    [ el [ Font.size 12, Font.italic, centerX ] <|
-        --        text (sidebarHoverText |> Maybe.withDefault "--")
-        --    , table
-        --    ]
-        , -- render the nested chart of the system
-          let
+        , let
             comparePos =
                 ( 0, 0 )
           in
@@ -1581,18 +1552,6 @@ view model =
                             [ text "Revelation location:"
                             , text <| HexAddress.toKey model.playerHex
                             ]
-
-                        --, case model.hoveringHex of
-                        --    Just hoveringHex ->
-                        --        column []
-                        --            [ text "Hovering HexId:"
-                        --            , text <| String.fromInt hoveringHex.value
-                        --            , text "distance to player hex"
-                        --            , text <| String.fromInt <| calcDistance model.playerHex hoveringHex
-                        --            ]
-                        --
-                        --    Nothing ->
-                        --        text <| "None yet"
                         ]
                     ]
                 , case model.selectedHex of
@@ -1605,45 +1564,45 @@ view model =
 
                                     hexDescription =
                                         case Dict.get key model.sectors of
-                                            Just sector ->
-                                                sector.name ++ " " ++ hexLabel viewingAddress
+                                            Just _ ->
+                                                " "
 
                                             Nothing ->
                                                 "Hex Address: " ++ HexAddress.toKey viewingAddress
 
                                     foo =
-                                        column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                                        column [ centerX, centerY, Font.size 10 ]
                                             [ text <| hexDescription
                                             ]
                                 in
                                 foo
 
                             Just LoadingSolarSystem ->
-                                column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                                column [ centerX, centerY, Font.size 10 ]
                                     [ text "loading..."
                                     , text <| "Hex Address: " ++ HexAddress.hexAddressToString viewingAddress
                                     ]
 
                             Just LoadedEmptyHex ->
-                                column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                                column [ centerX, centerY, Font.size 10 ]
                                     [ text "[empty]"
                                     , text <| "Hex Address: " ++ HexAddress.hexAddressToString viewingAddress
                                     ]
 
                             Just (FailedSolarSystem httpError) ->
-                                column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                                column [ centerX, centerY, Font.size 10 ]
                                     [ text "failed."
                                     , text <| "Hex Address: " ++ HexAddress.hexAddressToString viewingAddress
                                     ]
 
                             Nothing ->
-                                column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                                column [ centerX, centerY, Font.size 10 ]
                                     [ text "No solar system data found for system."
                                     , text <| "Hex Address: " ++ HexAddress.hexAddressToString viewingAddress
                                     ]
 
                     Nothing ->
-                        column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                        column [ centerX, centerY, Font.size 10 ]
                             [ text "Click a hex to view system details."
                             ]
                 , case model.selectedSystem of
@@ -1996,6 +1955,7 @@ update msg model =
             ( { model
                 | selectedHex = Just hexAddress
                 , selectedStellarObject = Nothing
+                , selectedSystem = Nothing
               }
             , fetchSingleSolarSystemRequest model.hostConfig <| universalToSector hexAddress
             )
