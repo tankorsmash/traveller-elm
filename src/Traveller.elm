@@ -1417,22 +1417,10 @@ renderDescription stellarObject =
     el [ Font.family [ Font.monospace ] ] description
 
 
-viewSystemDetailsSidebar : Maybe String -> SolarSystem -> Maybe StellarObject -> Element Msg
-viewSystemDetailsSidebar sidebarHoverText solarSystem selectedStellarObject =
-    let
-        primaryStar : StarData
-        primaryStar =
-            solarSystem.primaryStar
-
-        starDataConfig =
-            getInnerStarData primaryStar
-
-        stellarObjects =
-            starDataConfig.stellarObjects
-    in
+viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Element Msg
+viewSystemDetailsSidebar solarSystem selectedStellarObject =
     column [ Element.spacing 10, Element.paddingXY 0 10 ] <|
-        [ text <| solarSystem.sectorName ++ " " ++ addressToString solarSystem
-        , let
+        [ let
             comparePos =
                 ( 0, 0 )
           in
@@ -1522,6 +1510,16 @@ numHexRows =
     sectorRows
 
 
+universalHexLabel : SectorDict -> HexAddress -> String
+universalHexLabel sectors hexAddress =
+    case Dict.get (HexAddress.toSectorKey <| HexAddress.universalToSector hexAddress) sectors of
+        Nothing ->
+            " "
+
+        Just sector ->
+            sector.name ++ " " ++ HexAddress.hexLabel hexAddress
+
+
 view : Model -> Element.Element Msg
 view model =
     let
@@ -1556,50 +1554,24 @@ view model =
                     ]
                 , case model.selectedHex of
                     Just viewingAddress ->
-                        case model.solarSystems |> Dict.get (HexAddress.toKey viewingAddress) of
-                            Just (LoadedSolarSystem s) ->
-                                let
-                                    key =
-                                        toSectorKey <| universalToSector viewingAddress
+                        column [ centerY, Element.paddingXY 0 10 ]
+                            [ case model.solarSystems |> Dict.get (HexAddress.toKey viewingAddress) of
+                                Just (LoadedSolarSystem s) ->
+                                    Element.none
 
-                                    hexDescription =
-                                        case Dict.get key model.sectors of
-                                            Just _ ->
-                                                " "
+                                Just LoadingSolarSystem ->
+                                    text "loading..."
 
-                                            Nothing ->
-                                                "Hex Address: " ++ HexAddress.toKey viewingAddress
+                                Just LoadedEmptyHex ->
+                                    Element.none
 
-                                    foo =
-                                        column [ centerX, centerY, Font.size 10 ]
-                                            [ text <| hexDescription
-                                            ]
-                                in
-                                foo
+                                Just (FailedSolarSystem httpError) ->
+                                    text "failed."
 
-                            Just LoadingSolarSystem ->
-                                column [ centerX, centerY, Font.size 10 ]
-                                    [ text "loading..."
-                                    , text <| "Hex Address: " ++ HexAddress.hexAddressToString viewingAddress
-                                    ]
-
-                            Just LoadedEmptyHex ->
-                                column [ centerX, centerY, Font.size 10 ]
-                                    [ text "[empty]"
-                                    , text <| "Hex Address: " ++ HexAddress.hexAddressToString viewingAddress
-                                    ]
-
-                            Just (FailedSolarSystem httpError) ->
-                                column [ centerX, centerY, Font.size 10 ]
-                                    [ text "failed."
-                                    , text <| "Hex Address: " ++ HexAddress.hexAddressToString viewingAddress
-                                    ]
-
-                            Nothing ->
-                                column [ centerX, centerY, Font.size 10 ]
-                                    [ text "No solar system data found for system."
-                                    , text <| "Hex Address: " ++ HexAddress.hexAddressToString viewingAddress
-                                    ]
+                                Nothing ->
+                                    text "No solar system data found for system."
+                            , text <| universalHexLabel model.sectors viewingAddress
+                            ]
 
                     Nothing ->
                         column [ centerX, centerY, Font.size 10 ]
@@ -1608,7 +1580,6 @@ view model =
                 , case model.selectedSystem of
                     Just solarSystem ->
                         viewSystemDetailsSidebar
-                            model.sidebarHoverText
                             solarSystem
                             model.selectedStellarObject
 
