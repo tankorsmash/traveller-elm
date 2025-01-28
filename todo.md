@@ -16,14 +16,17 @@
 * [X] load list of sectors
 ** [X] display sector name in sidebar
 * [X] fix clipping of map to viewport boundaries
-* [ ] table'd sidebar (recursively render the columns, account for SVG's width, since its HTML and elm-ui isn't aware of that size)
-** [ ] like https://thriggle.netlify.app/traveller/subsector#$seed=Hide90811&$density=Standard&$size=Subsector&$rules=T5
 * [X] support multi-sector viewing
 * [X] making nicer function for turning a HexId into a row,col pair
+* [ ] Display location in sector co-ordinates, not absolute co-ordinates
+* [X] table'd sidebar (recursively render the columns, account for SVG's width, since its HTML and elm-ui isn't aware of that size)
+** [ ] like https://thriggle.netlify.app/traveller/subsector#$seed=Hide90811&$density=Standard&$size=Subsector&$rules=T5
 * [ ] making HexAddress fail on invalid addresses
 * [ ] Remember position between sessions
 * [ ] render neutron star
 * [ ] prettier ui somehow
+* [ ] sector borders
+* [ ] subsector borders
 
 ## 1.0
 * [ ] smart caching/requesting the api so we don't fetch too much duplicate data
