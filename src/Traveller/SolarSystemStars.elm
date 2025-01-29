@@ -1,4 +1,4 @@
-module Traveller.SolarSystemStars exposing (StarSystem, StarType, StarTypeData, getStarTypeData, starSystemCodec, starTypeCodec)
+module Traveller.SolarSystemStars exposing (StarSystem, StarType, StarTypeData, getStarTypeData, isBrownDwarfType, starSystemCodec, starTypeCodec)
 
 import Codec exposing (Codec, lazy, list, object)
 import Traveller.HexAddress as HexAddress exposing (HexAddress)
@@ -14,6 +14,11 @@ type alias StarTypeData =
     , colour : Maybe StarColour
     , diameter : Maybe Float
     }
+
+
+isBrownDwarfType : StarTypeData -> Bool
+isBrownDwarfType theStar =
+    List.any (\a -> a == theStar.stellarType) [ "D", "Y", "T", "L" ]
 
 
 type StarType

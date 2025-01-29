@@ -52,7 +52,7 @@ import Traveller.Point exposing (StellarPoint)
 import Traveller.Route exposing (Route, codecRoute)
 import Traveller.Sector exposing (Sector, SectorDict, codecSector, sectorKey)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
-import Traveller.SolarSystemStars exposing (StarSystem, StarType, StarTypeData, getStarTypeData, starSystemCodec)
+import Traveller.SolarSystemStars exposing (StarSystem, StarType, StarTypeData, getStarTypeData, isBrownDwarfType, starSystemCodec)
 import Traveller.StarColour exposing (starColourRGB)
 import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, getInnerStarData, getSafeJumpTime, getStellarOrbit, isBrownDwarf)
 import Url.Builder
@@ -496,6 +496,18 @@ renderHexWithStar starSystem _ hexAddress (( vox, voy ) as visualOrigin) size =
                 primaryPos =
                     ( toFloat vox, toFloat voy )
 
+                isKnown : StarType -> Bool
+                isKnown theStar =
+                    let
+                        starData =
+                            getStarTypeData theStar
+                    in
+                    if isBrownDwarfType starData then
+                        starSystem.surveyIndex >= 4
+
+                    else
+                        starSystem.surveyIndex >= 1
+
                 generateStar : Int -> StarType -> Svg Msg
                 generateStar idx starType =
                     let
@@ -529,6 +541,7 @@ renderHexWithStar starSystem _ hexAddress (( vox, voy ) as visualOrigin) size =
             Svg.g
                 []
                 (starSystem.stars
+                    |> List.filter isKnown
                     |> List.indexedMap generateStar
                 )
 
