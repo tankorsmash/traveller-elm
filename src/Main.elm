@@ -60,7 +60,7 @@ routeParser =
         ]
 
 
-init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init : Maybe ( Int, Int ) -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
         hostConfig : HostConfig.HostConfig
@@ -79,7 +79,7 @@ init flags url key =
                    )
 
         ( travellerModel, travellerCmds ) =
-            Traveller.init key hostConfig
+            Traveller.init flags key hostConfig
 
         model : Model
         model =
@@ -103,7 +103,7 @@ init flags url key =
     )
 
 
-main : Program () Model Msg
+main : Program (Maybe ( Int, Int )) Model Msg
 main =
     Browser.application
         { init = init

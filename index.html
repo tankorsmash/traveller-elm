@@ -20,11 +20,17 @@
         elm.ports.listenToLocalStorage.send(0);
       }
 
+      const loc = JSON.parse(localStorage.getItem('upperLeftHex') ?? "null" );
       const elm = Elm.Main.init({
+        flags: loc,
         node: document.getElementById("root"),
       });
 
       <!-- elm.ports.writeToLocalStorage.subscribe(receiveFromElm); -->
+
+      elm.ports.storeInLocalStorage.subscribe(id => {
+        localStorage.setItem('upperLeftHex', JSON.stringify(id));
+      });
 
       elm.ports.toggleDialog.subscribe(id => {
         console.log("toggling")

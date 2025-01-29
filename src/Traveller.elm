@@ -1,4 +1,4 @@
-module Traveller exposing (Model, Msg(..), init, numHexCols, numHexRows, subscriptions, update, view)
+port module Traveller exposing (Model, Msg(..), init, numHexCols, numHexRows, subscriptions, update, view)
 
 --import Traveller.HexId as HexId exposing (HexId, RawHexId)
 
@@ -234,20 +234,25 @@ subscriptions _ =
     Browser.Events.onResize GotResize
 
 
-init : Browser.Navigation.Key -> HostConfig.HostConfig -> ( Model, Cmd Msg )
-init key hostConfig =
+init : Maybe ( Int, Int ) -> Browser.Navigation.Key -> HostConfig.HostConfig -> ( Model, Cmd Msg )
+init maybeUpperLeft key hostConfig =
     let
         -- requestHistory : RequestHistory
         ( requestEntry, ( solarSystemDict, requestHistory ) ) =
             prepNextRequest ( Dict.empty, [] ) upperLeftHex lowerRightHex
 
         upperLeftHex =
-            toUniversalAddress
-                { sectorX = -10
-                , sectorY = -2
-                , x = 21
-                , y = 12
-                }
+            case maybeUpperLeft of
+                Just ( x, y ) ->
+                    HexAddress x y
+
+                Nothing ->
+                    toUniversalAddress
+                        { sectorX = -10
+                        , sectorY = -2
+                        , x = 21
+                        , y = 12
+                        }
 
         lowerRightHex =
             let
@@ -1678,6 +1683,14 @@ fetchSingleSolarSystemRequest hostConfig hex =
     requestCmd
 
 
+saveMapCoords : HexAddress -> Cmd Msg
+saveMapCoords upperLeft =
+    storeInLocalStorage ( upperLeft.x, upperLeft.y )
+
+
+port storeInLocalStorage : ( Int, Int ) -> Cmd msg
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -1912,7 +1925,7 @@ update msg model =
                     in
                     if xDelta /= 0 || yDelta /= 0 then
                         ( newModel
-                        , Cmd.none
+                        , saveMapCoords newModel.upperLeftHex
                         )
 
                     else
