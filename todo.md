@@ -19,14 +19,14 @@
 * [X] support multi-sector viewing
 * [X] making nicer function for turning a HexId into a row,col pair
 * [X] save location of map
-* [ ] Only show known stellar objects in side panel
+* [X] Only show known stellar objects in side panel
 * [ ] display Revelation location
 * [ ] display Revelation route
 * [ ] Display location in sector co-ordinates, not absolute co-ordinates
 * [X] table'd sidebar (recursively render the columns, account for SVG's width, since its HTML and elm-ui isn't aware of that size)
 ** [ ] like https://thriggle.netlify.app/traveller/subsector#$seed=Hide90811&$density=Standard&$size=Subsector&$rules=T5
 * [ ] making HexAddress fail on invalid addresses
-* [ ] Remember position between sessions
+* [X] Remember position between sessions
 * [ ] render neutron star
 * [ ] prettier ui somehow
 * [ ] sector borders
