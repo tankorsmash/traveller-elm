@@ -54,19 +54,7 @@ import Traveller.Sector exposing (Sector, SectorDict, codecSector, sectorKey)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.SolarSystemStars exposing (StarSystem, StarType, StarTypeData, getStarTypeData, starSystemCodec)
 import Traveller.StarColour exposing (starColourRGB)
-import Traveller.StellarObject
-    exposing
-        ( GasGiantData
-        , InnerStarData
-        , PlanetoidBeltData
-        , PlanetoidData
-        , StarData(..)
-        , StellarObject(..)
-        , TerrestrialData
-        , getInnerStarData
-        , getSafeJumpTime
-        , getStellarOrbit
-        )
+import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, getInnerStarData, getSafeJumpTime, getStellarOrbit, isBrownDwarf)
 import Url.Builder
 
 
@@ -1210,8 +1198,8 @@ renderPlanetoid newNestingLevel planetoidData selectedStellarObject =
         ]
 
 
-renderStellarObject : Int -> StellarObject -> Maybe StellarObject -> Element.Element Msg
-renderStellarObject newNestingLevel stellarObject selectedStellarObject =
+renderStellarObject : Int -> Int -> StellarObject -> Maybe StellarObject -> Element.Element Msg
+renderStellarObject surveyIndex newNestingLevel stellarObject selectedStellarObject =
     row
         [ Element.spacing 8
         , Font.size 14
@@ -1231,12 +1219,12 @@ renderStellarObject newNestingLevel stellarObject selectedStellarObject =
                 renderPlanetoid newNestingLevel planetoidData selectedStellarObject
 
             Star starDataConfig ->
-                el [ Element.width Element.fill, Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <| renderStar starDataConfig newNestingLevel selectedStellarObject
+                el [ Element.width Element.fill, Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <| renderStar surveyIndex starDataConfig newNestingLevel selectedStellarObject
         ]
 
 
-renderStar : StarData -> Int -> Maybe StellarObject -> Element.Element Msg
-renderStar (StarDataWrap starData) nestingLevel selectedStellarObject =
+renderStar : Int -> StarData -> Int -> Maybe StellarObject -> Element.Element Msg
+renderStar surveyIndex (StarDataWrap starData) nestingLevel selectedStellarObject =
     let
         inJumpShadow obj =
             case starData.jumpShadow of
@@ -1245,6 +1233,27 @@ renderStar (StarDataWrap starData) nestingLevel selectedStellarObject =
 
                 Nothing ->
                     False
+
+        isKnown obj =
+            case obj of
+                GasGiant _ ->
+                    surveyIndex >= 5
+
+                TerrestrialPlanet _ ->
+                    surveyIndex >= 6
+
+                PlanetoidBelt _ ->
+                    surveyIndex >= 6
+
+                Planetoid _ ->
+                    surveyIndex >= 6
+
+                Star childStar ->
+                    if isBrownDwarf <| getInnerStarData childStar then
+                        surveyIndex >= 4
+
+                    else
+                        surveyIndex >= 3
 
         nextNestingLevel =
             nestingLevel + 1
@@ -1283,7 +1292,7 @@ renderStar (StarDataWrap starData) nestingLevel selectedStellarObject =
         , starData.companion
             |> Maybe.map
                 (\compStarData ->
-                    renderStar compStarData nextNestingLevel selectedStellarObject
+                    renderStar surveyIndex compStarData nextNestingLevel selectedStellarObject
                 )
             |> Maybe.withDefault Element.none
         , column [ Element.width Element.fill ] <|
@@ -1309,7 +1318,8 @@ renderStar (StarDataWrap starData) nestingLevel selectedStellarObject =
             in
             [ starData.stellarObjects
                 |> List.filter inJumpShadow
-                |> List.map (\so -> renderStellarObject nextNestingLevel so selectedStellarObject)
+                |> List.filter isKnown
+                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so selectedStellarObject)
                 |> column []
             , -- jump shadow
               column [ Font.size 14, Font.shadow { blur = 1, color = jumpShadowTextColor, offset = ( 0.5, 0.5 ) }, Element.width Element.fill, Element.behindContent red ]
@@ -1322,7 +1332,8 @@ renderStar (StarDataWrap starData) nestingLevel selectedStellarObject =
                 ]
             , starData.stellarObjects
                 |> List.filter (not << inJumpShadow)
-                |> List.map (\so -> renderStellarObject nextNestingLevel so selectedStellarObject)
+                |> List.filter isKnown
+                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so selectedStellarObject)
                 |> column []
             ]
         ]
@@ -1336,7 +1347,7 @@ convertColor color =
 viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Element Msg
 viewSystemDetailsSidebar solarSystem selectedStellarObject =
     column [ Element.spacing 10, Element.paddingXY 0 10 ] <|
-        [ renderStar solarSystem.primaryStar 0 selectedStellarObject
+        [ renderStar solarSystem.surveyIndex solarSystem.primaryStar 0 selectedStellarObject
         ]
 
 

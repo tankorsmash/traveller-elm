@@ -1,4 +1,4 @@
-module Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, codecStarData, codecStellarObject, getInnerStarData, getSafeJumpTime, getStellarOrbit)
+module Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, codecStarData, codecStellarObject, getInnerStarData, getSafeJumpTime, getStellarOrbit, isBrownDwarf)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -152,6 +152,11 @@ type alias InnerStarData =
     , au : Float
     , jumpShadow : Maybe Float
     }
+
+
+isBrownDwarf : InnerStarData -> Bool
+isBrownDwarf theStar =
+    List.any (\a -> a == theStar.stellarType) [ "D", "Y", "T", "L" ]
 
 
 {-| Since StarData is recursive, we need to use a Type for it, instead of an
