@@ -1703,7 +1703,7 @@ update msg model =
         DownloadedSolarSystems requestEntry (Ok solarSystems) ->
             let
                 rangeAsPairs =
-                    HexAddress.between requestEntry.upperLeftHex model.lowerRightHex
+                    HexAddress.between requestEntry.upperLeftHex requestEntry.lowerRightHex
                         |> List.map
                             (\addr ->
                                 let
@@ -1785,7 +1785,7 @@ update msg model =
                     markRequestComplete requestEntry (RemoteData.Failure err) model.requestHistory
 
                 rangeAsPairs =
-                    HexAddress.between requestEntry.upperLeftHex model.lowerRightHex
+                    HexAddress.between requestEntry.upperLeftHex requestEntry.lowerRightHex
                         |> List.map
                             (\addr ->
                                 let
@@ -1793,7 +1793,24 @@ update msg model =
                                         HexAddress.toKey addr
                                 in
                                 ( addrKey
-                                , Dict.get addrKey existingDict |> Maybe.withDefault (FailedSolarSystem err)
+                                , Dict.get addrKey existingDict
+                                    |> (\maybeSolarsystem ->
+                                            case maybeSolarsystem of
+                                                Just LoadingSolarSystem ->
+                                                    FailedSolarSystem err
+
+                                                Just LoadedEmptyHex ->
+                                                    FailedSolarSystem err
+
+                                                Just (FailedSolarSystem _) ->
+                                                    FailedSolarSystem err
+
+                                                Just (LoadedSolarSystem solarSystem) ->
+                                                    LoadedSolarSystem solarSystem
+
+                                                Nothing ->
+                                                    FailedSolarSystem err
+                                       )
                                 )
                             )
 
