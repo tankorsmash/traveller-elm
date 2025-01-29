@@ -49,6 +49,7 @@ import Task
 import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, hexLabel, sectorColumns, sectorRows, toSectorKey, toUniversalAddress, universalHexX, universalHexY, universalToSector)
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
+import Traveller.Route exposing (Route, codecRoute)
 import Traveller.Sector exposing (Sector, SectorDict, codecSector, sectorKey)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.SolarSystemStars exposing (StarSystem, StarType, StarTypeData, getStarTypeData, starSystemCodec)
@@ -251,7 +252,7 @@ init key hostConfig =
         lowerRightHex =
             let
                 squareSize =
-                    10
+                    30
             in
             upperLeftHex
                 |> HexAddress.shiftAddressBy
@@ -727,12 +728,13 @@ type alias SolarSystemDict =
 -}
 viewHexes :
     HexAddress
+    -> HexAddress
     -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport }
     -> SolarSystemDict
     -> HexAddress
     -> Float
     -> Html Msg
-viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSize =
+viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSize =
     let
         viewportHeightIsh =
             screenVp.viewport.height * 0.9
@@ -747,10 +749,6 @@ viewHexes upperLeftHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSiz
 
                 Just hexmapViewport ->
                     hexmapViewport
-
-        lowerRightHex =
-            upperLeftHex
-                |> HexAddress.shiftAddressBy { deltaX = 30, deltaY = 30 }
 
         ( zero_x, zero_y ) =
             calcVisualOrigin hexSize
@@ -1556,6 +1554,7 @@ view model =
                             in
                             viewHexes
                                 model.upperLeftHex
+                                model.lowerRightHex
                                 viewPortConfig
                                 model.solarSystems
                                 model.playerHex
@@ -1985,3 +1984,36 @@ sendSectorRequest requestEntry hostConfig =
                 }
     in
     requestCmd
+
+
+
+--sendRouteRequest : RequestEntry -> HostConfig -> Cmd Msg
+--sendRouteRequest requestEntry hostConfig =
+--    let
+--        routeDecoder : JsDecode.Decoder (List Route)
+--        routeDecoder =
+--            Codec.list codecRoute
+--                |> Codec.decoder
+--
+--        ( urlHostRoot, urlHostPath ) =
+--            hostConfig
+--
+--        url =
+--            Url.Builder.crossOrigin
+--                urlHostRoot
+--                (urlHostPath ++ [ "route" ])
+--                []
+--
+--        requestCmd =
+--            -- using Http.request instead of Http.get, to allow setting a timeout
+--            Http.request
+--                { method = "GET"
+--                , headers = []
+--                , url = url
+--                , body = Http.emptyBody
+--                , expect = Http.expectJson (DownloadedRoute requestEntry) routeDecoder
+--                , timeout = Just 5000
+--                , tracker = Nothing
+--                }
+--    in
+--    requestCmd
