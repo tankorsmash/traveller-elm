@@ -19,6 +19,7 @@
 * [X] support multi-sector viewing
 * [X] making nicer function for turning a HexId into a row,col pair
 * [X] save location of map
+* [ ] Only show known stellar objects in side panel
 * [ ] display Revelation location
 * [ ] display Revelation route
 * [ ] Display location in sector co-ordinates, not absolute co-ordinates

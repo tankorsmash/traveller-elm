@@ -170,8 +170,7 @@ view model =
         [ Dialog.view "error-dialog" ToggleErrorDialog model.dialogBody
         , div
             []
-            [ Html.button [ Html.Events.onClick ToggleDarkMode ] [ text "Light/Dark" ]
-            , Html.nav [ class "navbar navbar-expand m-3" ]
+            [ Html.nav [ class "navbar navbar-expand m-3" ]
                 [ a [ href "/", class "navbar-brand" ] [ text "Traveller" ]
                 , Html.ul [ class "navbar-nav" ]
                     [ Html.li [ class "nav-item" ] [ a [ class "nav-link", href "/" ] [ text "Map" ] ]

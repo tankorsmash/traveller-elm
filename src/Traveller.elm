@@ -1641,7 +1641,7 @@ sendSolarSystemRequest requestEntry hostConfig upperLeft lowerRight =
                 , url = url
                 , body = Http.emptyBody
                 , expect = Http.expectJson (DownloadedSolarSystems requestEntry) solarSystemsDecoder
-                , timeout = Just 5000
+                , timeout = Just 15000
                 , tracker = Nothing
                 }
     in
@@ -1992,7 +1992,7 @@ sendSectorRequest requestEntry hostConfig =
                 , url = url
                 , body = Http.emptyBody
                 , expect = Http.expectJson (DownloadedSectors requestEntry) sectorDecoder
-                , timeout = Just 5000
+                , timeout = Just 15000
                 , tracker = Nothing
                 }
     in
