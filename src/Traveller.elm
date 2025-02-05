@@ -49,7 +49,7 @@ import Task
 import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, hexLabel, sectorColumns, sectorRows, toSectorAddress, toSectorKey, toUniversalAddress, universalHexX, universalHexY)
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
-import Traveller.Route exposing (Route, codecRoute)
+import Traveller.Route exposing (Route, RouteList, codecRoute)
 import Traveller.Sector exposing (Sector, SectorDict, codecSector, sectorKey)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.SolarSystemStars exposing (StarSystem, StarType, StarTypeData, getStarTypeData, isBrownDwarfType, starSystemCodec)
@@ -189,6 +189,7 @@ type alias Model =
     , upperLeftHex : HexAddress
     , lowerRightHex : HexAddress
     , hostConfig : HostConfig.HostConfig
+    , route : RouteList
     }
 
 
@@ -209,6 +210,7 @@ type Msg
     | MapMouseDown ( Float, Float )
     | MapMouseUp
     | MapMouseMove ( Float, Float )
+    | DownloadedRoute RequestEntry (Result Http.Error (List Route))
 
 
 {-| Where the Hex is on the screen, in pixel coordinates
@@ -273,12 +275,14 @@ init maybeUpperLeft key hostConfig =
             , lowerRightHex = lowerRightHex
             , hostConfig = hostConfig
             , sectors = Dict.empty
+            , route = []
             }
     in
     ( model
     , Cmd.batch
         [ sendSolarSystemRequest requestEntry model.hostConfig model.upperLeftHex model.lowerRightHex
         , sendSectorRequest requestEntry model.hostConfig
+        , sendRouteRequest requestEntry model.hostConfig
         , Browser.Dom.getViewport
             |> Task.perform GotViewport
         ]
@@ -363,8 +367,14 @@ rotatePoint hexSize idx ( x_, y_ ) degrees_ distance =
     )
 
 
-viewHexEmpty : HexAddress -> HexAddress -> VisualHexOrigin -> Float -> Svg Msg -> Svg Msg
-viewHexEmpty playerHexAddress hexAddress (( x, y ) as origin) size childSvg =
+isOnRoute : RouteList -> HexAddress -> Bool
+isOnRoute route address =
+    List.any (\a -> a.address == address)
+        route
+
+
+viewHexEmpty : RouteList -> HexAddress -> VisualHexOrigin -> Float -> Svg Msg -> Svg Msg
+viewHexEmpty route hexAddress (( x, y ) as origin) size childSvg =
     let
         si =
             0
@@ -404,7 +414,12 @@ viewHexEmpty playerHexAddress hexAddress (( x, y ) as origin) size childSvg =
         [ -- background hex
           Svg.polygon
             [ points (hexagonPoints origin size)
-            , SvgAttrs.fill defaultHexBg
+            , SvgAttrs.fill <|
+                if isOnRoute route hexAddress then
+                    routeHexBg
+
+                else
+                    defaultHexBg
             , SvgAttrs.stroke "#CCCCCC"
             , SvgAttrs.strokeWidth "1"
             , SvgAttrs.pointerEvents "visiblePainted"
@@ -429,8 +444,8 @@ viewHexEmpty playerHexAddress hexAddress (( x, y ) as origin) size childSvg =
         ]
 
 
-renderHexWithStar : StarSystem -> HexAddress -> HexAddress -> VisualHexOrigin -> Float -> Svg Msg
-renderHexWithStar starSystem _ hexAddress (( vox, voy ) as visualOrigin) size =
+renderHexWithStar : StarSystem -> RouteList -> HexAddress -> VisualHexOrigin -> Float -> Svg Msg
+renderHexWithStar starSystem route hexAddress (( vox, voy ) as visualOrigin) size =
     let
         si =
             starSystem.surveyIndex
@@ -482,7 +497,12 @@ renderHexWithStar starSystem _ hexAddress (( vox, voy ) as visualOrigin) size =
         [ -- background hex
           Svg.polygon
             [ points (hexagonPoints visualOrigin size)
-            , SvgAttrs.fill defaultHexBg
+            , SvgAttrs.fill <|
+                if isOnRoute route hexAddress then
+                    routeHexBg
+
+                else
+                    defaultHexBg
             , SvgAttrs.stroke "#CCCCCC"
             , SvgAttrs.strokeWidth "1"
             , SvgAttrs.pointerEvents "visiblePainted"
@@ -628,6 +648,10 @@ defaultHexBg =
     "#f5f5f5"
 
 
+routeHexBg =
+    "#FCD299"
+
+
 defaultHexSize =
     40
 
@@ -672,9 +696,9 @@ viewHex :
     -> ( Float, Float )
     -> HexAddress
     -> VisualHexOrigin
-    -> HexAddress
+    -> RouteList
     -> ( Maybe (Svg Msg), Int )
-viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress visualHexOrigin playerHexAddress =
+viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress visualHexOrigin route =
     let
         solarSystem =
             Dict.get (HexAddress.toKey hexAddress) solarSystemDict
@@ -690,14 +714,14 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
                 , SvgAttrs.textAnchor "middle"
                 ]
                 [ Svg.text txt ]
-                |> viewHexEmpty playerHexAddress hexAddress visualHexOrigin hexSize
+                |> viewHexEmpty route hexAddress visualHexOrigin hexSize
 
         hexSVG =
             Just
                 (case solarSystem of
                     Just (LoadedSolarSystem ss) ->
                         renderHexWithStar ss
-                            playerHexAddress
+                            route
                             hexAddress
                             visualHexOrigin
                             hexSize
@@ -736,10 +760,10 @@ viewHexes :
     -> HexAddress
     -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport }
     -> SolarSystemDict
-    -> HexAddress
+    -> RouteList
     -> Float
     -> Html Msg
-viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict playerHexId hexSize =
+viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict route hexSize =
     let
         viewportHeightIsh =
             screenVp.viewport.height * 0.9
@@ -784,7 +808,7 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict play
                     ( viewportWidthIsh, viewportHeightIsh )
                     hexAddr
                     hexSVGOrigin
-                    playerHexId
+                    route
             )
         |> List.filterMap Tuple.first
         |> (let
@@ -1585,7 +1609,7 @@ view model =
                                 model.lowerRightHex
                                 viewPortConfig
                                 model.solarSystems
-                                model.playerHex
+                                model.route
                                 model.hexScale
                                 |> Html.toUnstyled
 
@@ -1664,6 +1688,37 @@ sendSolarSystemRequest requestEntry hostConfig upperLeft lowerRight =
                 , url = url
                 , body = Http.emptyBody
                 , expect = Http.expectJson (DownloadedSolarSystems requestEntry) solarSystemsDecoder
+                , timeout = Just 15000
+                , tracker = Nothing
+                }
+    in
+    requestCmd
+
+
+sendRouteRequest : RequestEntry -> HostConfig -> Cmd Msg
+sendRouteRequest requestEntry hostConfig =
+    let
+        routeDecoder : JsDecode.Decoder (List Route)
+        routeDecoder =
+            Codec.list codecRoute
+                |> Codec.decoder
+
+        ( urlHostRoot, urlHostPath ) =
+            hostConfig
+
+        url =
+            Url.Builder.crossOrigin
+                urlHostRoot
+                (urlHostPath ++ [ "route" ])
+                []
+
+        requestCmd =
+            Http.request
+                { method = "GET"
+                , headers = []
+                , url = url
+                , body = Http.emptyBody
+                , expect = Http.expectJson (DownloadedRoute requestEntry) routeDecoder
                 , timeout = Just 15000
                 , tracker = Nothing
                 }
@@ -1801,7 +1856,25 @@ update msg model =
             , Cmd.none
             )
 
-        DownloadedSectors requestEntry (Err _) ->
+        DownloadedSectors requestEntry (Err err) ->
+            let
+                _ =
+                    Debug.log "Sectors did not work" err
+            in
+            ( model, Cmd.none )
+
+        DownloadedRoute requestEntry (Ok route) ->
+            ( { model
+                | route = route
+              }
+            , Cmd.none
+            )
+
+        DownloadedRoute requestEntry (Err err) ->
+            let
+                _ =
+                    Debug.log "Route did not work" err
+            in
             ( model, Cmd.none )
 
         FetchedSolarSystem (Ok solarSystem) ->
