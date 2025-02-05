@@ -153,7 +153,7 @@ hexLabel hex =
             toSectorAddress hex
     in
     (String.fromInt (sectorHex.x + 1) |> String.pad 2 '0')
-        ++ (String.fromInt (sectorHex.y + 1) |> String.pad 2 '0')
+        ++ (String.fromInt (sectorHex.y - 1) |> String.pad 2 '0')
 
 
 universalToSectorX : HexAddress -> Int

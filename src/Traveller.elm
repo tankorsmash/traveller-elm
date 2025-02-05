@@ -46,7 +46,7 @@ import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
 import Task
-import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, hexLabel, sectorColumns, sectorRows, toSectorKey, toUniversalAddress, universalHexX, universalHexY, toSectorAddress)
+import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, hexLabel, sectorColumns, sectorRows, toSectorAddress, toSectorKey, toUniversalAddress, universalHexX, universalHexY)
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
 import Traveller.Route exposing (Route, codecRoute)
@@ -411,8 +411,7 @@ viewHexEmpty playerHexAddress hexAddress (( x, y ) as origin) size childSvg =
             , SvgAttrs.css [ hoverableStyle ]
             ]
             []
-        , -- center star
-          Svg.text_
+        , Svg.text_
             [ SvgAttrs.x <| String.fromInt <| x
             , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
             , SvgAttrs.fontSize
@@ -1361,9 +1360,6 @@ viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Element Msg
 viewSystemDetailsSidebar solarSystem selectedStellarObject =
     column [ Element.spacing 10, Element.paddingXY 0 10 ] <|
         [ renderStar solarSystem.surveyIndex solarSystem.primaryStar 0 selectedStellarObject
-        , text ("Viewing sys' unihex:" ++ HexAddress.toKey solarSystem.address)
-        , text ("Viewing sys' sector:" ++ (HexAddress.toSectorKey <| toSectorAddress solarSystem.address))
-        , text ("Viewing sys' secxy:" ++ ((\sa -> Debug.toString {x=sa.x, y= sa.y}) <| toSectorAddress solarSystem.address))
         ]
 
 
@@ -1517,9 +1513,6 @@ view model =
                                 Nothing ->
                                     text "No solar system data found for system."
                             , text <| universalHexLabel model.sectors viewingAddress
-                            , text ("Viewing unihex:" ++ HexAddress.toKey viewingAddress)
-                            , text ("Viewing sys' sector:" ++ (HexAddress.toSectorKey <| toSectorAddress viewingAddress))
-                            , text ("Viewing sys' secxy:" ++ ((\sa -> Debug.toString {x=sa.x, y= sa.y}) <| toSectorAddress viewingAddress))
                             ]
 
                     Nothing ->
@@ -1694,8 +1687,8 @@ fetchSingleSolarSystemRequest hostConfig hex =
                 (urlHostPath ++ [ "solarsystem" ])
                 [ Url.Builder.int "sx" hex.sectorX
                 , Url.Builder.int "sy" hex.sectorY
-                , Url.Builder.int "hx" hex.x
-                , Url.Builder.int "hy" hex.y
+                , Url.Builder.int "hx" <| hex.x + 1
+                , Url.Builder.int "hy" <| hex.y - 1
                 ]
 
         requestCmd =
@@ -1808,6 +1801,9 @@ update msg model =
             , Cmd.none
             )
 
+        DownloadedSectors requestEntry (Err _) ->
+            ( model, Cmd.none )
+
         FetchedSolarSystem (Ok solarSystem) ->
             ( { model
                 | selectedSystem = Just solarSystem
@@ -1816,9 +1812,6 @@ update msg model =
             )
 
         FetchedSolarSystem (Err _) ->
-            ( model, Cmd.none )
-
-        DownloadedSectors requestEntry (Err _) ->
             ( model, Cmd.none )
 
         DownloadedSolarSystems requestEntry (Err err) ->

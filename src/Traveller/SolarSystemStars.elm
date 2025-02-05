@@ -60,6 +60,8 @@ type alias StarSystem =
 
 type alias RawStarSystem =
     { name : String
+    , originX : Int
+    , originY : Int
     , x : Int
     , y : Int
     , sectorX : Int
@@ -84,7 +86,7 @@ starSystemCodec =
 rawStarSystemToStarSystem : RawStarSystem -> Codec.Codec StarSystem
 rawStarSystemToStarSystem rawStarSystem =
     Codec.succeed
-        { address = HexAddress.createFromStarSystem rawStarSystem
+        { address = { x = rawStarSystem.originX, y = rawStarSystem.originY }
         , sectorName = rawStarSystem.sectorName
         , name = rawStarSystem.name
         , gasGiantCount = rawStarSystem.gasGiantCount
@@ -99,7 +101,9 @@ rawStarSystemToStarSystem rawStarSystem =
 
 starSystemToRawStarSystem : StarSystem -> RawStarSystem
 starSystemToRawStarSystem starSystem =
-    { x = 99999999
+    { originX = 99999999
+    , originY = 99999999
+    , x = 99999999
     , y = 99999999
     , sectorX = 99999999
     , sectorY = 99999999
@@ -119,6 +123,8 @@ rawStarSystemCodec : Codec RawStarSystem
 rawStarSystemCodec =
     object RawStarSystem
         |> Codec.field "name" .name Codec.string
+        |> Codec.field "origin_x" .originX Codec.int
+        |> Codec.field "origin_y" .originY Codec.int
         |> Codec.field "x" .x Codec.int
         |> Codec.field "y" .y Codec.int
         |> Codec.field "sector_x" .sectorX Codec.int
