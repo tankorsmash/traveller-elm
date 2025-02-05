@@ -1,4 +1,4 @@
-module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, SectorHexAddress, addVal, between, create, createFromStarSystem, hexAddressToString, hexLabel, sectorColumns, sectorHexAddressToString, sectorRows, shiftAddressBy, toKey, toSectorKey, toUniversalAddress, universalHexX, universalHexY, toSectorAddress, universalToSectorX, universalToSectorY)
+module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, SectorHexAddress, addVal, between, create, createFromStarSystem, hexAddressToString, hexLabel, sectorColumns, sectorHexAddressToString, sectorRows, shiftAddressBy, toKey, toSectorAddress, toSectorKey, toUniversalAddress, universalHexX, universalHexY, universalToSectorX, universalToSectorY)
 
 
 sectorColumns =
@@ -171,7 +171,7 @@ universalToSectorY { y } =
         y // 40
 
     else
-        1 + y // 40
+        1 + (y - 1) // 40
 
 
 toSectorAddress : HexAddress -> SectorHexAddress
