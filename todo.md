@@ -21,7 +21,7 @@
 * [X] save location of map
 * [X] Only show known stellar objects in side panel
 * [ ] display Revelation location
-* [ ] display Revelation route
+* [X] display Revelation route
 * [ ] Display location in sector co-ordinates, not absolute co-ordinates
 * [X] table'd sidebar (recursively render the columns, account for SVG's width, since its HTML and elm-ui isn't aware of that size)
 ** [ ] like https://thriggle.netlify.app/traveller/subsector#$seed=Hide90811&$density=Standard&$size=Subsector&$rules=T5
