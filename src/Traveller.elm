@@ -46,7 +46,7 @@ import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
 import Task
-import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, hexLabel, sectorColumns, sectorRows, toSectorKey, toUniversalAddress, universalHexX, universalHexY, universalToSector)
+import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, hexLabel, sectorColumns, sectorRows, toSectorKey, toUniversalAddress, universalHexX, universalHexY, toSectorAddress)
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
 import Traveller.Route exposing (Route, codecRoute)
@@ -1362,7 +1362,8 @@ viewSystemDetailsSidebar solarSystem selectedStellarObject =
     column [ Element.spacing 10, Element.paddingXY 0 10 ] <|
         [ renderStar solarSystem.surveyIndex solarSystem.primaryStar 0 selectedStellarObject
         , text ("Viewing sys' unihex:" ++ HexAddress.toKey solarSystem.address)
-        , text ("Viewing sys' sechex:" ++ (HexAddress.toSectorKey <| universalToSector solarSystem.address))
+        , text ("Viewing sys' sector:" ++ (HexAddress.toSectorKey <| toSectorAddress solarSystem.address))
+        , text ("Viewing sys' secxy:" ++ ((\sa -> Debug.toString {x=sa.x, y= sa.y}) <| toSectorAddress solarSystem.address))
         ]
 
 
@@ -1457,7 +1458,7 @@ numHexRows =
 
 universalHexLabel : SectorDict -> HexAddress -> String
 universalHexLabel sectors hexAddress =
-    case Dict.get (HexAddress.toSectorKey <| HexAddress.universalToSector hexAddress) sectors of
+    case Dict.get (HexAddress.toSectorKey <| HexAddress.toSectorAddress hexAddress) sectors of
         Nothing ->
             " "
 
@@ -1517,7 +1518,8 @@ view model =
                                     text "No solar system data found for system."
                             , text <| universalHexLabel model.sectors viewingAddress
                             , text ("Viewing unihex:" ++ HexAddress.toKey viewingAddress)
-                            , text ("Viewing sechex:" ++ (HexAddress.toSectorKey <| universalToSector viewingAddress))
+                            , text ("Viewing sys' sector:" ++ (HexAddress.toSectorKey <| toSectorAddress viewingAddress))
+                            , text ("Viewing sys' secxy:" ++ ((\sa -> Debug.toString {x=sa.x, y= sa.y}) <| toSectorAddress viewingAddress))
                             ]
 
                     Nothing ->
@@ -1901,7 +1903,7 @@ update msg model =
                 , selectedStellarObject = Nothing
                 , selectedSystem = Nothing
               }
-            , fetchSingleSolarSystemRequest model.hostConfig <| universalToSector hexAddress
+            , fetchSingleSolarSystemRequest model.hostConfig <| toSectorAddress hexAddress
             )
 
         FocusInSidebar stellarObject ->

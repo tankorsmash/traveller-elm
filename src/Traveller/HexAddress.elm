@@ -1,4 +1,4 @@
-module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, SectorHexAddress, addVal, between, create, createFromStarSystem, hexAddressToString, hexLabel, sectorColumns, sectorHexAddressToString, sectorRows, shiftAddressBy, toKey, toSectorKey, toUniversalAddress, universalHexX, universalHexY, universalToSector, universalToSectorX, universalToSectorY)
+module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, SectorHexAddress, addVal, between, create, createFromStarSystem, hexAddressToString, hexLabel, sectorColumns, sectorHexAddressToString, sectorRows, shiftAddressBy, toKey, toSectorKey, toUniversalAddress, universalHexX, universalHexY, toSectorAddress, universalToSectorX, universalToSectorY)
 
 
 sectorColumns =
@@ -150,7 +150,7 @@ hexLabel : HexAddress -> String
 hexLabel hex =
     let
         sectorHex =
-            universalToSector hex
+            toSectorAddress hex
     in
     (String.fromInt (sectorHex.x + 1) |> String.pad 2 '0')
         ++ (String.fromInt (sectorHex.y + 1) |> String.pad 2 '0')
@@ -174,8 +174,8 @@ universalToSectorY { y } =
         1 + y // 40
 
 
-universalToSector : HexAddress -> SectorHexAddress
-universalToSector universal =
+toSectorAddress : HexAddress -> SectorHexAddress
+toSectorAddress universal =
     let
         sectorX =
             universalToSectorX universal

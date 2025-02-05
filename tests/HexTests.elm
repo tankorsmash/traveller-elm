@@ -3,7 +3,7 @@ module HexTests exposing (..)
 import Expect
 import Fuzz
 import Test exposing (Test, describe)
-import Traveller.HexAddress exposing (universalToSector, universalToSectorX, universalToSectorY)
+import Traveller.HexAddress exposing (toSectorAddress, universalToSectorX, universalToSectorY)
 
 
 suite : Test
@@ -41,7 +41,7 @@ universalToSectorTests =
                     expected =
                         { sectorX = 0, sectorY = 0, x = 17, y = 9 }
                 in
-                Expect.equal expected <| universalToSector uha
+                Expect.equal expected <| toSectorAddress uha
         , Test.test "Test 2" <|
             \_ ->
                 let
@@ -51,7 +51,7 @@ universalToSectorTests =
                     expected =
                         { sectorX = 0, sectorY = 2, x = 17, y = 38 }
                 in
-                Expect.equal expected <| universalToSector uha
+                Expect.equal expected <| toSectorAddress uha
         , Test.test "Test 3" <|
             \_ ->
                 let
@@ -61,5 +61,5 @@ universalToSectorTests =
                     expected =
                         { sectorX = 0, sectorY = -2, x = 17, y = 10 }
                 in
-                Expect.equal expected <| universalToSector uha
+                Expect.equal expected <| toSectorAddress uha
         ]

@@ -3,7 +3,7 @@ module BetweenTests exposing (..)
 import Expect
 import Fuzz
 import Test exposing (Test, describe)
-import Traveller.HexAddress as HexAddress exposing (universalToSector, universalToSectorX, universalToSectorY)
+import Traveller.HexAddress as HexAddress exposing (toSectorAddress, universalToSectorX, universalToSectorY)
 
 
 betweenTests : Test
