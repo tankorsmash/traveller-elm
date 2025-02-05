@@ -1361,6 +1361,8 @@ viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Element Msg
 viewSystemDetailsSidebar solarSystem selectedStellarObject =
     column [ Element.spacing 10, Element.paddingXY 0 10 ] <|
         [ renderStar solarSystem.surveyIndex solarSystem.primaryStar 0 selectedStellarObject
+        , text ("Viewing sys' unihex:" ++ HexAddress.toKey solarSystem.address)
+        , text ("Viewing sys' sechex:" ++ (HexAddress.toSectorKey <| universalToSector solarSystem.address))
         ]
 
 
@@ -1514,6 +1516,8 @@ view model =
                                 Nothing ->
                                     text "No solar system data found for system."
                             , text <| universalHexLabel model.sectors viewingAddress
+                            , text ("Viewing unihex:" ++ HexAddress.toKey viewingAddress)
+                            , text ("Viewing sechex:" ++ (HexAddress.toSectorKey <| universalToSector viewingAddress))
                             ]
 
                     Nothing ->
