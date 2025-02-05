@@ -18,7 +18,7 @@ type alias RouteList =
 
 codecRoute : Codec.Codec Route
 codecRoute =
-    Codec.object (\x y -> Route { x = x, y = y })
+    Codec.object (\x y shipId year day -> Route { x = x, y = y } shipId year day)
         |> Codec.field "origin_x" (.address >> .x) Codec.int
         |> Codec.field "origin_y" (.address >> .y) Codec.int
         |> Codec.field "ship_id" .shipId Codec.int
