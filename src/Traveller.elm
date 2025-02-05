@@ -836,13 +836,7 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict rout
                     ]
                 , SvgAttrs.id "hexmap"
                 , viewBox <|
-                    "0"
-                        ++ " "
-                        ++ "0"
-                        ++ " "
-                        ++ stringWidth
-                        ++ " "
-                        ++ stringHeight
+                    "0 0 " ++ stringWidth ++ " " ++ stringHeight
                 ]
            )
 
