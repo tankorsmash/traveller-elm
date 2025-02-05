@@ -49,8 +49,8 @@ import Task
 import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, hexLabel, sectorColumns, sectorRows, toSectorAddress, toSectorKey, toUniversalAddress, universalHexX, universalHexY)
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
-import Traveller.Route exposing (Route, RouteList, codecRoute)
-import Traveller.Sector exposing (Sector, SectorDict, codecSector, sectorKey)
+import Traveller.Route as Route exposing (Route, RouteList)
+import Traveller.Sector exposing (Sector, SectorDict, codec, sectorKey)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.SolarSystemStars exposing (StarSystem, StarType, StarTypeData, getStarTypeData, isBrownDwarfType, starSystemCodec)
 import Traveller.StarColour exposing (starColourRGB)
@@ -1700,7 +1700,7 @@ sendRouteRequest requestEntry hostConfig =
     let
         routeDecoder : JsDecode.Decoder (List Route)
         routeDecoder =
-            Codec.list codecRoute
+            Codec.list Route.codec
                 |> Codec.decoder
 
         ( urlHostRoot, urlHostPath ) =
@@ -2068,7 +2068,7 @@ sendSectorRequest requestEntry hostConfig =
     let
         sectorDecoder : JsDecode.Decoder (List Sector)
         sectorDecoder =
-            Codec.list codecSector
+            Codec.list codec
                 |> Codec.decoder
 
         ( urlHostRoot, urlHostPath ) =

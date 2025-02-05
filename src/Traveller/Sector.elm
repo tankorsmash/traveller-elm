@@ -1,4 +1,4 @@
-module Traveller.Sector exposing (Sector, SectorDict, codecSector, sectorKey)
+module Traveller.Sector exposing (Sector, SectorDict, codec, sectorKey)
 
 import Codec exposing (Codec)
 import Dict
@@ -19,8 +19,8 @@ sectorKey sector =
         ++ String.fromInt sector.y
 
 
-codecSector : Codec Sector
-codecSector =
+codec : Codec Sector
+codec =
     Codec.object Sector
         |> Codec.field "x" .x Codec.int
         |> Codec.field "y" .y Codec.int
