@@ -461,6 +461,18 @@ viewHexEmpty hx hy x y size childSvgTxt hexColour =
         ]
 
 
+renderPolyline : String -> String -> Svg msg
+renderPolyline points_ borderColour =
+    Svg.polyline
+        [ points points_
+        , SvgAttrs.stroke borderColour
+        , SvgAttrs.fill "none"
+        , SvgAttrs.strokeWidth "2"
+        , SvgAttrs.pointerEvents "visiblePainted"
+        ]
+        []
+
+
 renderPolygon : String -> String -> Svg msg
 renderPolygon points_ fill =
     let
@@ -810,6 +822,30 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
         viewportWidthIsh =
             screenVp.viewport.width * 0.9
 
+        renderCurrentAddressOutline : HexAddress -> Svg Msg
+        renderCurrentAddressOutline ca =
+            let
+                locationOrigin =
+                    calcVisualOrigin hexSize
+                        { row = upperLeftHex.y - ca.y, col = ca.x - upperLeftHex.x }
+                        |> (\( x, y ) ->
+                                ( x - zero_x
+                                , y - zero_y
+                                )
+                           )
+
+                points =
+                    case String.split " " <| hexagonPoints locationOrigin hexSize of
+                        first :: points_ ->
+                            (first :: points_) ++ [ first ]
+
+                        other ->
+                            other
+            in
+            Svg.Styled.Lazy.lazy2 renderPolyline
+                (points |> String.join " ")
+                currentAddressHexBg
+
         widestViewport =
             case hexmapVp of
                 Nothing ->
@@ -860,26 +896,14 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
                     hexColour
             )
         |> List.filterMap Tuple.first
-        |> \hexr -> let newer =
-                     (Maybe.map (\ca -> (let
-                locationOrigin =
-                    calcVisualOrigin hexSize
-                        { row = upperLeftHex.y - ca.y, col = ca.x - upperLeftHex.x }
-                        |> (\( x, y ) ->
-                                ( x - zero_x
-                                , y - zero_y
-                                )
-                           )
-
-                points =
-                    hexagonPoints locationOrigin hexSize
-            in
-            Svg.Styled.Lazy.lazy2 renderPolygon
-                points
-                currentAddressHexBg
-           )) in
-            newer <| currentAddress)
-        |> List.singleton
+        |> (\hexSvgs ->
+                let
+                    singlePolyHex =
+                        Maybe.map renderCurrentAddressOutline currentAddress
+                            |> Maybe.withDefault (Svg.text "")
+                in
+                hexSvgs ++ [ singlePolyHex ]
+           )
         |> (let
                 stringWidth =
                     String.fromFloat <| viewportWidthIsh
