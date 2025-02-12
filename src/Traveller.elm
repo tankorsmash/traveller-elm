@@ -1015,7 +1015,7 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
                     ]
                 , SvgAttrs.id "hexmap"
                 , viewBox <|
-                    toViewBox hexSize upperLeftHex
+                    toViewBox hexSize upperLeftHex viewportHeightIsh
                         -- "-11834 -2798"
                         ++ " "
                         ++ stringWidth
@@ -1025,13 +1025,13 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
            )
 
 
-toViewBox : Float -> HexAddress -> String
-toViewBox hexScale { x, y } =
+toViewBox : Float -> HexAddress -> Float -> String
+toViewBox hexScale { x, y } vph =
     calcVisualOrigin hexScale { col = x, row = y }
         |> (\( x_, y_ ) ->
                 String.fromFloat (toFloat x_)
                     ++ " "
-                    ++ String.fromFloat (toFloat y_)
+                    ++ String.fromFloat (toFloat y_ - vph)
            )
 
 
@@ -1726,6 +1726,7 @@ view model =
 
                                 Nothing ->
                                     text "No solar system data found for system."
+                            , text <| Debug.toString viewingAddress
                             , text <| universalHexLabel model.sectors viewingAddress
                             ]
 
