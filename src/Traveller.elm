@@ -869,7 +869,7 @@ renderSectorOutline ( upperLeftHex, zero_x, zero_y ) hexSize hex =
         [ points points_
         , SvgAttrs.stroke "#0a0a0a"
         , SvgAttrs.fill "none"
-        , SvgAttrs.strokeWidth "2"
+        , SvgAttrs.strokeWidth "6"
         , SvgAttrs.pointerEvents "visiblePainted"
         ]
         []
@@ -925,12 +925,23 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
                 Just hexmapViewport ->
                     hexmapViewport
 
-        ( zero_x, zero_y ) =
-            calcVisualOrigin hexSize
-                { row = 0
-                , col = 0
-                }
+        sectorUpperLeft =
+            upperLeftHex |> HexAddress.toSectorAddress
 
+        ( zero_x, zero_y ) =
+            ( 0, 0 )
+
+        -- calcVisualOrigin hexSize
+        --     { row = 0
+        --     , col = 0
+        --     }
+        --     |> (\( x, y ) ->
+        --             if modBy 2 sectorUpperLeft.x == 0 then
+        --                 ( x, y - (hexSize / 1.6 |> floor) )
+        --
+        --             else
+        --                 ( x, y )
+        --        )
         hexRange =
             HexAddress.between upperLeftHex lowerRightHex
     in
@@ -940,7 +951,7 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
                 let
                     hexSVGOrigin =
                         calcVisualOrigin hexSize
-                            { row = upperLeftHex.y - hexAddr.y, col = hexAddr.x - upperLeftHex.x }
+                            { row = hexAddr.y, col = hexAddr.x }
                             |> (\( x, y ) ->
                                     ( x - zero_x
                                     , y - zero_y
@@ -981,7 +992,7 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
            )
         |> (let
                 stringWidth =
-                    String.fromFloat <| viewportWidthIsh
+                    Debug.log "stringwidth " <| String.fromFloat <| viewportWidthIsh
 
                 stringHeight =
                     String.fromFloat <| viewportHeightIsh
@@ -1004,12 +1015,20 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
                     ]
                 , SvgAttrs.id "hexmap"
                 , viewBox <|
-                    "0 0 "
-                        ++ stringWidth
+                    -- toViewBox hexSize upperLeftHex
+                    "-11834 -2798"
+                        ++ " " ++ stringWidth
                         ++ " "
                         ++ stringHeight
                 ]
            )
+
+
+toViewBox : Float -> HexAddress -> String
+toViewBox hexScale { x, y } =
+    String.fromFloat (toFloat x * hexScale)
+        ++ " "
+        ++ String.fromFloat (toFloat y * hexScale)
 
 
 orbitStyle : List (Element.Attribute msg)
