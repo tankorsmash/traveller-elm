@@ -300,29 +300,54 @@ hoverableStyle =
         ]
 
 
-hexagonPoints : ( Int, Int ) -> Float -> String
-hexagonPoints ( xOrigin, yOrigin ) size =
+hexagonPointZero : Float -> Float -> ( Float, Float )
+hexagonPointZero size n =
+    let
+        a =
+            2 * pi / 6
+
+        x =
+            size * cos (a * n)
+
+        y =
+            size * sin (a * n)
+
+        buildPoint =
+            ( x, y )
+    in
+    buildPoint
+
+
+hexagonPoint : ( Int, Int ) -> Float -> Float -> ( Float, Float )
+hexagonPoint ( xOrigin, yOrigin ) size n =
     let
         a =
             2 * pi / 6
 
         -- angle deg =
         --     (deg + 90) * pi / 180
-        x n =
+        x =
             toFloat xOrigin
                 + (size * cos (a * n))
-                |> String.fromFloat
 
-        y n =
+        y =
             toFloat yOrigin
                 + (size * sin (a * n))
-                |> String.fromFloat
 
-        buildPoint n =
-            x n ++ "," ++ y n
+        buildPoint =
+            ( x, y )
     in
+    buildPoint
+
+
+hexagonPoints : ( Int, Int ) -> Float -> String
+hexagonPoints ( xOrigin, yOrigin ) size =
     List.range 0 5
-        |> List.map (toFloat >> buildPoint)
+        |> List.map
+            (toFloat
+                >> hexagonPoint ( xOrigin, yOrigin ) size
+                >> (\( x, y ) -> String.fromFloat x ++ "," ++ String.fromFloat y)
+            )
         |> String.join " "
 
 
@@ -788,6 +813,68 @@ type alias SolarSystemDict =
     Dict.Dict String RemoteSolarSystem
 
 
+type OffsetDir
+    = Left
+    | Right
+
+
+renderSectorOutline : ( HexAddress, Int, Int ) -> Float -> SectorHexAddress -> Svg Msg
+renderSectorOutline ( upperLeftHex, zero_x, zero_y ) hexSize hex =
+    let
+        -- calcVisualOrigin
+        topLeft : HexAddress
+        topLeft =
+            { hex | x = 1, y = 1 } |> HexAddress.toUniversalAddress
+
+        botRight =
+            { hex | x = 32, y = 40 } |> HexAddress.toUniversalAddress
+
+        topRight =
+            { hex | x = 32, y = 1 } |> HexAddress.toUniversalAddress
+
+        botLeft =
+            { hex | x = 1, y = 40 } |> HexAddress.toUniversalAddress
+
+        ( offsetNum1, _ ) =
+            hexagonPointZero hexSize 2
+
+        ( offsetNum2, _ ) =
+            hexagonPointZero hexSize 3
+
+        avgNum =
+            (offsetNum1 + offsetNum2) / 2 |> floor
+
+        adjustPos ( hexAddr, offsetDir ) =
+            calcVisualOrigin hexSize
+                { row = upperLeftHex.y - hexAddr.y, col = hexAddr.x - upperLeftHex.x }
+                |> (\( x, y ) ->
+                        case offsetDir of
+                            Left ->
+                                ( x - avgNum, y )
+
+                            Right ->
+                                ( x + avgNum, y )
+                   )
+                |> (\( x, y ) ->
+                        (x - zero_x |> String.fromInt)
+                            ++ ", "
+                            ++ (y - zero_y |> String.fromInt)
+                   )
+
+        points_ =
+            List.map adjustPos [ ( topLeft, Left ), ( topRight, Right ), ( botRight, Right ), ( botLeft, Left ), ( topLeft, Left ) ]
+                |> String.join " "
+    in
+    Svg.polyline
+        [ points points_
+        , SvgAttrs.stroke "#0a0a0a"
+        , SvgAttrs.fill "none"
+        , SvgAttrs.strokeWidth "2"
+        , SvgAttrs.pointerEvents "visiblePainted"
+        ]
+        []
+
+
 {-| View all the hexes in the system
 -}
 viewHexes :
@@ -886,7 +973,11 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
                         Maybe.map renderCurrentAddressOutline currentAddress
                             |> Maybe.withDefault (Svg.text "")
                 in
-                hexSvgs ++ [ singlePolyHex ]
+                hexSvgs
+                    ++ [ renderSectorOutline ( upperLeftHex, zero_x, zero_y + (floor <| hexSize / 1.6) ) hexSize (upperLeftHex |> HexAddress.toSectorAddress)
+                       , renderSectorOutline ( upperLeftHex, zero_x, zero_y ) hexSize (lowerRightHex |> HexAddress.toSectorAddress)
+                       , singlePolyHex
+                       ]
            )
         |> (let
                 stringWidth =
@@ -1588,7 +1679,7 @@ view model =
                     , Font.color <| fontTextColor
                     ]
                     [ column [ Element.spacing 15 ]
-                        [ row [Element.spacing 2]
+                        [ row [ Element.spacing 2 ]
                             [ text "Revelation location:"
                             , text <| universalHexLabel model.sectors model.playerHex
                             ]
