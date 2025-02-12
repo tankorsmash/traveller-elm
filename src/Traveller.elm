@@ -828,17 +828,6 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
             HexAddress.between upperLeftHex lowerRightHex
     in
     hexRange
-        |> List.sortWith
-            (\l r ->
-                if Just l == currentAddress then
-                    GT
-
-                else if Just r == currentAddress then
-                    LT
-
-                else
-                    EQ
-            )
         |> List.map
             (\hexAddr ->
                 let
@@ -871,6 +860,26 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
                     hexColour
             )
         |> List.filterMap Tuple.first
+        |> \hexr -> let newer =
+                     (Maybe.map (\ca -> (let
+                locationOrigin =
+                    calcVisualOrigin hexSize
+                        { row = upperLeftHex.y - ca.y, col = ca.x - upperLeftHex.x }
+                        |> (\( x, y ) ->
+                                ( x - zero_x
+                                , y - zero_y
+                                )
+                           )
+
+                points =
+                    hexagonPoints locationOrigin hexSize
+            in
+            Svg.Styled.Lazy.lazy2 renderPolygon
+                points
+                currentAddressHexBg
+           )) in
+            newer <| currentAddress)
+        |> List.singleton
         |> (let
                 stringWidth =
                     String.fromFloat <| viewportWidthIsh
