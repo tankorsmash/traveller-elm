@@ -31,6 +31,7 @@
 * [ ] prettier ui somehow
 * [ ] sector borders
 * [ ] subsector borders
+* [ ] Convert back to SVG viewbox and don't render relative to the upper left hex
 
 ## 1.0
 * [ ] smart caching/requesting the api so we don't fetch too much duplicate data
