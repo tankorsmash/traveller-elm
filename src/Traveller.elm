@@ -45,12 +45,13 @@ import Round
 import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
+import Svg.Styled.Lazy
 import Task
 import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, hexLabel, sectorColumns, sectorRows, toSectorAddress, toSectorKey, toUniversalAddress, universalHexX, universalHexY)
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
-import Traveller.Route exposing (Route, RouteList, codecRoute)
-import Traveller.Sector exposing (Sector, SectorDict, codecSector, sectorKey)
+import Traveller.Route as Route exposing (Route, RouteList)
+import Traveller.Sector exposing (Sector, SectorDict, codec, sectorKey)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.SolarSystemStars exposing (StarSystem, StarType, StarTypeData, getStarTypeData, isBrownDwarfType, starSystemCodec)
 import Traveller.StarColour exposing (starColourRGB)
@@ -373,11 +374,26 @@ isOnRoute route address =
         route
 
 
-viewHexEmpty : RouteList -> HexAddress -> VisualHexOrigin -> Float -> Svg Msg -> Svg Msg
-viewHexEmpty route hexAddress (( x, y ) as origin) size childSvg =
+viewHexEmpty : Bool -> Int -> Int -> Int -> Int -> Float -> String -> Svg Msg
+viewHexEmpty isOnRoute_ hx hy x y size childSvgTxt =
     let
+        origin =
+            ( x, y )
+
         si =
             0
+
+        hexAddress =
+            HexAddress hx hy
+
+        childSvg =
+            Svg.text_
+                [ SvgAttrs.x <| String.fromInt x
+                , SvgAttrs.y <| String.fromInt y
+                , SvgAttrs.fontSize "10"
+                , SvgAttrs.textAnchor "middle"
+                ]
+                [ Svg.text childSvgTxt ]
 
         -- a decoder that takes JSON and emits either a decode failure or a Msg
         downDecoder : JsDecode.Decoder Msg
@@ -412,20 +428,14 @@ viewHexEmpty route hexAddress (( x, y ) as origin) size childSvg =
         , SvgAttrs.id <| HexAddress.toKey hexAddress
         ]
         [ -- background hex
-          Svg.polygon
-            [ points (hexagonPoints origin size)
-            , SvgAttrs.fill <|
-                if isOnRoute route hexAddress then
-                    routeHexBg
+          Svg.Styled.Lazy.lazy2 renderPolygon
+            (hexagonPoints origin size)
+            (if isOnRoute_ then
+                routeHexBg
 
-                else
-                    defaultHexBg
-            , SvgAttrs.stroke "#CCCCCC"
-            , SvgAttrs.strokeWidth "1"
-            , SvgAttrs.pointerEvents "visiblePainted"
-            , SvgAttrs.css [ hoverableStyle ]
-            ]
-            []
+             else
+                defaultHexBg
+            )
         , Svg.text_
             [ SvgAttrs.x <| String.fromInt <| x
             , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
@@ -442,6 +452,19 @@ viewHexEmpty route hexAddress (( x, y ) as origin) size childSvg =
             ]
         , childSvg
         ]
+
+
+renderPolygon : String -> String -> Svg msg
+renderPolygon points_ fill =
+    Svg.polygon
+        [ points points_
+        , SvgAttrs.fill fill
+        , SvgAttrs.stroke "#CCCCCC"
+        , SvgAttrs.strokeWidth "1"
+        , SvgAttrs.pointerEvents "visiblePainted"
+        , SvgAttrs.css [ hoverableStyle ]
+        ]
+        []
 
 
 renderHexWithStar : StarSystem -> RouteList -> HexAddress -> VisualHexOrigin -> Float -> Svg Msg
@@ -495,20 +518,14 @@ renderHexWithStar starSystem route hexAddress (( vox, voy ) as visualOrigin) siz
         , SvgAttrs.style "cursor: pointer; user-select: none"
         ]
         [ -- background hex
-          Svg.polygon
-            [ points (hexagonPoints visualOrigin size)
-            , SvgAttrs.fill <|
-                if isOnRoute route hexAddress then
-                    routeHexBg
+          Svg.Styled.Lazy.lazy2 renderPolygon
+            (hexagonPoints visualOrigin size)
+            (if isOnRoute route hexAddress then
+                routeHexBg
 
-                else
-                    defaultHexBg
-            , SvgAttrs.stroke "#CCCCCC"
-            , SvgAttrs.strokeWidth "1"
-            , SvgAttrs.pointerEvents "visiblePainted"
-            , SvgAttrs.css [ hoverableStyle ]
-            ]
-            []
+             else
+                defaultHexBg
+            )
         , -- center star
           if showStar then
             let
@@ -707,20 +724,18 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
             visualHexOrigin
 
         viewEmptyHelper txt =
-            Svg.text_
-                [ SvgAttrs.x <| String.fromInt vox
-                , SvgAttrs.y <| String.fromInt voy
-                , SvgAttrs.fontSize "10"
-                , SvgAttrs.textAnchor "middle"
-                ]
-                [ Svg.text txt ]
-                |> viewHexEmpty route hexAddress visualHexOrigin hexSize
+            let
+                isOnRoute_ =
+                    isOnRoute route hexAddress
+            in
+            Svg.Styled.Lazy.lazy7 viewHexEmpty isOnRoute_ hexAddress.x hexAddress.y vox voy hexSize txt
 
         hexSVG =
             Just
                 (case solarSystem of
                     Just (LoadedSolarSystem ss) ->
-                        renderHexWithStar ss
+                        Svg.Styled.Lazy.lazy5 renderHexWithStar
+                            ss
                             route
                             hexAddress
                             visualHexOrigin
@@ -836,10 +851,7 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict rout
                     ]
                 , SvgAttrs.id "hexmap"
                 , viewBox <|
-                    "0"
-                        ++ " "
-                        ++ "0"
-                        ++ " "
+                    "0 0 "
                         ++ stringWidth
                         ++ " "
                         ++ stringHeight
@@ -1705,7 +1717,7 @@ sendRouteRequest requestEntry hostConfig =
     let
         routeDecoder : JsDecode.Decoder (List Route)
         routeDecoder =
-            Codec.list codecRoute
+            Codec.list Route.codec
                 |> Codec.decoder
 
         ( urlHostRoot, urlHostPath ) =
@@ -2073,7 +2085,7 @@ sendSectorRequest requestEntry hostConfig =
     let
         sectorDecoder : JsDecode.Decoder (List Sector)
         sectorDecoder =
-            Codec.list codecSector
+            Codec.list codec
                 |> Codec.decoder
 
         ( urlHostRoot, urlHostPath ) =
