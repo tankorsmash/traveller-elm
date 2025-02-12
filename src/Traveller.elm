@@ -598,7 +598,7 @@ renderHexWithStar starSystem route hexAddress (( vox, voy ) as visualOrigin) siz
                     ]
                 , Svg.text_
                     [ SvgAttrs.x <| String.fromInt <| vox
-                    , SvgAttrs.y <| String.fromInt <| voy + (floor <| size * 0.85)
+                    , SvgAttrs.y <| String.fromInt <| voy + (floor <| size * 0.8)
                     , SvgAttrs.fontSize "12"
                     , SvgAttrs.textAnchor "middle"
                     ]
@@ -625,15 +625,15 @@ renderHexWithStar starSystem route hexAddress (( vox, voy ) as visualOrigin) siz
                                 "?"
                      in
                      [ Svg.tspan
-                        [ SvgAttrs.fill "#109076" ]
+                        [ SvgAttrs.fill "#109076", SvgAttrs.fontWeight "800" ]
                         [ showGasGiants |> Svg.text ]
                      , Svg.text " / "
                      , Svg.tspan
-                        [ SvgAttrs.fill "#809076" ]
+                        [ SvgAttrs.fill "#809076", SvgAttrs.fontWeight "800" ]
                         [ showTerrestrialPlanets |> Svg.text ]
                      , Svg.text " / "
                      , Svg.tspan
-                        [ SvgAttrs.fill "#68B976" ]
+                        [ SvgAttrs.fill "#68B976", SvgAttrs.fontWeight "800" ]
                         [ showplanetoidBelts |> Svg.text ]
                      ]
                     )
@@ -1406,6 +1406,11 @@ textColor =
     Color.rgb 0.5 1.0 0.5
 
 
+deepnightColor : Element.Color
+deepnightColor =
+    colorToElementColor <| Color.rgb 1.0 0.498 0.0
+
+
 fontDarkTextColor : Element.Color
 fontDarkTextColor =
     textColor
@@ -1491,10 +1496,7 @@ view model =
     let
         sidebarColumn =
             column []
-                [ el [ Font.size 20 ] <|
-                    text <|
-                        "Deepnight Revelation Navigation Console"
-                , el [ Font.size 14, Font.color <| fontDarkTextColor ] <|
+                [ el [ Font.size 14, Font.color <| fontDarkTextColor ] <|
                     text <|
                         "Viewing "
                             ++ String.fromInt numHexCols
@@ -1580,7 +1582,10 @@ view model =
 
         hexesColumn =
             column []
-                [ Element.html <|
+                [ el [ Font.size 20, Font.color <| deepnightColor, Element.paddingEach { zeroEach | bottom = 4 } ] <|
+                    text <|
+                        "Deepnight Revelation Navigation Console"
+                , Element.html <|
                     -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
                     case model.viewport of
                         Just viewport ->
