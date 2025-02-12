@@ -1015,9 +1015,10 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
                     ]
                 , SvgAttrs.id "hexmap"
                 , viewBox <|
-                    -- toViewBox hexSize upperLeftHex
-                    "-11834 -2798"
-                        ++ " " ++ stringWidth
+                    toViewBox hexSize upperLeftHex
+                        -- "-11834 -2798"
+                        ++ " "
+                        ++ stringWidth
                         ++ " "
                         ++ stringHeight
                 ]
@@ -1026,9 +1027,12 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
 
 toViewBox : Float -> HexAddress -> String
 toViewBox hexScale { x, y } =
-    String.fromFloat (toFloat x * hexScale)
-        ++ " "
-        ++ String.fromFloat (toFloat y * hexScale)
+    calcVisualOrigin hexScale { col = x, row = y }
+        |> (\( x_, y_ ) ->
+                String.fromFloat (toFloat x_)
+                    ++ " "
+                    ++ String.fromFloat (toFloat y_)
+           )
 
 
 orbitStyle : List (Element.Attribute msg)
