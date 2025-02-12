@@ -189,6 +189,7 @@ type alias Model =
     , selectedStellarObject : Maybe StellarObject
     , upperLeftHex : HexAddress
     , lowerRightHex : HexAddress
+    , currentAddress : Maybe HexAddress
     , hostConfig : HostConfig.HostConfig
     , route : RouteList
     }
@@ -277,6 +278,7 @@ init maybeUpperLeft key hostConfig =
             , hostConfig = hostConfig
             , sectors = Dict.empty
             , route = []
+            , currentAddress = Nothing
             }
     in
     ( model
@@ -374,8 +376,18 @@ isOnRoute route address =
         route
 
 
-viewHexEmpty : Bool -> Int -> Int -> Int -> Int -> Float -> String -> Svg Msg
-viewHexEmpty isOnRoute_ hx hy x y size childSvgTxt =
+isCurrentLocation : Model -> HexAddress -> Bool
+isCurrentLocation model address =
+    case model.currentAddress of
+        Just a ->
+            a == address
+
+        Nothing ->
+            False
+
+
+viewHexEmpty : Int -> Int -> Int -> Int -> Float -> String -> String -> Svg Msg
+viewHexEmpty hx hy x y size childSvgTxt hexColour =
     let
         origin =
             ( x, y )
@@ -430,12 +442,7 @@ viewHexEmpty isOnRoute_ hx hy x y size childSvgTxt =
         [ -- background hex
           Svg.Styled.Lazy.lazy2 renderPolygon
             (hexagonPoints origin size)
-            (if isOnRoute_ then
-                routeHexBg
-
-             else
-                defaultHexBg
-            )
+            hexColour
         , Svg.text_
             [ SvgAttrs.x <| String.fromInt <| x
             , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
@@ -456,19 +463,41 @@ viewHexEmpty isOnRoute_ hx hy x y size childSvgTxt =
 
 renderPolygon : String -> String -> Svg msg
 renderPolygon points_ fill =
+    let
+        borderColour =
+            if fill == currentAddressHexBg then
+                currentAddressHexBg
+
+            else
+                "#CCCCCC"
+
+        strokeWidth =
+            if fill == currentAddressHexBg then
+                "2"
+
+            else
+                "1"
+
+        hexColour =
+            if fill == currentAddressHexBg then
+                routeHexBg
+
+            else
+                fill
+    in
     Svg.polygon
         [ points points_
-        , SvgAttrs.fill fill
-        , SvgAttrs.stroke "#CCCCCC"
-        , SvgAttrs.strokeWidth "1"
+        , SvgAttrs.fill hexColour
+        , SvgAttrs.stroke borderColour
+        , SvgAttrs.strokeWidth strokeWidth
         , SvgAttrs.pointerEvents "visiblePainted"
         , SvgAttrs.css [ hoverableStyle ]
         ]
         []
 
 
-renderHexWithStar : StarSystem -> RouteList -> HexAddress -> VisualHexOrigin -> Float -> Svg Msg
-renderHexWithStar starSystem route hexAddress (( vox, voy ) as visualOrigin) size =
+renderHexWithStar : StarSystem -> String -> HexAddress -> VisualHexOrigin -> Float -> Svg Msg
+renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin) size =
     let
         si =
             starSystem.surveyIndex
@@ -520,12 +549,7 @@ renderHexWithStar starSystem route hexAddress (( vox, voy ) as visualOrigin) siz
         [ -- background hex
           Svg.Styled.Lazy.lazy2 renderPolygon
             (hexagonPoints visualOrigin size)
-            (if isOnRoute route hexAddress then
-                routeHexBg
-
-             else
-                defaultHexBg
-            )
+            hexColour
         , -- center star
           if showStar then
             let
@@ -669,6 +693,10 @@ routeHexBg =
     "#FCD299"
 
 
+currentAddressHexBg =
+    "#fe5a1d"
+
+
 defaultHexSize =
     40
 
@@ -713,9 +741,9 @@ viewHex :
     -> ( Float, Float )
     -> HexAddress
     -> VisualHexOrigin
-    -> RouteList
+    -> String
     -> ( Maybe (Svg Msg), Int )
-viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress visualHexOrigin route =
+viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress visualHexOrigin hexColour =
     let
         solarSystem =
             Dict.get (HexAddress.toKey hexAddress) solarSystemDict
@@ -724,11 +752,7 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
             visualHexOrigin
 
         viewEmptyHelper txt =
-            let
-                isOnRoute_ =
-                    isOnRoute route hexAddress
-            in
-            Svg.Styled.Lazy.lazy7 viewHexEmpty isOnRoute_ hexAddress.x hexAddress.y vox voy hexSize txt
+            Svg.Styled.Lazy.lazy7 viewHexEmpty hexAddress.x hexAddress.y vox voy hexSize txt
 
         hexSVG =
             Just
@@ -736,22 +760,22 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
                     Just (LoadedSolarSystem ss) ->
                         Svg.Styled.Lazy.lazy5 renderHexWithStar
                             ss
-                            route
+                            hexColour
                             hexAddress
                             visualHexOrigin
                             hexSize
 
                     Just LoadingSolarSystem ->
-                        viewEmptyHelper "Loading..."
+                        viewEmptyHelper "Loading..." hexColour
 
                     Just (FailedSolarSystem httpError) ->
-                        viewEmptyHelper "Failed."
+                        viewEmptyHelper "Failed." hexColour
 
                     Just LoadedEmptyHex ->
-                        viewEmptyHelper ""
+                        viewEmptyHelper "" hexColour
 
                     Nothing ->
-                        viewEmptyHelper ""
+                        viewEmptyHelper "" hexColour
                 )
     in
     ( hexSVG, isEmptyHex solarSystem )
@@ -775,10 +799,10 @@ viewHexes :
     -> HexAddress
     -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport }
     -> SolarSystemDict
-    -> RouteList
+    -> ( RouteList, Maybe HexAddress )
     -> Float
     -> Html Msg
-viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict route hexSize =
+viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( route, currentAddress ) hexSize =
     let
         viewportHeightIsh =
             screenVp.viewport.height * 0.9
@@ -804,6 +828,17 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict rout
             HexAddress.between upperLeftHex lowerRightHex
     in
     hexRange
+        |> List.sortWith
+            (\l r ->
+                if Just l == currentAddress then
+                    GT
+
+                else if Just r == currentAddress then
+                    LT
+
+                else
+                    EQ
+            )
         |> List.map
             (\hexAddr ->
                 let
@@ -815,6 +850,16 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict rout
                                     , y - zero_y
                                     )
                                )
+
+                    hexColour =
+                        if Just hexAddr == currentAddress then
+                            currentAddressHexBg
+
+                        else if isOnRoute route hexAddr then
+                            routeHexBg
+
+                        else
+                            defaultHexBg
                 in
                 viewHex
                     widestViewport
@@ -823,7 +868,7 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict rout
                     ( viewportWidthIsh, viewportHeightIsh )
                     hexAddr
                     hexSVGOrigin
-                    route
+                    hexColour
             )
         |> List.filterMap Tuple.first
         |> (let
@@ -1626,7 +1671,7 @@ view model =
                                 model.lowerRightHex
                                 viewPortConfig
                                 model.solarSystems
-                                model.route
+                                ( model.route, model.currentAddress )
                                 model.hexScale
                                 |> Html.toUnstyled
 
@@ -1883,6 +1928,7 @@ update msg model =
         DownloadedRoute requestEntry (Ok route) ->
             ( { model
                 | route = route
+                , currentAddress = List.reverse route |> List.head |> Maybe.map .address
               }
             , Cmd.none
             )
