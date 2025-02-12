@@ -406,28 +406,6 @@ viewHexEmpty hx hy x y size childSvgTxt hexColour =
                 , SvgAttrs.textAnchor "middle"
                 ]
                 [ Svg.text childSvgTxt ]
-
-        -- a decoder that takes JSON and emits either a decode failure or a Msg
-        downDecoder : JsDecode.Decoder Msg
-        downDecoder =
-            let
-                -- takes a raw JS mouse event and turns it into a parsed Elm mouse event
-                jsMouseEventDecoder =
-                    Html.Events.Extra.Mouse.eventDecoder
-
-                -- takes an Elm Mouse event and creates our Msg
-                msgConstructor evt =
-                    MapMouseDown <| evt.offsetPos
-            in
-            -- run the mouse event decoder
-            jsMouseEventDecoder
-                |> -- then if that succeeds, pass the event object into msgConstructor
-                   JsDecode.map msgConstructor
-
-        moveDecoder =
-            -- equivalent to the `downDecoder`, only it returns `MapMouseMove` instead
-            Html.Events.Extra.Mouse.eventDecoder
-                |> JsDecode.map (.offsetPos >> MapMouseMove)
     in
     Svg.g
         [ SvgEvents.onMouseOver (HoveringHex hexAddress)
@@ -508,6 +486,34 @@ renderPolygon points_ fill =
         []
 
 
+
+-- a decoder that takes JSON and emits either a decode failure or a Msg
+
+
+downDecoder : JsDecode.Decoder Msg
+downDecoder =
+    let
+        -- takes a raw JS mouse event and turns it into a parsed Elm mouse event
+        jsMouseEventDecoder =
+            Html.Events.Extra.Mouse.eventDecoder
+
+        -- takes an Elm Mouse event and creates our Msg
+        msgConstructor evt =
+            MapMouseDown <| evt.offsetPos
+    in
+    -- run the mouse event decoder
+    jsMouseEventDecoder
+        |> -- then if that succeeds, pass the event object into msgConstructor
+           JsDecode.map msgConstructor
+
+
+moveDecoder : JsDecode.Decoder Msg
+moveDecoder =
+    -- equivalent to the `downDecoder`, only it returns `MapMouseMove` instead
+    Html.Events.Extra.Mouse.eventDecoder
+        |> JsDecode.map (.offsetPos >> MapMouseMove)
+
+
 renderHexWithStar : StarSystem -> String -> HexAddress -> VisualHexOrigin -> Float -> Svg Msg
 renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin) size =
     let
@@ -516,28 +522,6 @@ renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin)
 
         showStar =
             starSystem.surveyIndex > 0
-
-        -- a decoder that takes JSON and emits either a decode failure or a Msg
-        downDecoder : JsDecode.Decoder Msg
-        downDecoder =
-            let
-                -- takes a raw JS mouse event and turns it into a parsed Elm mouse event
-                jsMouseEventDecoder =
-                    Html.Events.Extra.Mouse.eventDecoder
-
-                -- takes an Elm Mouse event and creates our Msg
-                msgConstructor evt =
-                    MapMouseDown <| evt.offsetPos
-            in
-            -- run the mouse event decoder
-            jsMouseEventDecoder
-                |> -- then if that succeeds, pass the event object into msgConstructor
-                   JsDecode.map msgConstructor
-
-        moveDecoder =
-            -- equivalent to the `downDecoder`, only it returns `MapMouseMove` instead
-            Html.Events.Extra.Mouse.eventDecoder
-                |> JsDecode.map (.offsetPos >> MapMouseMove)
 
         drawStar : ( Float, Float ) -> Int -> StarTypeData -> Svg Msg
         drawStar ( starX, starY ) radius star =
