@@ -20,7 +20,7 @@
 * [X] making nicer function for turning a HexId into a row,col pair
 * [X] save location of map
 * [X] Only show known stellar objects in side panel
-* [ ] display Revelation location
+* [X] display Revelation location
 * [X] display Revelation route
 * [ ] Display location in sector co-ordinates, not absolute co-ordinates
 * [X] table'd sidebar (recursively render the columns, account for SVG's width, since its HTML and elm-ui isn't aware of that size)
