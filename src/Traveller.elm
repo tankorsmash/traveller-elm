@@ -1588,9 +1588,9 @@ view model =
                     , Font.color <| fontTextColor
                     ]
                     [ column [ Element.spacing 15 ]
-                        [ row []
+                        [ row [Element.spacing 2]
                             [ text "Revelation location:"
-                            , text <| HexAddress.toKey model.playerHex
+                            , text <| universalHexLabel model.sectors model.playerHex
                             ]
                         ]
                     ]
