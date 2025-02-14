@@ -26,6 +26,7 @@
 * [X] table'd sidebar (recursively render the columns, account for SVG's width, since its HTML and elm-ui isn't aware of that size)
 ** [ ] like https://thriggle.netlify.app/traveller/subsector#$seed=Hide90811&$density=Standard&$size=Subsector&$rules=T5
 * [ ] making HexAddress fail on invalid addresses
+* [ ] display name if known
 * [X] Remember position between sessions
 * [ ] render neutron star
 * [ ] prettier ui somehow
