@@ -91,9 +91,13 @@ urlParser =
                        Maybe.map
                         (\{ protocol, host, path, port_ } ->
                             ( rebuildRoot protocol host port_
-                            , [ --drop the leading slash from the url
-                                String.dropLeft 1 path
-                              ]
+                            , --drop the leading slash from the url
+                              case String.dropLeft 1 path of
+                                "" ->
+                                    []
+
+                                withoutSlash ->
+                                    [ withoutSlash ]
                             )
                         )
                 )

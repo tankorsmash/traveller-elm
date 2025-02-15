@@ -34,6 +34,7 @@ import FontAwesome.Solid as Icon
 import FontAwesome.Styles as Icon
 import HostConfig exposing (HostConfig)
 import Html as UnstyledHtml
+import Html.Attributes as UnstyledHtmlAttrs
 import Html.Events.Extra.Mouse
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes
@@ -175,6 +176,7 @@ type alias Model =
     { key : Browser.Navigation.Key
     , hexScale : Float
     , solarSystems : SolarSystemDict
+    , newSolarSystemErrors : List Http.Error
     , lastSolarSystemError : Maybe Http.Error
     , requestHistory : RequestHistory
     , dragMode : DragMode
@@ -200,6 +202,7 @@ type Msg
     | ZoomScaleChanged Float
     | DownloadSolarSystems
     | DownloadedSolarSystems RequestEntry (Result Http.Error (List StarSystem))
+    | ClearAllErrors
     | FetchedSolarSystem (Result Http.Error SolarSystem)
     | DownloadedSectors RequestEntry (Result Http.Error (List Sector))
     | HoveringHex HexAddress
@@ -261,6 +264,7 @@ init maybeUpperLeft key hostConfig =
         model =
             { hexScale = defaultHexSize
             , solarSystems = solarSystemDict
+            , newSolarSystemErrors = []
             , lastSolarSystemError = Nothing
             , requestHistory = requestHistory
             , dragMode = NoDragging
@@ -1679,6 +1683,95 @@ universalHexLabel sectors hexAddress =
             sector.name ++ " " ++ HexAddress.hexLabel hexAddress
 
 
+errorDialog : List Http.Error -> UnstyledHtml.Html Msg
+errorDialog httpErrors =
+    let
+        openAttr =
+            if (not << List.isEmpty) httpErrors then
+                UnstyledHtmlAttrs.attribute "open" "open"
+
+            else
+                UnstyledHtmlAttrs.classList []
+
+        errorButton { onPress, label } =
+            Input.button
+                [ Element.width <| Element.px 100
+
+                -- , Border.dashed
+                , Border.width 2
+                , Border.rounded 10
+                , Element.padding 10
+                , Element.mouseOver [ Background.color <| Element.rgb 0.5 0.5 0.5 ]
+                ]
+                { onPress = onPress, label = el [ centerX ] <| text label }
+
+        pluralize n singular plural =
+            if n == 1 then
+                singular
+
+            else
+                plural
+
+        renderError httpError =
+            case httpError of
+                Http.BadBody error ->
+                    monospaceText error
+
+                Http.BadUrl url ->
+                    text <| "Invalid URL: " ++ url
+
+                Http.NetworkError ->
+                    text "Network Error"
+
+                Http.BadStatus statusCode ->
+                    text <| "BadStatus: " ++ String.fromInt statusCode
+
+                Http.Timeout ->
+                    text "Request timedout"
+    in
+    UnstyledHtml.node "dialog"
+        [ openAttr ]
+        [ Element.layout
+            [ Element.centerX
+            , width fill
+            ]
+          <|
+            column
+                [ Element.height <| Element.minimum 500 <| Element.fill
+                , Element.width <| Element.minimum 500 <| Element.fill
+                , Font.color <| Element.rgb 1 1 1
+                , Element.scrollbars
+                , Element.spacing 10
+                ]
+                [ -- header
+                  el [ centerX, Font.size 24, Font.underline, Element.padding 10 ] <|
+                    let
+                        errorCount =
+                            List.length httpErrors
+                    in
+                    text <|
+                        pluralize
+                            errorCount
+                            "One Error!"
+                            ("Many errors! (" ++ String.fromInt errorCount ++ " of 'em)")
+                , -- error renderer
+                  column
+                    [ Element.spacing 10
+                    , Element.height <| Element.minimum 100 <| Element.fill
+                    , width fill
+                    , Element.scrollbars
+                    , Font.size 16
+                    ]
+                  <|
+                    List.map renderError httpErrors
+                , --buttons
+                  row [ centerX, Element.spacing 10 ]
+                    [ errorButton { onPress = Just ClearAllErrors, label = "Close" }
+                    ]
+                ]
+        ]
+
+
 view : Model -> Element.Element Msg
 view model =
     let
@@ -1833,6 +1926,7 @@ view model =
                 sidebarColumn
             , el [ Element.alignTop ] <|
                 hexesColumn
+            , Element.html <| errorDialog model.newSolarSystemErrors
             ]
 
         -- , -- TODO: bring this back
@@ -2055,7 +2149,7 @@ update msg model =
                 _ =
                     Debug.log "Sectors did not work" err
             in
-            ( model, Cmd.none )
+            ( { model | newSolarSystemErrors = err :: model.newSolarSystemErrors }, Cmd.none )
 
         DownloadedRoute requestEntry (Ok route) ->
             ( { model
@@ -2070,7 +2164,7 @@ update msg model =
                 _ =
                     Debug.log "Route did not work" err
             in
-            ( model, Cmd.none )
+            ( { model | newSolarSystemErrors = err :: model.newSolarSystemErrors }, Cmd.none )
 
         FetchedSolarSystem (Ok solarSystem) ->
             ( { model
@@ -2130,6 +2224,7 @@ update msg model =
             in
             ( { model
                 | solarSystems = solarSystemDict
+                , newSolarSystemErrors = err :: model.newSolarSystemErrors
                 , lastSolarSystemError = Just err
                 , requestHistory = newRequestHistory
               }
@@ -2227,6 +2322,9 @@ update msg model =
 
         TableColumnHovered columnDesc ->
             ( { model | sidebarHoverText = columnDesc }, Cmd.none )
+
+        ClearAllErrors ->
+            ( { model | newSolarSystemErrors = [] }, Cmd.none )
 
 
 stripDataFromRemoteData : RemoteData err data -> RemoteData err ()
