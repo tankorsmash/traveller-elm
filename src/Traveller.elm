@@ -233,8 +233,27 @@ init : Maybe ( Int, Int ) -> Browser.Navigation.Key -> HostConfig.HostConfig -> 
 init maybeUpperLeft key hostConfig =
     let
         -- requestHistory : RequestHistory
-        ( requestEntry, ( solarSystemDict, requestHistory ) ) =
-            prepNextRequest ( Dict.empty, [] ) upperLeftHex lowerRightHex
+        ( initSystemDict, initRequestHistory ) =
+            ( Dict.empty, [] )
+
+        ( ( ssReqEntry, secReqEntry, routeReqEntry ), ( solarSystemDict, requestHistory ) ) =
+            prepNextRequest ( initSystemDict, initRequestHistory ) upperLeftHex lowerRightHex
+                |> -- build a new request entry for sector request
+                   (\( ssReqEntry_, oldSsDictAndReqHistory ) ->
+                        let
+                            ( newReqEntry, ssDictAndReqHistory ) =
+                                prepNextRequest oldSsDictAndReqHistory upperLeftHex lowerRightHex
+                        in
+                        ( ( ssReqEntry_, newReqEntry ), ssDictAndReqHistory )
+                   )
+                |> -- take the old ones and build a new one for route request
+                   (\( ( ssReqEntry_, secReqEntry_ ), oldSsDictAndReqHistory ) ->
+                        let
+                            ( routeReqEntry_, ssDictAndReqHistory ) =
+                                prepNextRequest oldSsDictAndReqHistory upperLeftHex lowerRightHex
+                        in
+                        ( ( ssReqEntry_, secReqEntry_, routeReqEntry_ ), ssDictAndReqHistory )
+                   )
 
         upperLeftHex =
             case maybeUpperLeft of
@@ -287,9 +306,9 @@ init maybeUpperLeft key hostConfig =
     in
     ( model
     , Cmd.batch
-        [ sendSolarSystemRequest requestEntry model.hostConfig model.upperLeftHex model.lowerRightHex
-        , sendSectorRequest requestEntry model.hostConfig
-        , sendRouteRequest requestEntry model.hostConfig
+        [ sendSolarSystemRequest ssReqEntry model.hostConfig model.upperLeftHex model.lowerRightHex
+        , sendSectorRequest secReqEntry model.hostConfig
+        , sendRouteRequest routeReqEntry model.hostConfig
         , Browser.Dom.getViewport
             |> Task.perform GotViewport
         ]
