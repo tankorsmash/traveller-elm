@@ -175,7 +175,7 @@ type alias Model =
     { key : Browser.Navigation.Key
     , hexScale : Float
     , solarSystems : SolarSystemDict
-    , newSolarSystemErrors : List Http.Error
+    , newSolarSystemErrors : List ( Http.Error, String )
     , lastSolarSystemError : Maybe Http.Error
     , requestHistory : RequestHistory
     , dragMode : DragMode
@@ -200,10 +200,10 @@ type Msg
     = NoOpMsg
     | ZoomScaleChanged Float
     | DownloadSolarSystems
-    | DownloadedSolarSystems RequestEntry (Result Http.Error (List StarSystem))
+    | DownloadedSolarSystems ( RequestEntry, String ) (Result Http.Error (List StarSystem))
     | ClearAllErrors
     | FetchedSolarSystem (Result Http.Error SolarSystem)
-    | DownloadedSectors RequestEntry (Result Http.Error (List Sector))
+    | DownloadedSectors ( RequestEntry, String ) (Result Http.Error (List Sector))
     | HoveringHex HexAddress
     | ViewingHex HexAddress
     | GotViewport Browser.Dom.Viewport
@@ -214,7 +214,7 @@ type Msg
     | MapMouseDown ( Float, Float )
     | MapMouseUp
     | MapMouseMove ( Float, Float )
-    | DownloadedRoute RequestEntry (Result Http.Error (List Route))
+    | DownloadedRoute ( RequestEntry, String ) (Result Http.Error (List Route))
 
 
 {-| Where the Hex is on the screen, in pixel coordinates
@@ -1701,7 +1701,7 @@ universalHexLabel sectors hexAddress =
             sector.name ++ " " ++ HexAddress.hexLabel hexAddress
 
 
-errorDialog : List Http.Error -> UnstyledHtml.Html Msg
+errorDialog : List ( Http.Error, String ) -> UnstyledHtml.Html Msg
 errorDialog httpErrors =
     let
         openAttr =
@@ -1730,22 +1730,25 @@ errorDialog httpErrors =
             else
                 plural
 
-        renderError httpError =
-            case httpError of
-                Http.BadBody error ->
-                    monospaceText error
+        renderError ( httpError, url ) =
+            column []
+                [ el [ Font.italic, Font.color <| colorToElementColor Color.grey ] <| monospaceText url
+                , case httpError of
+                    Http.BadBody error ->
+                        monospaceText error
 
-                Http.BadUrl url ->
-                    text <| "Invalid URL: " ++ url
+                    Http.BadUrl url_ ->
+                        text <| "Invalid URL: " ++ url_
 
-                Http.NetworkError ->
-                    text "Network Error"
+                    Http.NetworkError ->
+                        text "Network Error"
 
-                Http.BadStatus statusCode ->
-                    text <| "BadStatus: " ++ String.fromInt statusCode
+                    Http.BadStatus statusCode ->
+                        text <| "BadStatus: " ++ String.fromInt statusCode
 
-                Http.Timeout ->
-                    text "Request timedout"
+                    Http.Timeout ->
+                        text "Request timedout"
+                ]
     in
     UnstyledHtml.node "dialog"
         [ openAttr ]
@@ -1993,7 +1996,7 @@ sendSolarSystemRequest requestEntry hostConfig upperLeft lowerRight =
                 , headers = []
                 , url = url
                 , body = Http.emptyBody
-                , expect = Http.expectJson (DownloadedSolarSystems requestEntry) solarSystemsDecoder
+                , expect = Http.expectJson (DownloadedSolarSystems ( requestEntry, url )) solarSystemsDecoder
                 , timeout = Just 15000
                 , tracker = Nothing
                 }
@@ -2024,7 +2027,7 @@ sendRouteRequest requestEntry hostConfig =
                 , headers = []
                 , url = url
                 , body = Http.emptyBody
-                , expect = Http.expectJson (DownloadedRoute requestEntry) routeDecoder
+                , expect = Http.expectJson (DownloadedRoute ( requestEntry, url )) routeDecoder
                 , timeout = Just 15000
                 , tracker = Nothing
                 }
@@ -2096,7 +2099,7 @@ update msg model =
             , sendSolarSystemRequest nextRequestEntry model.hostConfig model.upperLeftHex model.lowerRightHex
             )
 
-        DownloadedSolarSystems requestEntry (Ok solarSystems) ->
+        DownloadedSolarSystems ( requestEntry, url_ ) (Ok solarSystems) ->
             let
                 rangeAsPairs =
                     HexAddress.between requestEntry.upperLeftHex requestEntry.lowerRightHex
@@ -2162,14 +2165,14 @@ update msg model =
             , Cmd.none
             )
 
-        DownloadedSectors requestEntry (Err err) ->
+        DownloadedSectors ( requestEntry, url ) (Err err) ->
             let
                 _ =
                     Debug.log "Sectors did not work" err
             in
-            ( { model | newSolarSystemErrors = err :: model.newSolarSystemErrors }, Cmd.none )
+            ( { model | newSolarSystemErrors = ( err, url ) :: model.newSolarSystemErrors }, Cmd.none )
 
-        DownloadedRoute requestEntry (Ok route) ->
+        DownloadedRoute ( requestEntry, url ) (Ok route) ->
             ( { model
                 | route = route
                 , currentAddress = List.reverse route |> List.head |> Maybe.map .address
@@ -2177,12 +2180,12 @@ update msg model =
             , Cmd.none
             )
 
-        DownloadedRoute requestEntry (Err err) ->
+        DownloadedRoute ( requestEntry, url ) (Err err) ->
             let
                 _ =
                     Debug.log "Route did not work" err
             in
-            ( { model | newSolarSystemErrors = err :: model.newSolarSystemErrors }, Cmd.none )
+            ( { model | newSolarSystemErrors = ( err, url ) :: model.newSolarSystemErrors }, Cmd.none )
 
         FetchedSolarSystem (Ok solarSystem) ->
             ( { model
@@ -2194,7 +2197,7 @@ update msg model =
         FetchedSolarSystem (Err _) ->
             ( model, Cmd.none )
 
-        DownloadedSolarSystems requestEntry (Err err) ->
+        DownloadedSolarSystems ( requestEntry, url ) (Err err) ->
             let
                 newRequestHistory =
                     markRequestComplete requestEntry (RemoteData.Failure err) model.requestHistory
@@ -2242,7 +2245,7 @@ update msg model =
             in
             ( { model
                 | solarSystems = solarSystemDict
-                , newSolarSystemErrors = err :: model.newSolarSystemErrors
+                , newSolarSystemErrors = ( err, url ) :: model.newSolarSystemErrors
                 , lastSolarSystemError = Just err
                 , requestHistory = newRequestHistory
               }
@@ -2398,7 +2401,7 @@ sendSectorRequest requestEntry hostConfig =
                 , headers = []
                 , url = url
                 , body = Http.emptyBody
-                , expect = Http.expectJson (DownloadedSectors requestEntry) sectorDecoder
+                , expect = Http.expectJson (DownloadedSectors ( requestEntry, url )) sectorDecoder
                 , timeout = Just 15000
                 , tracker = Nothing
                 }
