@@ -149,23 +149,22 @@ prepNextRequest ( oldSolarSystemDict, requestHistory ) upperLeftHex lowerRightHe
             , status = RemoteData.Loading
             }
 
-        hexRange =
-            HexAddress.between upperLeftHex lowerRightHex
-
         newSolarSystemDict =
-            hexRange
-                |> List.foldl
-                    (\hexAddr ssDict ->
-                        Dict.update (HexAddress.toKey hexAddr)
-                            (\maybeSolarSystem ->
-                                case maybeSolarSystem of
-                                    Just existingSolarSystem ->
-                                        Just existingSolarSystem
+            let
+                markSolarSystemLoadingIfNotFound maybeSolarSystem =
+                    case maybeSolarSystem of
+                        Just existingSolarSystem ->
+                            Just existingSolarSystem
 
-                                    Nothing ->
-                                        Just LoadingSolarSystem
-                            )
-                            ssDict
+                        Nothing ->
+                            Just LoadingSolarSystem
+            in
+            HexAddress.between upperLeftHex lowerRightHex
+                |> List.foldl
+                    (\hexAddr solarSystemDict ->
+                        Dict.update (HexAddress.toKey hexAddr)
+                            markSolarSystemLoadingIfNotFound
+                            solarSystemDict
                     )
                     oldSolarSystemDict
     in
