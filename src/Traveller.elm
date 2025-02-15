@@ -1735,7 +1735,10 @@ errorDialog httpErrors =
                 [ el [ Font.italic, Font.color <| colorToElementColor Color.grey ] <| monospaceText url
                 , case httpError of
                     Http.BadBody error ->
-                        monospaceText error
+                        Element.textColumn []
+                            [ monospaceText "JSON Decode Error:"
+                            , monospaceText error
+                            ]
 
                     Http.BadUrl url_ ->
                         text <| "Invalid URL: " ++ url_
