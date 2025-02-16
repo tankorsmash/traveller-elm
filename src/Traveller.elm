@@ -751,7 +751,7 @@ calcVisualOrigin hexSize { row, col } =
             hexSize + toFloat col * (hexSize + hexSize * cos a)
 
         y =
-            hexSize + toFloat row * 2 * hexSize * sin a + hexSize * hexColOffset col * sin a
+            -1 * (hexSize + toFloat row * 2 * hexSize * sin a + hexSize * hexColOffset col * sin a)
     in
     ( floor x, floor y )
 
@@ -1019,7 +1019,7 @@ toViewBox hexScale { x, y } vph =
         |> (\( x_, y_ ) ->
                 String.fromFloat (toFloat x_)
                     ++ " "
-                    ++ String.fromFloat (toFloat y_ - vph)
+                    ++ String.fromFloat (toFloat y_ + vph)
            )
 
 
