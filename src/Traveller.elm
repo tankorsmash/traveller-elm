@@ -1766,7 +1766,18 @@ errorDialog httpErrors =
 
         renderError ( httpError, url ) =
             column []
-                [ el [ Font.italic, Font.color <| colorToElementColor Color.grey ] <| monospaceText url
+                [ -- clickable url
+                  Element.link []
+                    { url = url
+                    , label =
+                        el
+                            [ Element.mouseOver [ Font.color <| colorToElementColor Color.green ]
+                            , Font.italic
+                            , Font.color <| colorToElementColor Color.grey
+                            ]
+                        <|
+                            monospaceText url
+                    }
                 , case httpError of
                     Http.BadBody error ->
                         Element.textColumn []
