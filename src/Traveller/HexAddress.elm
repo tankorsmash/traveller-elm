@@ -1,4 +1,4 @@
-module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, SectorHexAddress, addVal, between, create, createFromStarSystem, hexAddressToString, hexLabel, sectorColumns, sectorHexAddressToString, sectorRows, shiftAddressBy, toKey, toSectorAddress, toSectorKey, toUniversalAddress, universalHexX, universalHexY, universalToSectorX, universalToSectorY)
+module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, SectorHexAddress, addVal, between, betweenWithMax, create, createFromStarSystem, hexAddressToString, hexLabel, sectorColumns, sectorHexAddressToString, sectorRows, shiftAddressBy, toKey, toSectorAddress, toSectorKey, toUniversalAddress, universalHexX, universalHexY, universalToSectorX, universalToSectorY)
 
 
 sectorColumns =
@@ -139,6 +139,29 @@ between upperLeftHex lowerRightHex =
         |> List.concatMap
             (\x ->
                 List.range lowerRightHex.y upperLeftHex.y
+                    |> List.map
+                        (\y ->
+                            { x = x, y = y }
+                        )
+            )
+
+
+{-| Returns a list of hex addresses between two hex addresses, inclusive.
+ limits the max number of hexes across and tall.
+-}
+betweenWithMax : HexAddress -> HexAddress -> { maxAcross : Int, maxTall : Int } -> List HexAddress
+betweenWithMax upperLeftHex lowerRightHex { maxAcross, maxTall } =
+    let
+        across =
+            min (lowerRightHex.x - upperLeftHex.x) maxAcross
+
+        tall =
+            min (upperLeftHex.y - lowerRightHex.y) maxTall
+    in
+    List.range upperLeftHex.x (upperLeftHex.x + across)
+        |> List.concatMap
+            (\x ->
+                List.range (upperLeftHex.y - tall) upperLeftHex.y
                     |> List.map
                         (\y ->
                             { x = x, y = y }

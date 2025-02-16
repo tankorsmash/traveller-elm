@@ -781,14 +781,15 @@ calcVisualOrigin hexSize { row, col } =
 
 viewHex :
     Browser.Dom.Viewport
+    -> ( HexAddress, HexAddress )
     -> Float
     -> SolarSystemDict
     -> ( Float, Float )
     -> HexAddress
     -> VisualHexOrigin
     -> String
-    -> ( Maybe (Svg Msg), Int )
-viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress visualHexOrigin hexColour =
+    -> ( Svg Msg, Int )
+viewHex widestViewport ( upperLeftHex, lowerRightHex ) hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress visualHexOrigin hexColour =
     let
         solarSystem =
             Dict.get (HexAddress.toKey hexAddress) solarSystemDict
@@ -797,31 +798,29 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
             visualHexOrigin
 
         viewEmptyHelper txt =
-            Svg.Styled.Lazy.lazy7 viewHexEmpty hexAddress.x hexAddress.y vox voy hexSize txt
+            Svg.Styled.Lazy.lazy7 viewHexEmpty hexAddress.x hexAddress.y vox voy hexSize txt hexColour
 
         hexSVG =
-            Just
-                (case solarSystem of
-                    Just (LoadedSolarSystem ss) ->
-                        Svg.Styled.Lazy.lazy5 renderHexWithStar
-                            ss
-                            hexColour
-                            hexAddress
-                            visualHexOrigin
-                            hexSize
+            case solarSystem of
+                Just (LoadedSolarSystem ss) ->
+                    Svg.Styled.Lazy.lazy5 renderHexWithStar
+                        ss
+                        hexColour
+                        hexAddress
+                        visualHexOrigin
+                        hexSize
 
-                    Just LoadingSolarSystem ->
-                        viewEmptyHelper "Loading..." hexColour
+                Just LoadingSolarSystem ->
+                    viewEmptyHelper "Loading..."
 
-                    Just (FailedSolarSystem httpError) ->
-                        viewEmptyHelper "Failed." hexColour
+                Just (FailedSolarSystem httpError) ->
+                    viewEmptyHelper "Failed."
 
-                    Just LoadedEmptyHex ->
-                        viewEmptyHelper "" hexColour
+                Just LoadedEmptyHex ->
+                    viewEmptyHelper ""
 
-                    Nothing ->
-                        viewEmptyHelper "" hexColour
-                )
+                Nothing ->
+                    viewEmptyHelper ""
     in
     ( hexSVG, isEmptyHex solarSystem )
 
@@ -967,7 +966,36 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
         --                 ( x, y )
         --        )
         hexRange =
-            HexAddress.between upperLeftHex lowerRightHex
+            HexAddress.betweenWithMax
+                (HexAddress.shiftAddressBy { deltaX = -1, deltaY = -1 } upperLeftHex)
+                lowerRightHex
+                { maxAcross = maxAcross, maxTall = maxTall }
+
+        ( visualHexWidth, visualHexHeight ) =
+            let
+                ( left_x, left_y ) =
+                    calcVisualOrigin hexSize
+                        { row = 1, col = 1 }
+
+                ( right_x, _ ) =
+                    calcVisualOrigin hexSize
+                        { row = 1, col = 2 }
+
+                ( _, down_y ) =
+                    calcVisualOrigin hexSize
+                        { row = 2, col = 1 }
+            in
+            ( left_x - right_x |> abs, down_y - left_y |> abs )
+
+        ( maxAcross, maxTall ) =
+            case hexmapVp of
+                Nothing ->
+                    ( 10000, 10000 )
+
+                Just hvp ->
+                    ( (hvp.viewport.width / toFloat visualHexWidth) + 2 |> floor
+                    , (hvp.viewport.height / toFloat visualHexHeight) + 2 |> floor
+                    )
     in
     hexRange
         |> List.map
@@ -992,9 +1020,10 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
                         else
                             defaultHexBg
 
-                    ( hexSVG, isE ) =
+                    ( hexSVG, isEmpty ) =
                         viewHex
                             widestViewport
+                            ( upperLeftHex, lowerRightHex )
                             hexSize
                             solarSystemDict
                             ( viewportWidthIsh, viewportHeightIsh )
@@ -1002,28 +1031,22 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
                             hexSVGOrigin
                             hexColour
                 in
-                ( hexSVG |> Maybe.map (\svgElm -> ( hexAddr, svgElm )), isE )
+                hexSVG
             )
-        |> List.filterMap Tuple.first
         |> (\hexSvgsWithHexAddress ->
                 let
                     singlePolyHex =
                         Maybe.map renderCurrentAddressOutline currentAddress
                             |> Maybe.withDefault (Svg.text "")
                 in
-                [ List.map
-                    (\( hexAddr, svg ) ->
-                        ( HexAddress.toKey hexAddr, svg )
-                    )
-                    hexSvgsWithHexAddress
-                    |> Svg.Styled.Keyed.node "g" []
-                , renderSectorOutline
+                [ renderSectorOutline
                     ( upperLeftHex, zero_x, zero_y + (floor <| hexSize / 1.6) )
                     hexSize
                     (upperLeftHex |> HexAddress.toSectorAddress)
                 , renderSectorOutline ( upperLeftHex, zero_x, zero_y ) hexSize (lowerRightHex |> HexAddress.toSectorAddress)
                 , singlePolyHex
                 ]
+                    ++ hexSvgsWithHexAddress
            )
         |> (let
                 stringWidth =
