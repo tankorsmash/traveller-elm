@@ -42,6 +42,7 @@ import Json.Decode as JsDecode
 import Parser
 import RemoteData exposing (RemoteData(..))
 import Round
+import Svg.Attributes exposing (transform)
 import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
@@ -660,8 +661,8 @@ renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin)
                     ]
                 , Svg.text_
                     [ SvgAttrs.x <| String.fromInt <| vox
-                    , SvgAttrs.y <| String.fromInt <| voy + (floor <| size * 0.8)
-                    , SvgAttrs.fontSize "12"
+                    , SvgAttrs.y <| String.fromInt <| voy + (floor <| size * 0.8) - 1
+                    , SvgAttrs.fontSize "10"
                     , SvgAttrs.textAnchor "middle"
                     ]
                     (let
@@ -689,11 +690,11 @@ renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin)
                      [ Svg.tspan
                         [ SvgAttrs.fill "#109076", SvgAttrs.fontWeight "800" ]
                         [ showGasGiants |> Svg.text ]
-                     , Svg.text " / "
+                     , Svg.text "–"
                      , Svg.tspan
                         [ SvgAttrs.fill "#809076", SvgAttrs.fontWeight "800" ]
                         [ showTerrestrialPlanets |> Svg.text ]
-                     , Svg.text " / "
+                     , Svg.text "–"
                      , Svg.tspan
                         [ SvgAttrs.fill "#68B976", SvgAttrs.fontWeight "800" ]
                         [ showplanetoidBelts |> Svg.text ]
@@ -875,8 +876,6 @@ renderSectorOutline ( upperLeftHex, zero_x, zero_y ) hexSize hex =
         []
 
 
-{-| View all the hexes in the system
--}
 viewHexes :
     HexAddress
     -> HexAddress
@@ -931,17 +930,6 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
         ( zero_x, zero_y ) =
             ( 0, 0 )
 
-        -- calcVisualOrigin hexSize
-        --     { row = 0
-        --     , col = 0
-        --     }
-        --     |> (\( x, y ) ->
-        --             if modBy 2 sectorUpperLeft.x == 0 then
-        --                 ( x, y - (hexSize / 1.6 |> floor) )
-        --
-        --             else
-        --                 ( x, y )
-        --        )
         hexRange =
             HexAddress.between upperLeftHex lowerRightHex
     in
@@ -992,7 +980,7 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
            )
         |> (let
                 stringWidth =
-                    Debug.log "stringwidth " <| String.fromFloat <| viewportWidthIsh
+                    String.fromFloat <| viewportWidthIsh
 
                 stringHeight =
                     String.fromFloat <| viewportHeightIsh
@@ -1443,12 +1431,12 @@ renderStellarObject surveyIndex newNestingLevel stellarObject selectedStellarObj
                 renderPlanetoid newNestingLevel planetoidData selectedStellarObject
 
             Star starDataConfig ->
-                el [ Element.width Element.fill, Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <| renderStar surveyIndex starDataConfig newNestingLevel selectedStellarObject
+                el [ Element.width Element.fill, Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <| displayStarDetails surveyIndex starDataConfig newNestingLevel selectedStellarObject
         ]
 
 
-renderStar : Int -> StarData -> Int -> Maybe StellarObject -> Element.Element Msg
-renderStar surveyIndex (StarDataWrap starData) nestingLevel selectedStellarObject =
+displayStarDetails : Int -> StarData -> Int -> Maybe StellarObject -> Element.Element Msg
+displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel selectedStellarObject =
     let
         inJumpShadow obj =
             case starData.jumpShadow of
@@ -1516,7 +1504,7 @@ renderStar surveyIndex (StarDataWrap starData) nestingLevel selectedStellarObjec
         , starData.companion
             |> Maybe.map
                 (\compStarData ->
-                    renderStar surveyIndex compStarData nextNestingLevel selectedStellarObject
+                    displayStarDetails surveyIndex compStarData nextNestingLevel selectedStellarObject
                 )
             |> Maybe.withDefault Element.none
         , column [ Element.width Element.fill ] <|
@@ -1571,7 +1559,7 @@ convertColor color =
 viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Element Msg
 viewSystemDetailsSidebar solarSystem selectedStellarObject =
     column [ Element.spacing 10, Element.paddingXY 0 10 ] <|
-        [ renderStar solarSystem.surveyIndex solarSystem.primaryStar 0 selectedStellarObject
+        [ displayStarDetails solarSystem.surveyIndex solarSystem.primaryStar 0 selectedStellarObject
         ]
 
 
