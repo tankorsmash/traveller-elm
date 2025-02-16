@@ -1,6 +1,8 @@
-module Traveller.SolarSystemStars exposing (StarSystem, StarType, StarTypeData, getStarTypeData, isBrownDwarfType, starSystemCodec, starTypeCodec)
+module Traveller.SolarSystemStars exposing (FallibleStarSystem, StarSystem, StarType, StarTypeData, fallibleStarSystemDecoder, getStarTypeData, isBrownDwarfType, starSystemCodec, starTypeCodec)
 
 import Codec exposing (Codec)
+import Json.Decode as Decode exposing (Decoder)
+import Json.Decode.Pipeline exposing (custom, required)
 import Traveller.HexAddress as HexAddress exposing (HexAddress)
 import Traveller.StarColour exposing (StarColour, codecStarColour)
 
@@ -58,6 +60,20 @@ type alias StarSystem =
     }
 
 
+type alias FallibleStarSystem =
+    { address : HexAddress
+    , sectorName : String
+    , name : String
+    , scanPoints : Int
+    , surveyIndex : Int
+    , gasGiantCount : Int
+    , terrestrialPlanetCount : Int
+    , planetoidBeltCount : Int
+    , allegiance : Maybe String
+    , stars : List (Result Decode.Error StarType)
+    }
+
+
 starSystemCodec : Codec StarSystem
 starSystemCodec =
     Codec.object
@@ -76,3 +92,35 @@ starSystemCodec =
         |> Codec.field "allegiance" .allegiance (Codec.nullable Codec.string)
         |> Codec.field "stars" .stars (Codec.list starTypeCodec)
         |> Codec.buildObject
+
+
+{-| all the fields from StarSystem, but with stars as a list of Result Decode.Error StarType
+
+this is so the decoder can handle errors in the starTypeCodec
+
+-}
+fallibleStarSystemDecoder : Decoder FallibleStarSystem
+fallibleStarSystemDecoder =
+    let
+        decodeOrCatchError : Decode.Value -> Result Decode.Error StarType
+        decodeOrCatchError =
+            Decode.decodeValue (Codec.decoder starTypeCodec)
+    in
+    Decode.succeed
+        (\ox oy sname name sp si ggc tpc ppc al stars ->
+            FallibleStarSystem { x = ox, y = oy } sname name sp si ggc tpc ppc al stars
+        )
+        |> required "origin_x" Decode.int
+        |> required "origin_y" Decode.int
+        |> required "sector_name" Decode.string
+        |> required "name" Decode.string
+        |> required "scan_points" Decode.int
+        |> required "survey_index" Decode.int
+        |> required "gas_giant_count" Decode.int
+        |> required "terrestrial_planet_count" Decode.int
+        |> required "planetoid_belt_count" Decode.int
+        |> required "allegiance" (Decode.nullable Decode.string)
+        |> required "stars"
+            (Decode.list
+                (Decode.map decodeOrCatchError Decode.value)
+            )

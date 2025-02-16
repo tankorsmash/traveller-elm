@@ -42,6 +42,7 @@ import Http
 import Json.Decode as JsDecode
 import Parser
 import RemoteData exposing (RemoteData(..))
+import Result.Extra as Result
 import Round
 import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
@@ -55,7 +56,7 @@ import Traveller.Point exposing (StellarPoint)
 import Traveller.Route as Route exposing (Route, RouteList)
 import Traveller.Sector exposing (Sector, SectorDict, codec, sectorKey)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
-import Traveller.SolarSystemStars exposing (StarSystem, StarType, StarTypeData, getStarTypeData, isBrownDwarfType, starSystemCodec)
+import Traveller.SolarSystemStars exposing (FallibleStarSystem, StarSystem, StarType, StarTypeData, fallibleStarSystemDecoder, getStarTypeData, isBrownDwarfType, starSystemCodec)
 import Traveller.StarColour exposing (starColourRGB)
 import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, getInnerStarData, getSafeJumpTime, getStellarOrbit, isBrownDwarf)
 import Url.Builder
@@ -201,7 +202,7 @@ type Msg
     = NoOpMsg
     | ZoomScaleChanged Float
     | DownloadSolarSystems
-    | DownloadedSolarSystems ( RequestEntry, String ) (Result Http.Error (List StarSystem))
+    | DownloadedSolarSystems ( RequestEntry, String ) (Result Http.Error (List FallibleStarSystem))
     | ClearAllErrors
     | FetchedSolarSystem (Result Http.Error SolarSystem)
     | DownloadedSectors ( RequestEntry, String ) (Result Http.Error (List Sector))
@@ -819,6 +820,9 @@ viewHex widestViewport ( upperLeftHex, lowerRightHex ) hexSize solarSystemDict (
                 Just LoadedEmptyHex ->
                     viewEmptyHelper ""
 
+                Just (FailedStarsSolarSystem failedSolarSystem) ->
+                    Svg.Styled.Lazy.lazy7 viewHexEmpty hexAddress.x hexAddress.y vox voy hexSize "Star Failed." "#aaaaaa"
+
                 Nothing ->
                     viewEmptyHelper ""
     in
@@ -829,6 +833,7 @@ type RemoteSolarSystem
     = LoadedSolarSystem StarSystem
     | LoadedEmptyHex
     | LoadingSolarSystem
+    | FailedStarsSolarSystem FallibleStarSystem
     | FailedSolarSystem Http.Error
 
 
@@ -1886,6 +1891,9 @@ view model =
                                 Just (FailedSolarSystem httpError) ->
                                     text "failed."
 
+                                Just (FailedStarsSolarSystem _) ->
+                                    text "decoding a star failed"
+
                                 Nothing ->
                                     text "No solar system data found for system."
                             , text <| Debug.toString viewingAddress
@@ -2019,10 +2027,11 @@ view model =
 sendSolarSystemRequest : RequestEntry -> HostConfig -> HexAddress -> HexAddress -> Cmd Msg
 sendSolarSystemRequest requestEntry hostConfig upperLeft lowerRight =
     let
-        solarSystemsDecoder : JsDecode.Decoder (List StarSystem)
+        solarSystemsDecoder : JsDecode.Decoder (List FallibleStarSystem)
         solarSystemsDecoder =
-            Codec.list starSystemCodec
-                |> Codec.decoder
+            -- Codec.list starSystemCodec
+            --     |> Codec.decoder
+            JsDecode.list fallibleStarSystemDecoder
 
         ( urlHostRoot, urlHostPath ) =
             hostConfig
@@ -2147,7 +2156,7 @@ update msg model =
             , sendSolarSystemRequest nextRequestEntry model.hostConfig model.upperLeftHex model.lowerRightHex
             )
 
-        DownloadedSolarSystems ( requestEntry, url_ ) (Ok solarSystems) ->
+        DownloadedSolarSystems ( requestEntry, url_ ) (Ok fallibleSolarSystems) ->
             let
                 rangeAsPairs =
                     HexAddress.between requestEntry.upperLeftHex requestEntry.lowerRightHex
@@ -2163,14 +2172,43 @@ update msg model =
                             )
 
                 sortedSolarSystems =
-                    solarSystems
-                        |> List.sortBy (HexAddress.toKey << .address)
+                    fallibleSolarSystems
                         |> List.map
-                            (\system ->
-                                ( HexAddress.toKey system.address
-                                , LoadedSolarSystem system
+                            (\fallibleSystem ->
+                                ( HexAddress.toKey fallibleSystem.address
+                                , let
+                                    fallibleSystem2 : FallibleStarSystem
+                                    fallibleSystem2 =
+                                        fallibleSystem
+
+                                    hasFailed =
+                                        List.any Result.isErr fallibleSystem.stars
+                                  in
+                                  if not hasFailed then
+                                    let
+                                        starSystem : StarSystem
+                                        starSystem =
+                                            { address = fallibleSystem.address
+                                            , sectorName = fallibleSystem.sectorName
+                                            , name = fallibleSystem.name
+                                            , scanPoints = fallibleSystem.scanPoints
+                                            , surveyIndex = fallibleSystem.surveyIndex
+                                            , gasGiantCount = fallibleSystem.gasGiantCount
+                                            , terrestrialPlanetCount = fallibleSystem.terrestrialPlanetCount
+                                            , planetoidBeltCount = fallibleSystem.planetoidBeltCount
+                                            , allegiance = fallibleSystem.allegiance
+                                            , stars =
+                                                --relies on hasFailed to be false
+                                                List.map Result.toMaybe fallibleSystem.stars |> List.filterMap identity
+                                            }
+                                    in
+                                    LoadedSolarSystem starSystem
+
+                                  else
+                                    FailedStarsSolarSystem <| Debug.log "failed" fallibleSystem
                                 )
                             )
+                        |> List.sortBy Tuple.first
                         |> Dict.fromList
 
                 solarSystemDict =
@@ -2273,6 +2311,9 @@ update msg model =
 
                                                 Just (LoadedSolarSystem solarSystem) ->
                                                     LoadedSolarSystem solarSystem
+
+                                                Just (FailedStarsSolarSystem _) ->
+                                                    FailedSolarSystem err
 
                                                 Nothing ->
                                                     FailedSolarSystem err
