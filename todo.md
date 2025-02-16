@@ -23,16 +23,18 @@
 * [X] display Revelation location
 * [X] display Revelation route
 * [X] Display location in sector co-ordinates, not absolute co-ordinates
+* [X] Remember position between sessions
 * [X] table'd sidebar (recursively render the columns, account for SVG's width, since its HTML and elm-ui isn't aware of that size)
 ** [ ] like https://thriggle.netlify.app/traveller/subsector#$seed=Hide90811&$density=Standard&$size=Subsector&$rules=T5
-* [ ] making HexAddress fail on invalid addresses
+* [ ] Convert back to SVG viewbox and don't render relative to the upper left hex
+* [ ] modify UWP display based on survey index
+* [ ] sector selecter - centre map on the sector selected
 * [ ] display name if known
-* [X] Remember position between sessions
+* [ ] making HexAddress fail on invalid addresses
 * [ ] render neutron star
 * [ ] prettier ui somehow
 * [ ] sector borders
 * [ ] subsector borders
-* [ ] Convert back to SVG viewbox and don't render relative to the upper left hex
 
 ## 1.0
 * [ ] smart caching/requesting the api so we don't fetch too much duplicate data

@@ -163,7 +163,7 @@ update msg model =
             )
 
 
-{-| since elm-ui only expects one layout with a static stylesheet,  we put this
+{-| since elm-ui only expects one layout with a static stylesheet, we put this
 one first always so it'll have the stylesheet set-up and all the rest don't
 need to specify much.
 -}
@@ -199,14 +199,9 @@ view model =
                     [ Html.li [ class "nav-item" ] [ a [ class "nav-link", href "/" ] [ text "Map" ] ]
                     ]
                 ]
-            , case model.route of
-                Just TravellerPage ->
-                    Html.map GotTravellerMsg <|
-                        Element.layoutWith { options = [ Element.noStaticStyleSheet ] } [ Element.centerX ] <|
-                            Traveller.view model.travellerModel
-
-                Nothing ->
-                    Html.text "404 i guess"
+            , Html.map GotTravellerMsg <|
+                Element.layoutWith { options = [ Element.noStaticStyleSheet ] } [ Element.centerX ] <|
+                    Traveller.view model.travellerModel
             ]
         ]
     }
