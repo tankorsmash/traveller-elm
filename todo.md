@@ -30,6 +30,7 @@
 * [X] Remember position between sessions
 * [ ] render neutron star
 * [ ] prettier ui somehow
+* [ ] sector selecter - centre map on the sector selected
 * [ ] sector borders
 * [ ] subsector borders
 * [ ] Convert back to SVG viewbox and don't render relative to the upper left hex
