@@ -46,6 +46,7 @@ import Round
 import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
+import Svg.Styled.Keyed
 import Svg.Styled.Lazy
 import Task
 import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, hexLabel, sectorColumns, sectorRows, toSectorAddress, toSectorKey, toUniversalAddress, universalHexX, universalHexY)
@@ -561,6 +562,17 @@ moveDecoder =
         |> JsDecode.map (.offsetPos >> MapMouseMove)
 
 
+drawStar : ( Float, Float ) -> Int -> Float -> String -> Svg Msg
+drawStar ( starX, starY ) radius size starColor =
+    Svg.circle
+        [ SvgAttrs.cx <| String.fromFloat <| starX
+        , SvgAttrs.cy <| String.fromFloat <| starY
+        , SvgAttrs.r <| String.fromFloat <| scaleAttr size radius
+        , SvgAttrs.fill starColor -- <| starColourRGB star.colour
+        ]
+        []
+
+
 renderHexWithStar : StarSystem -> String -> HexAddress -> VisualHexOrigin -> Float -> Svg Msg
 renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin) size =
     let
@@ -569,16 +581,6 @@ renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin)
 
         showStar =
             starSystem.surveyIndex > 0
-
-        drawStar : ( Float, Float ) -> Int -> StarTypeData -> Svg Msg
-        drawStar ( starX, starY ) radius star =
-            Svg.circle
-                [ SvgAttrs.cx <| String.fromFloat <| starX
-                , SvgAttrs.cy <| String.fromFloat <| starY
-                , SvgAttrs.r <| String.fromFloat <| scaleAttr size radius
-                , SvgAttrs.fill <| starColourRGB star.colour
-                ]
-                []
     in
     Svg.g
         [ SvgEvents.onMouseOver (HoveringHex hexAddress)
@@ -634,12 +636,12 @@ renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin)
                                     getStarTypeData companion
                             in
                             Svg.g []
-                                [ drawStar starPos 7 starData
-                                , drawStar compStarPos 3 compStarData
+                                [ drawStar starPos 7 size <| starColourRGB starData.colour
+                                , drawStar compStarPos 3 size <| starColourRGB compStarData.colour
                                 ]
 
                         Nothing ->
-                            drawStar starPos 7 starData
+                            drawStar starPos 7 size <| starColourRGB starData.colour
             in
             Svg.g
                 []
@@ -989,32 +991,43 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
 
                         else
                             defaultHexBg
+
+                    ( hexSVG, isE ) =
+                        viewHex
+                            widestViewport
+                            hexSize
+                            solarSystemDict
+                            ( viewportWidthIsh, viewportHeightIsh )
+                            hexAddr
+                            hexSVGOrigin
+                            hexColour
                 in
-                viewHex
-                    widestViewport
-                    hexSize
-                    solarSystemDict
-                    ( viewportWidthIsh, viewportHeightIsh )
-                    hexAddr
-                    hexSVGOrigin
-                    hexColour
+                ( hexSVG |> Maybe.map (\svgElm -> ( hexAddr, svgElm )), isE )
             )
         |> List.filterMap Tuple.first
-        |> (\hexSvgs ->
+        |> (\hexSvgsWithHexAddress ->
                 let
                     singlePolyHex =
                         Maybe.map renderCurrentAddressOutline currentAddress
                             |> Maybe.withDefault (Svg.text "")
                 in
-                hexSvgs
-                    ++ [ renderSectorOutline ( upperLeftHex, zero_x, zero_y + (floor <| hexSize / 1.6) ) hexSize (upperLeftHex |> HexAddress.toSectorAddress)
-                       , renderSectorOutline ( upperLeftHex, zero_x, zero_y ) hexSize (lowerRightHex |> HexAddress.toSectorAddress)
-                       , singlePolyHex
-                       ]
+                [ List.map
+                    (\( hexAddr, svg ) ->
+                        ( HexAddress.toKey hexAddr, svg )
+                    )
+                    hexSvgsWithHexAddress
+                    |> Svg.Styled.Keyed.node "g" []
+                , renderSectorOutline
+                    ( upperLeftHex, zero_x, zero_y + (floor <| hexSize / 1.6) )
+                    hexSize
+                    (upperLeftHex |> HexAddress.toSectorAddress)
+                , renderSectorOutline ( upperLeftHex, zero_x, zero_y ) hexSize (lowerRightHex |> HexAddress.toSectorAddress)
+                , singlePolyHex
+                ]
            )
         |> (let
                 stringWidth =
-                    Debug.log "stringwidth " <| String.fromFloat <| viewportWidthIsh
+                    String.fromFloat <| viewportWidthIsh
 
                 stringHeight =
                     String.fromFloat <| viewportHeightIsh
