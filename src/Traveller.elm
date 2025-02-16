@@ -2394,10 +2394,39 @@ update msg model =
             )
 
         ViewingHex hexAddress ->
+            let
+                focusedErrors : List ( Http.Error, String )
+                focusedErrors =
+                    Dict.get (HexAddress.toKey hexAddress) model.solarSystems
+                        |> Maybe.map
+                            (\system ->
+                                case system of
+                                    FailedStarsSolarSystem fallibleSystem ->
+                                        fallibleSystem.stars
+                                            |> List.filterMap
+                                                (\res ->
+                                                    case res of
+                                                        Ok _ ->
+                                                            Nothing
+
+                                                        Err er ->
+                                                            Just ("Specific Star failed to decode:\n" ++ JsDecode.errorToString er)
+                                                )
+                                            |> List.map
+                                                (\er ->
+                                                    ( Http.BadBody er, "TODO: tie RequestEntry to URL" )
+                                                )
+
+                                    _ ->
+                                        []
+                            )
+                        |> Maybe.withDefault []
+            in
             ( { model
                 | selectedHex = Just hexAddress
                 , selectedStellarObject = Nothing
                 , selectedSystem = Nothing
+                , newSolarSystemErrors = focusedErrors
               }
             , fetchSingleSolarSystemRequest model.hostConfig <| toSectorAddress hexAddress
             )
