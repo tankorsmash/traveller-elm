@@ -159,15 +159,15 @@ update msg model =
 
 view : Model -> Browser.Document Msg
 view model =
-    { title = "Traveller"
+    { title = "Revelation"
     , body =
         [ Dialog.view "error-dialog" ToggleErrorDialog model.dialogBody
         , div
             []
             [ Html.nav [ class "navbar navbar-expand m-3" ]
-                [ a [ href "/", class "navbar-brand" ] [ text "Traveller" ]
+                [ a [ href "?", class "navbar-brand" ] [ text "Navigation" ]
                 , Html.ul [ class "navbar-nav" ]
-                    [ Html.li [ class "nav-item" ] [ a [ class "nav-link", href "/" ] [ text "Map" ] ]
+                    [ Html.li [ class "nav-item" ] [ a [ class "nav-link", href "/" ] [ text "Uncharted Space" ] ]
                     ]
                 ]
             , Html.map GotTravellerMsg <|
