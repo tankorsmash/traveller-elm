@@ -176,14 +176,9 @@ view model =
                     [ Html.li [ class "nav-item" ] [ a [ class "nav-link", href "/" ] [ text "Map" ] ]
                     ]
                 ]
-            , case model.route of
-                Just TravellerPage ->
-                    Html.map GotTravellerMsg <|
-                        Element.layout [ Element.centerX ] <|
-                            Traveller.view model.travellerModel
-
-                Nothing ->
-                    Html.text "404 i guess"
+            , Html.map GotTravellerMsg <|
+                Element.layout [ Element.centerX ] <|
+                    Traveller.view model.travellerModel
             ]
         ]
     }
