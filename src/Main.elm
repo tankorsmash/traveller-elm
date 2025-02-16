@@ -163,6 +163,28 @@ update msg model =
             )
 
 
+{-| since elm-ui only expects one layout with a static stylesheet,  we put this
+one first always so it'll have the stylesheet set-up and all the rest don't
+need to specify much.
+-}
+elmUiHackLayout : Html.Html msg
+elmUiHackLayout =
+    Html.div [ Html.Attributes.style "height" "0" ]
+        [ Element.layoutWith
+            { options =
+                [ Element.focusStyle
+                    { borderColor = Nothing
+                    , backgroundColor = Nothing
+                    , shadow = Nothing
+                    }
+                ]
+            }
+            [ Element.htmlAttribute <| Html.Attributes.id "hack" ]
+          <|
+            Element.none
+        ]
+
+
 view : Model -> Browser.Document Msg
 view model =
     { title = "Traveller"
@@ -170,7 +192,8 @@ view model =
         [ Dialog.view "error-dialog" ToggleErrorDialog model.dialogBody
         , div
             []
-            [ Html.nav [ class "navbar navbar-expand m-3" ]
+            [ elmUiHackLayout
+            , Html.nav [ class "navbar navbar-expand m-3" ]
                 [ a [ href "/", class "navbar-brand" ] [ text "Traveller" ]
                 , Html.ul [ class "navbar-nav" ]
                     [ Html.li [ class "nav-item" ] [ a [ class "nav-link", href "/" ] [ text "Map" ] ]
@@ -179,7 +202,7 @@ view model =
             , case model.route of
                 Just TravellerPage ->
                     Html.map GotTravellerMsg <|
-                        Element.layout [ Element.centerX ] <|
+                        Element.layoutWith { options = [ Element.noStaticStyleSheet ] } [ Element.centerX ] <|
                             Traveller.view model.travellerModel
 
                 Nothing ->

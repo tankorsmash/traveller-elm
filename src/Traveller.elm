@@ -37,7 +37,7 @@ import Html as UnstyledHtml
 import Html.Attributes as UnstyledHtmlAttrs
 import Html.Events.Extra.Mouse
 import Html.Styled as Html exposing (Html)
-import Html.Styled.Attributes
+import Html.Styled.Attributes as HtmlStyledAttrs
 import Http
 import Json.Decode as JsDecode
 import Parser
@@ -1714,8 +1714,6 @@ errorDialog httpErrors =
         errorButton { onPress, label } =
             Input.button
                 [ Element.width <| Element.px 100
-
-                -- , Border.dashed
                 , Border.width 2
                 , Border.rounded 10
                 , Element.padding 10
@@ -1755,7 +1753,7 @@ errorDialog httpErrors =
     in
     UnstyledHtml.node "dialog"
         [ openAttr ]
-        [ Element.layout
+        [ Element.layoutWith { options = [ Element.noStaticStyleSheet ] }
             [ Element.centerX
             , width fill
             ]
@@ -1866,7 +1864,7 @@ view model =
         renderError : String -> UnstyledHtml.Html msg
         renderError txt =
             Html.toUnstyled <|
-                Html.div [ Html.Styled.Attributes.css [ Css.color (Css.hex "#ff0000") ] ]
+                Html.div [ HtmlStyledAttrs.css [ Css.color (Css.hex "#ff0000") ] ]
                     [ Html.text txt ]
 
         renderHttpError httpError =
