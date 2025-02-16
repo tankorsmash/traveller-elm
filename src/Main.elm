@@ -33,7 +33,6 @@ type Msg
     | LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
     | ToggleErrorDialog
-    | ToggleDarkMode
     | GotTravellerMsg Traveller.Msg
 
 
@@ -147,11 +146,6 @@ update msg model =
 
         ToggleErrorDialog ->
             ( model, toggleDialog "error-dialog" )
-
-        ToggleDarkMode ->
-            ( { model | isDarkMode = not model.isDarkMode }
-            , toggleDarkMode (not model.isDarkMode)
-            )
 
         GotTravellerMsg travellerMsg ->
             let
