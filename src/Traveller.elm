@@ -178,6 +178,7 @@ type alias Model =
     , hexScale : Float
     , solarSystems : SolarSystemDict
     , newSolarSystemErrors : List ( Http.Error, String )
+    , oldSolarSystemErrors : List ( Http.Error, String )
     , lastSolarSystemError : Maybe Http.Error
     , requestHistory : RequestHistory
     , dragMode : DragMode
@@ -285,6 +286,7 @@ init maybeUpperLeft key hostConfig =
             { hexScale = defaultHexSize
             , solarSystems = solarSystemDict
             , newSolarSystemErrors = []
+            , oldSolarSystemErrors = []
             , lastSolarSystemError = Nothing
             , requestHistory = requestHistory
             , dragMode = NoDragging
@@ -2171,20 +2173,23 @@ update msg model =
                                 )
                             )
 
-                sortedSolarSystems =
-                    fallibleSolarSystems
-                        |> List.map
-                            (\fallibleSystem ->
-                                ( HexAddress.toKey fallibleSystem.address
-                                , let
-                                    fallibleSystem2 : FallibleStarSystem
-                                    fallibleSystem2 =
-                                        fallibleSystem
+                newErrors =
+                    potentiallyNewErrors
+                        |> List.filter
+                            (\( newErr, errUrl ) ->
+                                List.member newErr (model.oldSolarSystemErrors |> List.map Tuple.first) |> not
+                            )
 
+                ( sortedSolarSystems, potentiallyNewErrors ) =
+                    fallibleSolarSystems
+                        |> List.foldl
+                            (\fallibleSystem ( systems, errs ) ->
+                                let
+                                    -- WARN: don't skip this check before filtering out errors, or we'll miss errors (see below)
                                     hasFailed =
                                         List.any Result.isErr fallibleSystem.stars
-                                  in
-                                  if not hasFailed then
+                                in
+                                if not hasFailed then
                                     let
                                         starSystem : StarSystem
                                         starSystem =
@@ -2198,18 +2203,42 @@ update msg model =
                                             , planetoidBeltCount = fallibleSystem.planetoidBeltCount
                                             , allegiance = fallibleSystem.allegiance
                                             , stars =
-                                                --relies on hasFailed to be false
+                                                -- WARN: relies on hasFailed to be false. if we don't do that check, we'll miss errors
                                                 List.map Result.toMaybe fallibleSystem.stars |> List.filterMap identity
                                             }
                                     in
-                                    LoadedSolarSystem starSystem
+                                    ( ( HexAddress.toKey fallibleSystem.address
+                                      , LoadedSolarSystem starSystem
+                                      )
+                                        :: systems
+                                    , errs
+                                    )
 
-                                  else
-                                    FailedStarsSolarSystem <| Debug.log "failed" fallibleSystem
-                                )
+                                else
+                                    ( ( HexAddress.toKey fallibleSystem.address
+                                      , FailedStarsSolarSystem <| Debug.log "failed" fallibleSystem
+                                      )
+                                        :: systems
+                                    , (fallibleSystem.stars
+                                        |> List.filterMap
+                                            (\res ->
+                                                case res of
+                                                    Ok _ ->
+                                                        Nothing
+
+                                                    Err er ->
+                                                        Just ("Specific Star failed to decode:\n" ++ JsDecode.errorToString er)
+                                            )
+                                        |> List.map
+                                            (\er ->
+                                                ( Http.BadBody er, url_ )
+                                            )
+                                      )
+                                        ++ errs
+                                    )
                             )
-                        |> List.sortBy Tuple.first
-                        |> Dict.fromList
+                            ( [], [] )
+                        |> Tuple.mapFirst Dict.fromList
 
                 solarSystemDict =
                     rangeAsPairs
@@ -2227,6 +2256,7 @@ update msg model =
             in
             ( { model
                 | solarSystems = solarSystemDict
+                , newSolarSystemErrors = newErrors ++ model.newSolarSystemErrors
                 , requestHistory = newRequestHistory
               }
             , Cmd.batch
@@ -2434,7 +2464,7 @@ update msg model =
             ( { model | sidebarHoverText = columnDesc }, Cmd.none )
 
         ClearAllErrors ->
-            ( { model | newSolarSystemErrors = [] }, Cmd.none )
+            ( { model | newSolarSystemErrors = [], oldSolarSystemErrors = model.newSolarSystemErrors ++ model.oldSolarSystemErrors }, Cmd.none )
 
 
 stripDataFromRemoteData : RemoteData err data -> RemoteData err ()
