@@ -28,6 +28,7 @@
 ** [ ] like https://thriggle.netlify.app/traveller/subsector#$seed=Hide90811&$density=Standard&$size=Subsector&$rules=T5
 * [ ] Convert back to SVG viewbox and don't render relative to the upper left hex
 ** [ ] Viewbox set to size of display, not fixed number of hexes
+* [ ] safe jump distance should take the jump shadow into account
 * [ ] modify UWP display based on survey index
 * [ ] uncharted space link displays the full map of uncharted space
 * [ ] Render regions
