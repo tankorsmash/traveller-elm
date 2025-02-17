@@ -27,9 +27,12 @@
 * [X] table'd sidebar (recursively render the columns, account for SVG's width, since its HTML and elm-ui isn't aware of that size)
 ** [ ] like https://thriggle.netlify.app/traveller/subsector#$seed=Hide90811&$density=Standard&$size=Subsector&$rules=T5
 * [ ] Convert back to SVG viewbox and don't render relative to the upper left hex
+** [ ] Viewbox set to size of display, not fixed number of hexes
 * [ ] modify UWP display based on survey index
 * [ ] sector selecter - centre map on the sector selected
 * [ ] display name if known
+* [ ] 3 Hex sizes
+* [ ] scroll performance
 * [ ] making HexAddress fail on invalid addresses
 * [ ] render neutron star
 * [ ] prettier ui somehow
