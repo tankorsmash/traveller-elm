@@ -34,18 +34,21 @@ import FontAwesome.Solid as Icon
 import FontAwesome.Styles as Icon
 import HostConfig exposing (HostConfig)
 import Html as UnstyledHtml
+import Html.Attributes as UnstyledHtmlAttrs
 import Html.Events.Extra.Mouse
 import Html.Styled as Html exposing (Html)
-import Html.Styled.Attributes
+import Html.Styled.Attributes as HtmlStyledAttrs
 import Http
 import Json.Decode as JsDecode
 import Parser
 import RemoteData exposing (RemoteData(..))
+import Result.Extra as Result
 import Round
 import Svg.Attributes exposing (transform)
 import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
+import Svg.Styled.Keyed
 import Svg.Styled.Lazy
 import Task
 import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, hexLabel, sectorColumns, sectorRows, toSectorAddress, toSectorKey, toUniversalAddress, universalHexX, universalHexY)
@@ -54,7 +57,7 @@ import Traveller.Point exposing (StellarPoint)
 import Traveller.Route as Route exposing (Route, RouteList)
 import Traveller.Sector exposing (Sector, SectorDict, codec, sectorKey)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
-import Traveller.SolarSystemStars exposing (StarSystem, StarType, StarTypeData, getStarTypeData, isBrownDwarfType, starSystemCodec)
+import Traveller.SolarSystemStars exposing (FallibleStarSystem, StarSystem, StarType, StarTypeData, fallibleStarSystemDecoder, getStarTypeData, isBrownDwarfType, starSystemCodec)
 import Traveller.StarColour exposing (starColourRGB)
 import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, getInnerStarData, getSafeJumpTime, getStellarOrbit, isBrownDwarf)
 import Url.Builder
@@ -149,23 +152,22 @@ prepNextRequest ( oldSolarSystemDict, requestHistory ) upperLeftHex lowerRightHe
             , status = RemoteData.Loading
             }
 
-        hexRange =
-            HexAddress.between upperLeftHex lowerRightHex
-
         newSolarSystemDict =
-            hexRange
-                |> List.foldl
-                    (\hexAddr ssDict ->
-                        Dict.update (HexAddress.toKey hexAddr)
-                            (\maybeSolarSystem ->
-                                case maybeSolarSystem of
-                                    Just existingSolarSystem ->
-                                        Just existingSolarSystem
+            let
+                markSolarSystemLoadingIfNotFound maybeSolarSystem =
+                    case maybeSolarSystem of
+                        Just existingSolarSystem ->
+                            Just existingSolarSystem
 
-                                    Nothing ->
-                                        Just LoadingSolarSystem
-                            )
-                            ssDict
+                        Nothing ->
+                            Just LoadingSolarSystem
+            in
+            HexAddress.between upperLeftHex lowerRightHex
+                |> List.foldl
+                    (\hexAddr solarSystemDict ->
+                        Dict.update (HexAddress.toKey hexAddr)
+                            markSolarSystemLoadingIfNotFound
+                            solarSystemDict
                     )
                     oldSolarSystemDict
     in
@@ -176,6 +178,8 @@ type alias Model =
     { key : Browser.Navigation.Key
     , hexScale : Float
     , solarSystems : SolarSystemDict
+    , newSolarSystemErrors : List ( Http.Error, String )
+    , oldSolarSystemErrors : List ( Http.Error, String )
     , lastSolarSystemError : Maybe Http.Error
     , requestHistory : RequestHistory
     , dragMode : DragMode
@@ -200,9 +204,10 @@ type Msg
     = NoOpMsg
     | ZoomScaleChanged Float
     | DownloadSolarSystems
-    | DownloadedSolarSystems RequestEntry (Result Http.Error (List StarSystem))
+    | DownloadedSolarSystems ( RequestEntry, String ) (Result Http.Error (List FallibleStarSystem))
+    | ClearAllErrors
     | FetchedSolarSystem (Result Http.Error SolarSystem)
-    | DownloadedSectors RequestEntry (Result Http.Error (List Sector))
+    | DownloadedSectors ( RequestEntry, String ) (Result Http.Error (List Sector))
     | HoveringHex HexAddress
     | ViewingHex HexAddress
     | GotViewport Browser.Dom.Viewport
@@ -213,7 +218,7 @@ type Msg
     | MapMouseDown ( Float, Float )
     | MapMouseUp
     | MapMouseMove ( Float, Float )
-    | DownloadedRoute RequestEntry (Result Http.Error (List Route))
+    | DownloadedRoute ( RequestEntry, String ) (Result Http.Error (List Route))
 
 
 {-| Where the Hex is on the screen, in pixel coordinates
@@ -231,8 +236,27 @@ init : Maybe ( Int, Int ) -> Browser.Navigation.Key -> HostConfig.HostConfig -> 
 init maybeUpperLeft key hostConfig =
     let
         -- requestHistory : RequestHistory
-        ( requestEntry, ( solarSystemDict, requestHistory ) ) =
-            prepNextRequest ( Dict.empty, [] ) upperLeftHex lowerRightHex
+        ( initSystemDict, initRequestHistory ) =
+            ( Dict.empty, [] )
+
+        ( ( ssReqEntry, secReqEntry, routeReqEntry ), ( solarSystemDict, requestHistory ) ) =
+            prepNextRequest ( initSystemDict, initRequestHistory ) upperLeftHex lowerRightHex
+                |> -- build a new request entry for sector request
+                   (\( ssReqEntry_, oldSsDictAndReqHistory ) ->
+                        let
+                            ( newReqEntry, ssDictAndReqHistory ) =
+                                prepNextRequest oldSsDictAndReqHistory upperLeftHex lowerRightHex
+                        in
+                        ( ( ssReqEntry_, newReqEntry ), ssDictAndReqHistory )
+                   )
+                |> -- take the old ones and build a new one for route request
+                   (\( ( ssReqEntry_, secReqEntry_ ), oldSsDictAndReqHistory ) ->
+                        let
+                            ( routeReqEntry_, ssDictAndReqHistory ) =
+                                prepNextRequest oldSsDictAndReqHistory upperLeftHex lowerRightHex
+                        in
+                        ( ( ssReqEntry_, secReqEntry_, routeReqEntry_ ), ssDictAndReqHistory )
+                   )
 
         upperLeftHex =
             case maybeUpperLeft of
@@ -262,6 +286,8 @@ init maybeUpperLeft key hostConfig =
         model =
             { hexScale = defaultHexSize
             , solarSystems = solarSystemDict
+            , newSolarSystemErrors = []
+            , oldSolarSystemErrors = []
             , lastSolarSystemError = Nothing
             , requestHistory = requestHistory
             , dragMode = NoDragging
@@ -284,9 +310,9 @@ init maybeUpperLeft key hostConfig =
     in
     ( model
     , Cmd.batch
-        [ sendSolarSystemRequest requestEntry model.hostConfig model.upperLeftHex model.lowerRightHex
-        , sendSectorRequest requestEntry model.hostConfig
-        , sendRouteRequest requestEntry model.hostConfig
+        [ sendSolarSystemRequest ssReqEntry model.hostConfig model.upperLeftHex model.lowerRightHex
+        , sendSectorRequest secReqEntry model.hostConfig
+        , sendRouteRequest routeReqEntry model.hostConfig
         , Browser.Dom.getViewport
             |> Task.perform GotViewport
         ]
@@ -540,6 +566,17 @@ moveDecoder =
         |> JsDecode.map (.offsetPos >> MapMouseMove)
 
 
+drawStar : ( Float, Float ) -> Int -> Float -> String -> Svg Msg
+drawStar ( starX, starY ) radius size starColor =
+    Svg.circle
+        [ SvgAttrs.cx <| String.fromFloat <| starX
+        , SvgAttrs.cy <| String.fromFloat <| starY
+        , SvgAttrs.r <| String.fromFloat <| scaleAttr size radius
+        , SvgAttrs.fill starColor -- <| starColourRGB star.colour
+        ]
+        []
+
+
 renderHexWithStar : StarSystem -> String -> HexAddress -> VisualHexOrigin -> Float -> Svg Msg
 renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin) size =
     let
@@ -548,16 +585,6 @@ renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin)
 
         showStar =
             starSystem.surveyIndex > 0
-
-        drawStar : ( Float, Float ) -> Int -> StarTypeData -> Svg Msg
-        drawStar ( starX, starY ) radius star =
-            Svg.circle
-                [ SvgAttrs.cx <| String.fromFloat <| starX
-                , SvgAttrs.cy <| String.fromFloat <| starY
-                , SvgAttrs.r <| String.fromFloat <| scaleAttr size radius
-                , SvgAttrs.fill <| starColourRGB star.colour
-                ]
-                []
     in
     Svg.g
         [ SvgEvents.onMouseOver (HoveringHex hexAddress)
@@ -613,12 +640,12 @@ renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin)
                                     getStarTypeData companion
                             in
                             Svg.g []
-                                [ drawStar starPos 7 starData
-                                , drawStar compStarPos 3 compStarData
+                                [ drawStar starPos 7 size <| starColourRGB starData.colour
+                                , drawStar compStarPos 3 size <| starColourRGB compStarData.colour
                                 ]
 
                         Nothing ->
-                            drawStar starPos 7 starData
+                            drawStar starPos 7 size <| starColourRGB starData.colour
             in
             Svg.g
                 []
@@ -758,14 +785,15 @@ calcVisualOrigin hexSize { row, col } =
 
 viewHex :
     Browser.Dom.Viewport
+    -> ( HexAddress, HexAddress )
     -> Float
     -> SolarSystemDict
     -> ( Float, Float )
     -> HexAddress
     -> VisualHexOrigin
     -> String
-    -> ( Maybe (Svg Msg), Int )
-viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress visualHexOrigin hexColour =
+    -> ( Svg Msg, Int )
+viewHex widestViewport ( upperLeftHex, lowerRightHex ) hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress visualHexOrigin hexColour =
     let
         solarSystem =
             Dict.get (HexAddress.toKey hexAddress) solarSystemDict
@@ -774,31 +802,32 @@ viewHex widestViewport hexSize solarSystemDict ( viewportWidth, viewportHeight )
             visualHexOrigin
 
         viewEmptyHelper txt =
-            Svg.Styled.Lazy.lazy7 viewHexEmpty hexAddress.x hexAddress.y vox voy hexSize txt
+            Svg.Styled.Lazy.lazy7 viewHexEmpty hexAddress.x hexAddress.y vox voy hexSize txt hexColour
 
         hexSVG =
-            Just
-                (case solarSystem of
-                    Just (LoadedSolarSystem ss) ->
-                        Svg.Styled.Lazy.lazy5 renderHexWithStar
-                            ss
-                            hexColour
-                            hexAddress
-                            visualHexOrigin
-                            hexSize
+            case solarSystem of
+                Just (LoadedSolarSystem ss) ->
+                    Svg.Styled.Lazy.lazy5 renderHexWithStar
+                        ss
+                        hexColour
+                        hexAddress
+                        visualHexOrigin
+                        hexSize
 
-                    Just LoadingSolarSystem ->
-                        viewEmptyHelper "Loading..." hexColour
+                Just LoadingSolarSystem ->
+                    viewEmptyHelper "Loading..."
 
-                    Just (FailedSolarSystem httpError) ->
-                        viewEmptyHelper "Failed." hexColour
+                Just (FailedSolarSystem httpError) ->
+                    viewEmptyHelper "Failed."
 
-                    Just LoadedEmptyHex ->
-                        viewEmptyHelper "" hexColour
+                Just LoadedEmptyHex ->
+                    viewEmptyHelper ""
 
-                    Nothing ->
-                        viewEmptyHelper "" hexColour
-                )
+                Just (FailedStarsSolarSystem failedSolarSystem) ->
+                    Svg.Styled.Lazy.lazy7 viewHexEmpty hexAddress.x hexAddress.y vox voy hexSize "Star Failed." "#aaaaaa"
+
+                Nothing ->
+                    viewEmptyHelper ""
     in
     ( hexSVG, isEmptyHex solarSystem )
 
@@ -807,6 +836,7 @@ type RemoteSolarSystem
     = LoadedSolarSystem StarSystem
     | LoadedEmptyHex
     | LoadingSolarSystem
+    | FailedStarsSolarSystem FallibleStarSystem
     | FailedSolarSystem Http.Error
 
 
@@ -931,7 +961,36 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
             ( 0, 0 )
 
         hexRange =
-            HexAddress.between upperLeftHex lowerRightHex
+            HexAddress.betweenWithMax
+                (HexAddress.shiftAddressBy { deltaX = -1, deltaY = -1 } upperLeftHex)
+                lowerRightHex
+                { maxAcross = maxAcross, maxTall = maxTall }
+
+        ( visualHexWidth, visualHexHeight ) =
+            let
+                ( left_x, left_y ) =
+                    calcVisualOrigin hexSize
+                        { row = 1, col = 1 }
+
+                ( right_x, _ ) =
+                    calcVisualOrigin hexSize
+                        { row = 1, col = 2 }
+
+                ( _, down_y ) =
+                    calcVisualOrigin hexSize
+                        { row = 2, col = 1 }
+            in
+            ( left_x - right_x |> abs, down_y - left_y |> abs )
+
+        ( maxAcross, maxTall ) =
+            case hexmapVp of
+                Nothing ->
+                    ( 10000, 10000 )
+
+                Just hvp ->
+                    ( (hvp.viewport.width / toFloat visualHexWidth) + 2 |> floor
+                    , (hvp.viewport.height / toFloat visualHexHeight) + 2 |> floor
+                    )
     in
     hexRange
         |> List.map
@@ -955,28 +1014,34 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
 
                         else
                             defaultHexBg
+
+                    ( hexSVG, isEmpty ) =
+                        viewHex
+                            widestViewport
+                            ( upperLeftHex, lowerRightHex )
+                            hexSize
+                            solarSystemDict
+                            ( viewportWidthIsh, viewportHeightIsh )
+                            hexAddr
+                            hexSVGOrigin
+                            hexColour
                 in
-                viewHex
-                    widestViewport
-                    hexSize
-                    solarSystemDict
-                    ( viewportWidthIsh, viewportHeightIsh )
-                    hexAddr
-                    hexSVGOrigin
-                    hexColour
+                hexSVG
             )
-        |> List.filterMap Tuple.first
-        |> (\hexSvgs ->
+        |> (\hexSvgsWithHexAddress ->
                 let
                     singlePolyHex =
                         Maybe.map renderCurrentAddressOutline currentAddress
                             |> Maybe.withDefault (Svg.text "")
                 in
-                hexSvgs
-                    ++ [ renderSectorOutline ( upperLeftHex, zero_x, zero_y + (floor <| hexSize / 1.6) ) hexSize (upperLeftHex |> HexAddress.toSectorAddress)
-                       , renderSectorOutline ( upperLeftHex, zero_x, zero_y ) hexSize (lowerRightHex |> HexAddress.toSectorAddress)
-                       , singlePolyHex
-                       ]
+                [ renderSectorOutline
+                    ( upperLeftHex, zero_x, zero_y + (floor <| hexSize / 1.6) )
+                    hexSize
+                    (upperLeftHex |> HexAddress.toSectorAddress)
+                , renderSectorOutline ( upperLeftHex, zero_x, zero_y ) hexSize (lowerRightHex |> HexAddress.toSectorAddress)
+                , singlePolyHex
+                ]
+                    ++ hexSvgsWithHexAddress
            )
         |> (let
                 stringWidth =
@@ -1667,6 +1732,110 @@ universalHexLabel sectors hexAddress =
             sector.name ++ " " ++ HexAddress.hexLabel hexAddress
 
 
+errorDialog : List ( Http.Error, String ) -> UnstyledHtml.Html Msg
+errorDialog httpErrors =
+    let
+        openAttr =
+            if (not << List.isEmpty) httpErrors then
+                UnstyledHtmlAttrs.attribute "open" "open"
+
+            else
+                UnstyledHtmlAttrs.classList []
+
+        errorButton { onPress, label } =
+            Input.button
+                [ Element.width <| Element.px 100
+                , Border.width 2
+                , Border.rounded 10
+                , Element.padding 10
+                , Element.mouseOver [ Background.color <| Element.rgb 0.5 0.5 0.5 ]
+                ]
+                { onPress = onPress, label = el [ centerX ] <| text label }
+
+        pluralize n singular plural =
+            if n == 1 then
+                singular
+
+            else
+                plural
+
+        renderError ( httpError, url ) =
+            column []
+                [ -- clickable url
+                  Element.link []
+                    { url = url
+                    , label =
+                        el
+                            [ Element.mouseOver [ Font.color <| colorToElementColor Color.green ]
+                            , Font.italic
+                            , Font.color <| colorToElementColor Color.grey
+                            ]
+                        <|
+                            monospaceText url
+                    }
+                , case httpError of
+                    Http.BadBody error ->
+                        Element.textColumn []
+                            [ monospaceText "JSON Decode Error:"
+                            , monospaceText error
+                            ]
+
+                    Http.BadUrl url_ ->
+                        text <| "Invalid URL: " ++ url_
+
+                    Http.NetworkError ->
+                        text "Network Error"
+
+                    Http.BadStatus statusCode ->
+                        text <| "BadStatus: " ++ String.fromInt statusCode
+
+                    Http.Timeout ->
+                        text "Request timedout"
+                ]
+    in
+    UnstyledHtml.node "dialog"
+        [ openAttr ]
+        [ Element.layoutWith { options = [ Element.noStaticStyleSheet ] }
+            [ Element.centerX
+            , width fill
+            ]
+          <|
+            column
+                [ Element.height <| Element.minimum 500 <| Element.fill
+                , Element.width <| Element.minimum 500 <| Element.fill
+                , Font.color <| Element.rgb 1 1 1
+                , Element.scrollbars
+                , Element.spacing 10
+                ]
+                [ -- header
+                  el [ centerX, Font.size 24, Font.underline, Element.padding 10 ] <|
+                    let
+                        errorCount =
+                            List.length httpErrors
+                    in
+                    text <|
+                        pluralize
+                            errorCount
+                            "One Error!"
+                            ("Many errors! (" ++ String.fromInt errorCount ++ " of 'em)")
+                , -- error renderer
+                  column
+                    [ Element.spacing 10
+                    , Element.height <| Element.minimum 100 <| Element.fill
+                    , width fill
+                    , Element.scrollbars
+                    , Font.size 16
+                    ]
+                  <|
+                    List.map renderError httpErrors
+                , --buttons
+                  row [ centerX, Element.spacing 10 ]
+                    [ errorButton { onPress = Just ClearAllErrors, label = "Close" }
+                    ]
+                ]
+        ]
+
+
 view : Model -> Element.Element Msg
 view model =
     let
@@ -1712,6 +1881,9 @@ view model =
                                 Just (FailedSolarSystem httpError) ->
                                     text "failed."
 
+                                Just (FailedStarsSolarSystem _) ->
+                                    text "decoding a star failed"
+
                                 Nothing ->
                                     text "No solar system data found for system."
                             , text <| Debug.toString viewingAddress
@@ -1737,7 +1909,7 @@ view model =
         renderError : String -> UnstyledHtml.Html msg
         renderError txt =
             Html.toUnstyled <|
-                Html.div [ Html.Styled.Attributes.css [ Css.color (Css.hex "#ff0000") ] ]
+                Html.div [ HtmlStyledAttrs.css [ Css.color (Css.hex "#ff0000") ] ]
                     [ Html.text txt ]
 
         renderHttpError httpError =
@@ -1821,6 +1993,7 @@ view model =
                 sidebarColumn
             , el [ Element.alignTop ] <|
                 hexesColumn
+            , Element.html <| errorDialog model.newSolarSystemErrors
             ]
 
         -- , -- TODO: bring this back
@@ -1844,10 +2017,11 @@ view model =
 sendSolarSystemRequest : RequestEntry -> HostConfig -> HexAddress -> HexAddress -> Cmd Msg
 sendSolarSystemRequest requestEntry hostConfig upperLeft lowerRight =
     let
-        solarSystemsDecoder : JsDecode.Decoder (List StarSystem)
+        solarSystemsDecoder : JsDecode.Decoder (List FallibleStarSystem)
         solarSystemsDecoder =
-            Codec.list starSystemCodec
-                |> Codec.decoder
+            -- Codec.list starSystemCodec
+            --     |> Codec.decoder
+            JsDecode.list fallibleStarSystemDecoder
 
         ( urlHostRoot, urlHostPath ) =
             hostConfig
@@ -1869,7 +2043,7 @@ sendSolarSystemRequest requestEntry hostConfig upperLeft lowerRight =
                 , headers = []
                 , url = url
                 , body = Http.emptyBody
-                , expect = Http.expectJson (DownloadedSolarSystems requestEntry) solarSystemsDecoder
+                , expect = Http.expectJson (DownloadedSolarSystems ( requestEntry, url )) solarSystemsDecoder
                 , timeout = Just 15000
                 , tracker = Nothing
                 }
@@ -1900,7 +2074,7 @@ sendRouteRequest requestEntry hostConfig =
                 , headers = []
                 , url = url
                 , body = Http.emptyBody
-                , expect = Http.expectJson (DownloadedRoute requestEntry) routeDecoder
+                , expect = Http.expectJson (DownloadedRoute ( requestEntry, url )) routeDecoder
                 , timeout = Just 15000
                 , tracker = Nothing
                 }
@@ -1972,7 +2146,7 @@ update msg model =
             , sendSolarSystemRequest nextRequestEntry model.hostConfig model.upperLeftHex model.lowerRightHex
             )
 
-        DownloadedSolarSystems requestEntry (Ok solarSystems) ->
+        DownloadedSolarSystems ( requestEntry, url_ ) (Ok fallibleSolarSystems) ->
             let
                 rangeAsPairs =
                     HexAddress.between requestEntry.upperLeftHex requestEntry.lowerRightHex
@@ -1987,16 +2161,72 @@ update msg model =
                                 )
                             )
 
-                sortedSolarSystems =
-                    solarSystems
-                        |> List.sortBy (HexAddress.toKey << .address)
-                        |> List.map
-                            (\system ->
-                                ( HexAddress.toKey system.address
-                                , LoadedSolarSystem system
-                                )
+                newErrors =
+                    potentiallyNewErrors
+                        |> List.filter
+                            (\( newErr, errUrl ) ->
+                                List.member newErr (model.oldSolarSystemErrors |> List.map Tuple.first) |> not
                             )
-                        |> Dict.fromList
+
+                ( sortedSolarSystems, potentiallyNewErrors ) =
+                    fallibleSolarSystems
+                        |> List.foldl
+                            (\fallibleSystem ( systems, errs ) ->
+                                let
+                                    -- WARN: don't skip this check before filtering out errors, or we'll miss errors (see below)
+                                    hasFailed =
+                                        List.any Result.isErr fallibleSystem.stars
+                                in
+                                if not hasFailed then
+                                    let
+                                        starSystem : StarSystem
+                                        starSystem =
+                                            { address = fallibleSystem.address
+                                            , sectorName = fallibleSystem.sectorName
+                                            , name = fallibleSystem.name
+                                            , scanPoints = fallibleSystem.scanPoints
+                                            , surveyIndex = fallibleSystem.surveyIndex
+                                            , gasGiantCount = fallibleSystem.gasGiantCount
+                                            , terrestrialPlanetCount = fallibleSystem.terrestrialPlanetCount
+                                            , planetoidBeltCount = fallibleSystem.planetoidBeltCount
+                                            , allegiance = fallibleSystem.allegiance
+                                            , stars =
+                                                -- WARN: relies on hasFailed to be false. if we don't do that check, we'll miss errors
+                                                List.map Result.toMaybe fallibleSystem.stars |> List.filterMap identity
+                                            }
+                                    in
+                                    ( ( HexAddress.toKey fallibleSystem.address
+                                      , LoadedSolarSystem starSystem
+                                      )
+                                        :: systems
+                                    , errs
+                                    )
+
+                                else
+                                    ( ( HexAddress.toKey fallibleSystem.address
+                                      , FailedStarsSolarSystem <| Debug.log "failed" fallibleSystem
+                                      )
+                                        :: systems
+                                    , (fallibleSystem.stars
+                                        |> List.filterMap
+                                            (\res ->
+                                                case res of
+                                                    Ok _ ->
+                                                        Nothing
+
+                                                    Err er ->
+                                                        Just ("Specific Star failed to decode:\n" ++ JsDecode.errorToString er)
+                                            )
+                                        |> List.map
+                                            (\er ->
+                                                ( Http.BadBody er, url_ )
+                                            )
+                                      )
+                                        ++ errs
+                                    )
+                            )
+                            ( [], [] )
+                        |> Tuple.mapFirst Dict.fromList
 
                 solarSystemDict =
                     rangeAsPairs
@@ -2014,6 +2244,7 @@ update msg model =
             in
             ( { model
                 | solarSystems = solarSystemDict
+                , newSolarSystemErrors = newErrors ++ model.newSolarSystemErrors
                 , requestHistory = newRequestHistory
               }
             , Cmd.batch
@@ -2038,14 +2269,14 @@ update msg model =
             , Cmd.none
             )
 
-        DownloadedSectors requestEntry (Err err) ->
+        DownloadedSectors ( requestEntry, url ) (Err err) ->
             let
                 _ =
                     Debug.log "Sectors did not work" err
             in
-            ( model, Cmd.none )
+            ( { model | newSolarSystemErrors = ( err, url ) :: model.newSolarSystemErrors }, Cmd.none )
 
-        DownloadedRoute requestEntry (Ok route) ->
+        DownloadedRoute ( requestEntry, url ) (Ok route) ->
             ( { model
                 | route = route
                 , currentAddress = List.reverse route |> List.head |> Maybe.map .address
@@ -2053,12 +2284,12 @@ update msg model =
             , Cmd.none
             )
 
-        DownloadedRoute requestEntry (Err err) ->
+        DownloadedRoute ( requestEntry, url ) (Err err) ->
             let
                 _ =
                     Debug.log "Route did not work" err
             in
-            ( model, Cmd.none )
+            ( { model | newSolarSystemErrors = ( err, url ) :: model.newSolarSystemErrors }, Cmd.none )
 
         FetchedSolarSystem (Ok solarSystem) ->
             ( { model
@@ -2070,7 +2301,7 @@ update msg model =
         FetchedSolarSystem (Err _) ->
             ( model, Cmd.none )
 
-        DownloadedSolarSystems requestEntry (Err err) ->
+        DownloadedSolarSystems ( requestEntry, url ) (Err err) ->
             let
                 newRequestHistory =
                     markRequestComplete requestEntry (RemoteData.Failure err) model.requestHistory
@@ -2099,6 +2330,9 @@ update msg model =
                                                 Just (LoadedSolarSystem solarSystem) ->
                                                     LoadedSolarSystem solarSystem
 
+                                                Just (FailedStarsSolarSystem _) ->
+                                                    FailedSolarSystem err
+
                                                 Nothing ->
                                                     FailedSolarSystem err
                                        )
@@ -2118,6 +2352,7 @@ update msg model =
             in
             ( { model
                 | solarSystems = solarSystemDict
+                , newSolarSystemErrors = ( err, url ) :: model.newSolarSystemErrors
                 , lastSolarSystemError = Just err
                 , requestHistory = newRequestHistory
               }
@@ -2147,10 +2382,39 @@ update msg model =
             )
 
         ViewingHex hexAddress ->
+            let
+                focusedErrors : List ( Http.Error, String )
+                focusedErrors =
+                    Dict.get (HexAddress.toKey hexAddress) model.solarSystems
+                        |> Maybe.map
+                            (\system ->
+                                case system of
+                                    FailedStarsSolarSystem fallibleSystem ->
+                                        fallibleSystem.stars
+                                            |> List.filterMap
+                                                (\res ->
+                                                    case res of
+                                                        Ok _ ->
+                                                            Nothing
+
+                                                        Err er ->
+                                                            Just ("Specific Star failed to decode:\n" ++ JsDecode.errorToString er)
+                                                )
+                                            |> List.map
+                                                (\er ->
+                                                    ( Http.BadBody er, "TODO: tie RequestEntry to URL" )
+                                                )
+
+                                    _ ->
+                                        []
+                            )
+                        |> Maybe.withDefault []
+            in
             ( { model
                 | selectedHex = Just hexAddress
                 , selectedStellarObject = Nothing
                 , selectedSystem = Nothing
+                , newSolarSystemErrors = focusedErrors
               }
             , fetchSingleSolarSystemRequest model.hostConfig <| toSectorAddress hexAddress
             )
@@ -2216,6 +2480,9 @@ update msg model =
         TableColumnHovered columnDesc ->
             ( { model | sidebarHoverText = columnDesc }, Cmd.none )
 
+        ClearAllErrors ->
+            ( { model | newSolarSystemErrors = [], oldSolarSystemErrors = model.newSolarSystemErrors ++ model.oldSolarSystemErrors }, Cmd.none )
+
 
 stripDataFromRemoteData : RemoteData err data -> RemoteData err ()
 stripDataFromRemoteData remoteData =
@@ -2270,7 +2537,7 @@ sendSectorRequest requestEntry hostConfig =
                 , headers = []
                 , url = url
                 , body = Http.emptyBody
-                , expect = Http.expectJson (DownloadedSectors requestEntry) sectorDecoder
+                , expect = Http.expectJson (DownloadedSectors ( requestEntry, url )) sectorDecoder
                 , timeout = Just 15000
                 , tracker = Nothing
                 }
