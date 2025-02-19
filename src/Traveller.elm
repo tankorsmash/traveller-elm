@@ -2098,7 +2098,7 @@ fetchSingleSolarSystemRequest hostConfig hex =
                 [ Url.Builder.int "sx" hex.sectorX
                 , Url.Builder.int "sy" hex.sectorY
                 , Url.Builder.int "hx" <| hex.x + 1
-                , Url.Builder.int "hy" <| hex.y - 1
+                , Url.Builder.int "hy" <| hex.y + 1
                 ]
 
         requestCmd =

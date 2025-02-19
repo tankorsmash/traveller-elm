@@ -42,6 +42,16 @@ universalToSectorTests =
                         { sectorX = 0, sectorY = 0, x = 17, y = 9 }
                 in
                 Expect.equal expected <| toSectorAddress uha
+        , Test.test "Test 1 sector rimward" <|
+            \_ ->
+                let
+                    uha =
+                        { x = 17, y = -42 }
+
+                    expected =
+                        { sectorX = 0, sectorY = -1, x = 17, y = 2 }
+                in
+                Expect.equal expected <| toSectorAddress uha
         , Test.test "Test 2" <|
             \_ ->
                 let
@@ -60,6 +70,26 @@ universalToSectorTests =
 
                     expected =
                         { sectorX = 0, sectorY = -2, x = 17, y = 10 }
+                in
+                Expect.equal expected <| toSectorAddress uha
+        , Test.test "Demnan" <|
+            \_ ->
+                let
+                    uha =
+                        { x = -290, y = -103 }
+
+                    expected =
+                        { sectorX = -10, sectorY = -2, x = 30, y = 23 }
+                in
+                Expect.equal expected <| toSectorAddress uha
+        , Test.test "Origin" <|
+            \_ ->
+                let
+                    uha =
+                        { x = 0, y = 0 }
+
+                    expected =
+                        { sectorX = 0, sectorY = 0, x = 0, y = 0 }
                 in
                 Expect.equal expected <| toSectorAddress uha
         ]

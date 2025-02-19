@@ -147,7 +147,7 @@ between upperLeftHex lowerRightHex =
 
 
 {-| Returns a list of hex addresses between two hex addresses, inclusive.
- limits the max number of hexes across and tall.
+limits the max number of hexes across and tall.
 -}
 betweenWithMax : HexAddress -> HexAddress -> { maxAcross : Int, maxTall : Int } -> List HexAddress
 betweenWithMax upperLeftHex lowerRightHex { maxAcross, maxTall } =
@@ -176,7 +176,7 @@ hexLabel hex =
             toSectorAddress hex
     in
     (String.fromInt (sectorHex.x + 1) |> String.pad 2 '0')
-        ++ (String.fromInt (sectorHex.y - 1) |> String.pad 2 '0')
+        ++ (String.fromInt (sectorHex.y + 1) |> String.pad 2 '0')
 
 
 universalToSectorX : HexAddress -> Int
