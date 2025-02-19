@@ -31,6 +31,7 @@
 * [ ] modify UWP display based on survey index
 * [ ] uncharted space link displays the full map of uncharted space
 * [ ] Render regions
+* [ ] Referee view
 ** [ ] API endpoint for regions
 * [ ] sector selecter - centre map on the sector selected
 * [ ] display name if known
