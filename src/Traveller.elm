@@ -1068,8 +1068,7 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
                     ]
                 , SvgAttrs.id "hexmap"
                 , viewBox <|
-                    toViewBox hexSize upperLeftHex viewportHeightIsh
-                        -- "-11834 -2798"
+                    toViewBox hexSize upperLeftHex
                         ++ " "
                         ++ stringWidth
                         ++ " "
@@ -1078,13 +1077,13 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
            )
 
 
-toViewBox : Float -> HexAddress -> Float -> String
-toViewBox hexScale { x, y } vph =
+toViewBox : Float -> HexAddress -> String
+toViewBox hexScale { x, y } =
     calcVisualOrigin hexScale { col = x, row = y }
         |> (\( x_, y_ ) ->
                 String.fromFloat (toFloat x_)
                     ++ " "
-                    ++ String.fromFloat (toFloat y_ + vph)
+                    ++ String.fromFloat (toFloat y_)
            )
 
 
