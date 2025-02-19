@@ -1,4 +1,4 @@
-port module Traveller exposing (Model, Msg(..), init, numHexCols, numHexRows, subscriptions, update, view)
+port module Traveller exposing (Model, Msg(..), auToKMs, init, kmsToAU, numHexCols, numHexRows, subscriptions, update, view)
 
 --import Traveller.HexId as HexId exposing (HexId, RawHexId)
 
@@ -1199,11 +1199,17 @@ renderIcon icon =
         |> Element.el (Element.paddingEach iconSpacing :: iconSizing)
 
 
-renderJumpTime : String -> Element.Element Msg
-renderJumpTime time =
+renderJumpTime : Maybe Float -> String -> Element.Element Msg
+renderJumpTime maxJumpTime time =
     Element.row safeJumpStyle
         [ renderIcon Icon.arrowUpFromBracket
-        , text <| time
+        , text <|
+            case maxJumpTime of
+                Just maxTime ->
+                    secondsToDaysWatches maxTime
+
+                Nothing ->
+                    time
         ]
 
 
@@ -1318,11 +1324,31 @@ renderTravelTime destination origin =
 -}
 
 
+travelTimeInSeconds : Float -> Int -> Float
+travelTimeInSeconds kms mdrive =
+    2 * sqrt (kms * 1000 / (toFloat mdrive * 9.8))
+
+
+secondsToDaysWatches : Float -> String
+secondsToDaysWatches secs =
+    let
+        watches =
+            toFloat <| ceiling <| secs / (60 * 60 * 8)
+
+        days =
+            toFloat <| floor <| watches / 3
+
+        watches_ =
+            watches - days * 3
+    in
+    Round.floor 0 days ++ "d " ++ Round.ceiling 0 watches_ ++ "w"
+
+
 travelTime : Float -> Int -> Bool -> String
 travelTime kms mdrive useHours =
     let
         rawSeconds =
-            2 * sqrt (kms * 1000 / (toFloat mdrive * 9.8))
+            travelTimeInSeconds kms mdrive
     in
     if useHours then
         let
@@ -1342,17 +1368,7 @@ travelTime kms mdrive useHours =
             Round.ceiling 0 minutes ++ "m"
 
     else
-        let
-            watches =
-                toFloat <| ceiling <| rawSeconds / 60608
-
-            days =
-                toFloat <| floor <| watches / 3
-
-            watches_ =
-                watches - days * 3
-        in
-        Round.floor 0 days ++ "d " ++ Round.ceiling 0 watches_ ++ "w"
+        secondsToDaysWatches rawSeconds
 
 
 
@@ -1390,11 +1406,15 @@ calcDistance2F p1 p2 =
     distance
 
 
-renderGasGiant : Int -> GasGiantData -> Maybe StellarObject -> Element.Element Msg
-renderGasGiant newNestingLevel gasGiantData selectedStellarObject =
+renderGasGiant : Int -> GasGiantData -> JumpShadowCheckers -> Maybe StellarObject -> Element.Element Msg
+renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarObject =
     let
         stellarObject =
             GasGiant gasGiantData
+
+        maxShadow =
+            List.maximum <|
+                List.filterMap (\checker -> checker stellarObject) jumpShadowCheckers
     in
     row
         [ Element.spacing 8
@@ -1406,16 +1426,19 @@ renderGasGiant newNestingLevel gasGiantData selectedStellarObject =
         , renderOrbitSequence gasGiantData.orbitSequence
         , renderSODescription gasGiantData.code
         , renderImage gasGiantData.code Nothing
-        , renderJumpTime gasGiantData.safeJumpTime
+        , renderJumpTime maxShadow gasGiantData.safeJumpTime
         , renderTravelTime stellarObject selectedStellarObject
         ]
 
 
-renderTerrestrialPlanet : Int -> TerrestrialData -> Maybe StellarObject -> Element.Element Msg
-renderTerrestrialPlanet newNestingLevel terrestrialData selectedStellarObject =
+renderTerrestrialPlanet : Int -> TerrestrialData -> JumpShadowCheckers -> Maybe StellarObject -> Element.Element Msg
+renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject =
     let
         planet =
             TerrestrialPlanet terrestrialData
+
+        maxShadow =
+            List.maximum <| List.filterMap (\checker -> checker planet) jumpShadowCheckers
     in
     row
         [ Element.spacing 8
@@ -1427,16 +1450,19 @@ renderTerrestrialPlanet newNestingLevel terrestrialData selectedStellarObject =
         , renderOrbitSequence terrestrialData.orbitSequence
         , renderSODescription terrestrialData.uwp
         , renderImage terrestrialData.uwp terrestrialData.meanTemperature
-        , renderJumpTime terrestrialData.safeJumpTime
+        , renderJumpTime maxShadow terrestrialData.safeJumpTime
         , renderTravelTime planet selectedStellarObject
         ]
 
 
-renderPlanetoidBelt : Int -> PlanetoidBeltData -> Maybe StellarObject -> Element.Element Msg
-renderPlanetoidBelt newNestingLevel planetoidBeltData selectedStellarObject =
+renderPlanetoidBelt : Int -> PlanetoidBeltData -> JumpShadowCheckers -> Maybe StellarObject -> Element.Element Msg
+renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selectedStellarObject =
     let
         belt =
             PlanetoidBelt planetoidBeltData
+
+        maxShadow =
+            List.maximum <| List.filterMap (\checker -> checker belt) jumpShadowCheckers
     in
     row
         [ Element.spacing 8
@@ -1448,16 +1474,19 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData selectedStellarObject =
         , renderOrbitSequence planetoidBeltData.orbitSequence
         , renderSODescription planetoidBeltData.uwp
         , renderImage planetoidBeltData.uwp Nothing
-        , renderJumpTime planetoidBeltData.safeJumpTime
+        , renderJumpTime maxShadow planetoidBeltData.safeJumpTime
         , renderTravelTime belt selectedStellarObject
         ]
 
 
-renderPlanetoid : Int -> PlanetoidData -> Maybe StellarObject -> Element.Element Msg
-renderPlanetoid newNestingLevel planetoidData selectedStellarObject =
+renderPlanetoid : Int -> PlanetoidData -> JumpShadowCheckers -> Maybe StellarObject -> Element.Element Msg
+renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellarObject =
     let
         planet =
             Planetoid planetoidData
+
+        maxShadow =
+            List.maximum <| List.filterMap (\checker -> checker planet) jumpShadowCheckers
     in
     row
         [ Element.spacing 8
@@ -1469,13 +1498,13 @@ renderPlanetoid newNestingLevel planetoidData selectedStellarObject =
         , renderOrbitSequence planetoidData.orbitSequence
         , renderSODescription planetoidData.uwp
         , renderImage planetoidData.uwp planetoidData.meanTemperature
-        , renderJumpTime planetoidData.safeJumpTime
+        , renderJumpTime maxShadow planetoidData.safeJumpTime
         , renderTravelTime planet selectedStellarObject
         ]
 
 
-renderStellarObject : Int -> Int -> StellarObject -> Maybe StellarObject -> Element.Element Msg
-renderStellarObject surveyIndex newNestingLevel stellarObject selectedStellarObject =
+renderStellarObject : Int -> Int -> StellarObject -> JumpShadowCheckers -> Maybe StellarObject -> Element.Element Msg
+renderStellarObject surveyIndex newNestingLevel stellarObject jumpShadowCheckers selectedStellarObject =
     row
         [ Element.spacing 8
         , Font.size 14
@@ -1483,24 +1512,24 @@ renderStellarObject surveyIndex newNestingLevel stellarObject selectedStellarObj
         ]
         [ case stellarObject of
             GasGiant gasGiantData ->
-                renderGasGiant newNestingLevel gasGiantData selectedStellarObject
+                renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarObject
 
             TerrestrialPlanet terrestrialData ->
-                renderTerrestrialPlanet newNestingLevel terrestrialData selectedStellarObject
+                renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject
 
             PlanetoidBelt planetoidBeltData ->
-                renderPlanetoidBelt newNestingLevel planetoidBeltData selectedStellarObject
+                renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selectedStellarObject
 
             Planetoid planetoidData ->
-                renderPlanetoid newNestingLevel planetoidData selectedStellarObject
+                renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellarObject
 
             Star starDataConfig ->
-                el [ Element.width Element.fill, Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <| displayStarDetails surveyIndex starDataConfig newNestingLevel selectedStellarObject
+                el [ Element.width Element.fill, Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <| displayStarDetails surveyIndex starDataConfig newNestingLevel jumpShadowCheckers selectedStellarObject
         ]
 
 
-displayStarDetails : Int -> StarData -> Int -> Maybe StellarObject -> Element.Element Msg
-displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel selectedStellarObject =
+displayStarDetails : Int -> StarData -> Int -> JumpShadowCheckers -> Maybe StellarObject -> Element.Element Msg
+displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCheckers selectedStellarObject =
     let
         inJumpShadow obj =
             case starData.jumpShadow of
@@ -1568,7 +1597,7 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel selectedStel
         , starData.companion
             |> Maybe.map
                 (\compStarData ->
-                    displayStarDetails surveyIndex compStarData nextNestingLevel selectedStellarObject
+                    displayStarDetails surveyIndex compStarData nextNestingLevel jumpShadowCheckers selectedStellarObject
                 )
             |> Maybe.withDefault Element.none
         , column [ Element.width Element.fill ] <|
@@ -1595,7 +1624,7 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel selectedStel
             [ starData.stellarObjects
                 |> List.filter inJumpShadow
                 |> List.filter isKnown
-                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so selectedStellarObject)
+                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject)
                 |> column []
             , -- jump shadow
               column [ Font.size 14, Font.shadow { blur = 1, color = jumpShadowTextColor, offset = ( 0.5, 0.5 ) }, Element.width Element.fill, Element.behindContent red ]
@@ -1609,7 +1638,7 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel selectedStel
             , starData.stellarObjects
                 |> List.filter (not << inJumpShadow)
                 |> List.filter isKnown
-                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so selectedStellarObject)
+                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject)
                 |> column []
             ]
         ]
@@ -1620,10 +1649,47 @@ convertColor color =
     Element.fromRgb <| Color.toRgba <| color
 
 
+type alias JumpShadowChecker =
+    StellarObject -> Maybe Float
+
+
+type alias JumpShadowCheckers =
+    List JumpShadowChecker
+
+
 viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Element Msg
 viewSystemDetailsSidebar solarSystem selectedStellarObject =
+    let
+        jumpShadowCheckers : JumpShadowCheckers
+        jumpShadowCheckers =
+            List.filterMap
+                (\o ->
+                    case o of
+                        Star star ->
+                            Just (getInnerStarData star)
+
+                        otherwise ->
+                            Nothing
+                )
+                (Star solarSystem.primaryStar :: (getInnerStarData solarSystem.primaryStar).stellarObjects)
+                |> List.map
+                    (\star so ->
+                        let
+                            objToStarKMs =
+                                calcDistance2F star.orbitPosition (getStellarOrbit so).orbitPosition
+
+                            jumpShadowDistanceKMs =
+                                auToKMs (Maybe.withDefault 0 star.jumpShadow)
+                        in
+                        if objToStarKMs > jumpShadowDistanceKMs then
+                            Nothing
+
+                        else
+                            Just <| travelTimeInSeconds (jumpShadowDistanceKMs - objToStarKMs) 4
+                    )
+    in
     column [ Element.spacing 10, Element.paddingXY 0 10 ] <|
-        [ displayStarDetails solarSystem.surveyIndex solarSystem.primaryStar 0 selectedStellarObject
+        [ displayStarDetails solarSystem.surveyIndex solarSystem.primaryStar 0 jumpShadowCheckers selectedStellarObject
         ]
 
 
@@ -2542,6 +2608,16 @@ sendSectorRequest requestEntry hostConfig =
                 }
     in
     requestCmd
+
+
+auToKMs : Float -> Float
+auToKMs au =
+    au * 149597871.0
+
+
+kmsToAU : Float -> Float
+kmsToAU kms =
+    kms / 149597871.0
 
 
 
