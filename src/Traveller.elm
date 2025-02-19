@@ -916,11 +916,11 @@ viewHexes :
     -> Html Msg
 viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( route, currentAddress ) hexSize =
     let
-        viewportHeightIsh =
-            screenVp.viewport.height * 0.9
+        svgHeight =
+            screenVp.viewport.height - 112
 
-        viewportWidthIsh =
-            screenVp.viewport.width * 0.9
+        svgWidth =
+            screenVp.viewport.width - 420
 
         renderCurrentAddressOutline : HexAddress -> Svg Msg
         renderCurrentAddressOutline ca =
@@ -1021,7 +1021,7 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
                             ( upperLeftHex, lowerRightHex )
                             hexSize
                             solarSystemDict
-                            ( viewportWidthIsh, viewportHeightIsh )
+                            ( svgWidth, svgHeight )
                             hexAddr
                             hexSVGOrigin
                             hexColour
@@ -1044,15 +1044,15 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
                     ++ hexSvgsWithHexAddress
            )
         |> (let
-                stringWidth =
-                    String.fromFloat <| viewportWidthIsh
+                widthString =
+                    String.fromFloat <| svgWidth
 
-                stringHeight =
-                    String.fromFloat <| viewportHeightIsh
+                heightString =
+                    String.fromFloat <| svgHeight
             in
             Svg.svg
-                [ SvgAttrs.width <| stringWidth
-                , SvgAttrs.height <| stringHeight
+                [ SvgAttrs.width <| widthString
+                , SvgAttrs.height <| heightString
                 , SvgAttrs.css <|
                     [ Css.before
                         [ Css.boxShadowMany
@@ -1070,9 +1070,9 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
                 , viewBox <|
                     toViewBox hexSize upperLeftHex
                         ++ " "
-                        ++ stringWidth
+                        ++ widthString
                         ++ " "
-                        ++ stringHeight
+                        ++ heightString
                 ]
            )
 
