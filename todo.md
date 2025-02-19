@@ -26,7 +26,7 @@
 * [X] Remember position between sessions
 * [X] table'd sidebar (recursively render the columns, account for SVG's width, since its HTML and elm-ui isn't aware of that size)
 * [ ] Convert back to SVG viewbox and don't render relative to the upper left hex
-** [ ] Viewbox set to size of display, not fixed number of hexes
+** [X] Viewbox set to size of display, not fixed number of hexes
 * [X] safe jump distance should take the jump shadow into account
 * [ ] modify UWP display based on survey index
 * [ ] uncharted space link displays the full map of uncharted space
