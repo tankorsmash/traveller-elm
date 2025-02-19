@@ -33,7 +33,6 @@ type Msg
     | LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
     | ToggleErrorDialog
-    | ToggleDarkMode
     | GotTravellerMsg Traveller.Msg
 
 
@@ -148,11 +147,6 @@ update msg model =
         ToggleErrorDialog ->
             ( model, toggleDialog "error-dialog" )
 
-        ToggleDarkMode ->
-            ( { model | isDarkMode = not model.isDarkMode }
-            , toggleDarkMode (not model.isDarkMode)
-            )
-
         GotTravellerMsg travellerMsg ->
             let
                 ( newTravellerModel, newTravellerCmds ) =
@@ -187,16 +181,16 @@ elmUiHackLayout =
 
 view : Model -> Browser.Document Msg
 view model =
-    { title = "Traveller"
+    { title = "Revelation"
     , body =
         [ Dialog.view "error-dialog" ToggleErrorDialog model.dialogBody
         , div
             []
             [ elmUiHackLayout
             , Html.nav [ class "navbar navbar-expand m-3" ]
-                [ a [ href "/", class "navbar-brand" ] [ text "Traveller" ]
+                [ a [ href "?", class "navbar-brand" ] [ text "Navigation" ]
                 , Html.ul [ class "navbar-nav" ]
-                    [ Html.li [ class "nav-item" ] [ a [ class "nav-link", href "/" ] [ text "Map" ] ]
+                    [ Html.li [ class "nav-item" ] [ a [ class "nav-link", href "/" ] [ text "Uncharted Space" ] ]
                     ]
                 ]
             , Html.map GotTravellerMsg <|
