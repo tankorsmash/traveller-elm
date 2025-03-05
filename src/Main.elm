@@ -59,7 +59,13 @@ routeParser =
         ]
 
 
-init : Maybe ( Int, Int ) -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+type alias Flags =
+    { upperLeft : Maybe ( Int, Int )
+    , hexSize : Int
+    }
+
+
+init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
         hostConfig : HostConfig.HostConfig
@@ -102,7 +108,7 @@ init flags url key =
     )
 
 
-main : Program (Maybe ( Int, Int )) Model Msg
+main : Program Flags Model Msg
 main =
     Browser.application
         { init = init

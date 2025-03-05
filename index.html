@@ -23,8 +23,9 @@
       }
 
       const loc = JSON.parse(localStorage.getItem('upperLeftHex') ?? "null" );
+      const hexSize = JSON.parse(localStorage.getItem('hexSize') ?? "40" );
       const elm = Elm.Main.init({
-        flags: loc,
+        flags: {"upperLeft": loc, "hexSize": hexSize},
         node: document.getElementById("root"),
       });
 
@@ -32,6 +33,10 @@
 
       elm.ports.storeInLocalStorage.subscribe(id => {
         localStorage.setItem('upperLeftHex', JSON.stringify(id));
+      });
+
+      elm.ports.storeHexSize.subscribe(size => {
+        localStorage.setItem('hexSize', JSON.stringify(size));
       });
 
       elm.ports.toggleDialog.subscribe(id => {
