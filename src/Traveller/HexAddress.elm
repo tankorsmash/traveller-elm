@@ -1,4 +1,6 @@
-module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, SectorHexAddress, addVal, between, betweenWithMax, create, createFromStarSystem, hexAddressToString, hexLabel, sectorColumns, sectorHexAddressToString, sectorRows, shiftAddressBy, toKey, toSectorAddress, toSectorKey, toUniversalAddress, universalHexX, universalHexY, universalToSectorX, universalToSectorY)
+module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, SectorHexAddress, addVal, between, betweenWithMax, codec, create, createFromStarSystem, hexAddressToString, hexLabel, sectorColumns, sectorHexAddressToString, sectorRows, shiftAddressBy, toKey, toSectorAddress, toSectorKey, toUniversalAddress, universalHexX, universalHexY, universalToSectorX, universalToSectorY)
+
+import Codec exposing (Codec)
 
 
 sectorColumns =
@@ -207,3 +209,11 @@ toSectorAddress universal =
             universalToSectorY universal
     in
     { sectorX = sectorX, sectorY = sectorY, x = universal.x - sectorX * 32, y = sectorY * 40 - universal.y }
+
+
+codec : Codec HexAddress
+codec =
+    Codec.object HexAddress
+        |> Codec.field "x" .x Codec.int
+        |> Codec.field "y" .y Codec.int
+        |> Codec.buildObject

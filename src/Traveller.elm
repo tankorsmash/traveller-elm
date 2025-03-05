@@ -6,7 +6,8 @@ import Browser.Dom
 import Browser.Events
 import Browser.Navigation
 import Codec
-import Color
+import Color exposing (Color)
+import Color.Convert
 import Color.Manipulate
 import Css
 import Dict
@@ -54,6 +55,7 @@ import Task
 import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, hexLabel, sectorColumns, sectorRows, toSectorAddress, toSectorKey, toUniversalAddress, universalHexX, universalHexY)
 import Traveller.Parser as TravellerParser
 import Traveller.Point exposing (StellarPoint)
+import Traveller.Region as Region exposing (Region, RegionDict)
 import Traveller.Route as Route exposing (Route, RouteList)
 import Traveller.Sector exposing (Sector, SectorDict, codec, sectorKey)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
@@ -113,6 +115,18 @@ type alias RequestEntry =
 
 type alias RequestHistory =
     List RequestEntry
+
+
+type alias HexKey =
+    String
+
+
+type alias HexColorDict =
+    Dict.Dict HexKey Color
+
+
+type alias RegionLabelDict =
+    Dict.Dict HexKey String
 
 
 nextRequestNum : RequestHistory -> RequestNum
@@ -197,6 +211,9 @@ type alias Model =
     , currentAddress : Maybe HexAddress
     , hostConfig : HostConfig.HostConfig
     , route : RouteList
+    , regions : RegionDict
+    , regionLabels : Dict.Dict String String
+    , hexColours : Dict.Dict String Color
     }
 
 
@@ -208,6 +225,7 @@ type Msg
     | ClearAllErrors
     | FetchedSolarSystem (Result Http.Error SolarSystem)
     | DownloadedSectors ( RequestEntry, String ) (Result Http.Error (List Sector))
+    | DownloadedRegions ( RequestEntry, String ) (Result Http.Error (List Region))
     | HoveringHex HexAddress
     | ViewingHex HexAddress
     | GotViewport Browser.Dom.Viewport
@@ -306,12 +324,16 @@ init maybeUpperLeft key hostConfig =
             , sectors = Dict.empty
             , route = []
             , currentAddress = Nothing
+            , regions = Dict.empty
+            , regionLabels = Dict.empty
+            , hexColours = Dict.empty
             }
     in
     ( model
     , Cmd.batch
         [ sendSolarSystemRequest ssReqEntry model.hostConfig model.upperLeftHex model.lowerRightHex
         , sendSectorRequest secReqEntry model.hostConfig
+        , sendRegionRequest secReqEntry model.hostConfig -- Josh to fix later
         , sendRouteRequest routeReqEntry model.hostConfig
         , Browser.Dom.getViewport
             |> Task.perform GotViewport
@@ -910,11 +932,11 @@ viewHexes :
     HexAddress
     -> HexAddress
     -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport }
-    -> SolarSystemDict
+    -> { solarSystemDict : SolarSystemDict, hexColours : HexColorDict, regionLabels : RegionLabelDict }
     -> ( RouteList, Maybe HexAddress )
     -> Float
     -> Html Msg
-viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( route, currentAddress ) hexSize =
+viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) hexSize =
     let
         svgHeight =
             screenVp.viewport.height - 112
@@ -1013,7 +1035,12 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
                             routeHexBg
 
                         else
-                            defaultHexBg
+                            case Dict.get (HexAddress.toKey hexAddr) hexColours of
+                                Just color ->
+                                    Color.Convert.colorToHex <| Color.Manipulate.lighten 0.25 color
+
+                                Nothing ->
+                                    defaultHexBg
 
                     ( hexSVG, isEmpty ) =
                         viewHex
@@ -1028,6 +1055,40 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } solarSystemDict ( ro
                 in
                 hexSVG
             )
+        |> (\hexSvgsWithHexAddress ->
+                let
+                    labelPos hexAddr =
+                        calcVisualOrigin hexSize
+                            { row = hexAddr.y, col = hexAddr.x }
+
+                    renderRegionLabel : HexAddress -> Maybe (Svg.Svg msg)
+                    renderRegionLabel hexAddress =
+                        case Dict.get (HexAddress.toKey hexAddress) regionLabels of
+                            Just name ->
+                                Just <|
+                                    Svg.text_
+                                        [ SvgAttrs.x <| String.fromInt <| Tuple.first (labelPos hexAddress)
+                                        , SvgAttrs.y <| String.fromInt <| Tuple.second (labelPos hexAddress)
+                                        , SvgAttrs.textAnchor "middle"
+                                        , SvgAttrs.dominantBaseline "middle"
+                                        , SvgAttrs.fontFamily "Quantico"
+                                        , SvgAttrs.fontWeight "700"
+                                        , SvgAttrs.fill "#0A0A0A"
+                                        ]
+                                        [ Svg.text name ]
+
+                            Nothing ->
+                                Nothing
+
+                    labels =
+                        hexRange
+                            |> List.filterMap
+                                (\hexAddress ->
+                                    renderRegionLabel hexAddress
+                                )
+                in
+                hexSvgsWithHexAddress ++ labels
+           )
         |> (\hexSvgsWithHexAddress ->
                 let
                     singlePolyHex =
@@ -1901,6 +1962,22 @@ errorDialog httpErrors =
         ]
 
 
+renderFAIcon : String -> Element.Element Msg
+renderFAIcon icon =
+    let
+        iconSpacing =
+            { zeroEach | right = 4 }
+    in
+    Element.html <| UnstyledHtml.i [ UnstyledHtmlAttrs.class icon ] []
+
+
+
+--icon
+--    |> Icon.view
+--    |> Element.html
+--    |> Element.el (Element.paddingEach iconSpacing :: iconSizing)
+
+
 view : Model -> Element.Element Msg
 view model =
     let
@@ -1918,7 +1995,12 @@ view model =
                         "Total hexes: "
                             ++ String.fromInt (numHexCols * numHexRows)
                 , -- zoom slider
-                  zoomSlider model.hexScale
+                  row [ Element.spacing 2 ]
+                    [ renderFAIcon "fa-regular fa-hexagon"
+                    , renderFAIcon "fa-regular fa-hexagon"
+                    , renderFAIcon "fa-regular fa-hexagon"
+                    , zoomSlider model.hexScale
+                    ]
                 , column
                     [ Font.size 14
                     , Font.color <| fontTextColor
@@ -2027,7 +2109,7 @@ view model =
                                 model.upperLeftHex
                                 model.lowerRightHex
                                 viewPortConfig
-                                model.solarSystems
+                                { solarSystemDict = model.solarSystems, hexColours = model.hexColours, regionLabels = model.regionLabels }
                                 ( model.route, model.currentAddress )
                                 model.hexScale
                                 |> Html.toUnstyled
@@ -2341,6 +2423,75 @@ update msg model =
             in
             ( { model | newSolarSystemErrors = ( err, url ) :: model.newSolarSystemErrors }, Cmd.none )
 
+        DownloadedRegions requestEntry (Ok regions) ->
+            let
+                regionDict =
+                    List.foldl
+                        (\region acc ->
+                            Dict.insert region.id region acc
+                        )
+                        Dict.empty
+                        regions
+            in
+            ( { model
+                | regions = regionDict
+              }
+            , Cmd.none
+            )
+
+        DownloadedRegions ( requestEntry, url ) (Err err) ->
+            let
+                parsecList : Region -> List ( String, Color )
+                parsecList region =
+                    List.map (\p -> ( HexAddress.toKey p, region.colour ))
+                        region.parsecs
+
+                stub : Region
+                stub =
+                    { id = 1
+                    , colour = Color.blue
+                    , name = "Stub Hennlix Nebula"
+                    , labelPosition = { x = -308, y = -104 }
+                    , parsecs =
+                        [ { x = -308, y = -104 }
+                        , { x = -308, y = -105 }
+                        , { x = -307, y = -104 }
+                        , { x = -309, y = -104 }
+                        ]
+                    }
+
+                hexColourDict : Dict.Dict String Color
+                hexColourDict =
+                    List.map
+                        (\region ->
+                            parsecList region
+                        )
+                        [ stub ]
+                        |> List.concat
+                        |> Dict.fromList
+
+                regionLabelDict : Dict.Dict String String
+                regionLabelDict =
+                    List.map
+                        (\region ->
+                            ( HexAddress.toKey region.labelPosition, region.name )
+                        )
+                        [ stub ]
+                        |> Dict.fromList
+            in
+            ( { model
+                | regions = Dict.fromList [ ( 1, stub ) ]
+                , hexColours = hexColourDict
+                , regionLabels = regionLabelDict
+              }
+            , Cmd.none
+            )
+
+        --let
+        --    _ =
+        --        Debug.log "Regions did not work" err
+        --in
+        --( { model | newSolarSystemErrors = ( err, url ) :: model.newSolarSystemErrors }, Cmd.none )
         DownloadedRoute ( requestEntry, url ) (Ok route) ->
             ( { model
                 | route = route
@@ -2651,3 +2802,34 @@ kmsToAU kms =
 --                }
 --    in
 --    requestCmd
+
+
+sendRegionRequest : RequestEntry -> HostConfig -> Cmd Msg
+sendRegionRequest requestEntry hostConfig =
+    let
+        regionsDecoder : JsDecode.Decoder (List Region)
+        regionsDecoder =
+            Codec.list Region.codec
+                |> Codec.decoder
+
+        ( urlHostRoot, urlHostPath ) =
+            hostConfig
+
+        url =
+            Url.Builder.crossOrigin
+                urlHostRoot
+                (urlHostPath ++ [ "regions" ])
+                []
+
+        requestCmd =
+            Http.request
+                { method = "GET"
+                , headers = []
+                , url = url
+                , body = Http.emptyBody
+                , expect = Http.expectJson (DownloadedRegions ( requestEntry, url )) regionsDecoder
+                , timeout = Just 15000
+                , tracker = Nothing
+                }
+    in
+    requestCmd
