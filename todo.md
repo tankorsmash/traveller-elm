@@ -30,7 +30,7 @@
 * [X] safe jump distance should take the jump shadow into account
 * [ ] modify UWP display based on survey index
 * [ ] uncharted space link displays the full map of uncharted space
-* [ ] Render regions
+* [X] Render regions
 * [ ] Referee view
 ** [ ] Link to map url, player friendly 
 ** [ ] API endpoint for regions
