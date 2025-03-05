@@ -237,6 +237,7 @@ type Msg
     | MapMouseUp
     | MapMouseMove ( Float, Float )
     | DownloadedRoute ( RequestEntry, String ) (Result Http.Error (List Route))
+    | SetHexSize Int
 
 
 {-| Where the Hex is on the screen, in pixel coordinates
@@ -1773,9 +1774,9 @@ textColor =
     Color.rgb 0.5 1.0 0.5
 
 
-deepnightColor : Element.Color
+deepnightColor : Color.Color
 deepnightColor =
-    colorToElementColor <| Color.rgb 1.0 0.498 0.0
+    Color.rgb 1.0 0.498 0.0
 
 
 fontDarkTextColor : Element.Color
@@ -1797,45 +1798,6 @@ jumpShadowTextColor =
 travellerRed : Element.Color
 travellerRed =
     Element.rgb 0.882 0.024 0
-
-
-sliderColors : List Element.Color
-sliderColors =
-    -- gradient colors so it looks like a slider
-    [ Element.rgba 0 0 0 0
-    , textColor |> Color.Manipulate.fadeOut 0.99 |> colorToElementColor
-    , textColor |> Color.Manipulate.fadeOut 0.95 |> colorToElementColor
-    , textColor |> Color.Manipulate.fadeOut 0.95 |> colorToElementColor
-    , textColor |> Color.Manipulate.fadeOut 0.05 |> colorToElementColor
-    , textColor |> Color.Manipulate.fadeOut 0.95 |> colorToElementColor
-    , textColor |> Color.Manipulate.fadeOut 0.95 |> colorToElementColor
-    , textColor |> Color.Manipulate.fadeOut 0.99 |> colorToElementColor
-    , Element.rgba 0 0 0 0
-    ]
-
-
-zoomSlider : Float -> Element Msg
-zoomSlider hexScale =
-    Input.slider
-        [ Background.gradient
-            { angle = 0
-            , steps =
-                sliderColors
-            }
-        , Border.rounded 200
-        , Element.paddingXY 0 0
-        , Element.width <| Element.px 200
-        ]
-        { onChange = ZoomScaleChanged
-        , label =
-            Input.labelLeft [ Font.family [ Font.monospace ], Font.size 16, Element.paddingXY 0 5 ]
-                (text <| "HexSize: " ++ (String.padLeft 2 ' ' <| String.fromFloat hexScale))
-        , min = 1
-        , max = 76
-        , step = Just 5
-        , value = hexScale
-        , thumb = Input.defaultThumb
-        }
 
 
 numHexCols : number
@@ -1971,13 +1933,6 @@ renderFAIcon icon size =
                 []
 
 
-
---icon
---    |> Icon.view
---    |> Element.html
---    |> Element.el (Element.paddingEach iconSpacing :: iconSizing)
-
-
 view : Model -> Element.Element Msg
 view model =
     let
@@ -1994,12 +1949,35 @@ view model =
                     text <|
                         "Total hexes: "
                             ++ String.fromInt (numHexCols * numHexRows)
-                , -- zoom slider
-                  row [ Element.spacing 6 ]
-                    [ renderFAIcon "fa-regular fa-hexagon" 80
-                    , renderFAIcon "fa-regular fa-hexagon" 60
-                    , renderFAIcon "fa-regular fa-hexagon" 50
-                    , zoomSlider model.hexScale
+                , let
+                    clickableIcon size =
+                        let
+                            selectorColor =
+                                if model.hexScale == toFloat (size // 2) then
+                                    deepnightColor
+
+                                else
+                                    textColor
+
+                            hexStyle =
+                                if model.hexScale == toFloat (size // 2) then
+                                    "fa-regular"
+
+                                else
+                                    "fa-thin"
+                        in
+                        renderFAIcon (hexStyle ++ " fa-hexagon") size
+                            |> Element.el
+                                [ Element.pointer
+                                , Element.mouseOver [ Font.color <| convertColor (Color.Manipulate.lighten 0.15 selectorColor) ]
+                                , Element.Events.onClick <| SetHexSize <| size // 2
+                                , Font.color <| convertColor selectorColor
+                                ]
+                  in
+                  row [ Element.spacing 6, Element.centerX ]
+                    [ clickableIcon 80
+                    , clickableIcon 60
+                    , clickableIcon 50
                     ]
                 , column
                     [ Font.size 14
@@ -2078,7 +2056,7 @@ view model =
 
         hexesColumn =
             column []
-                [ el [ Font.size 20, Font.color <| deepnightColor, Element.paddingEach { zeroEach | bottom = 4 } ] <|
+                [ el [ Font.size 20, Font.color <| colorToElementColor <| deepnightColor, Element.paddingEach { zeroEach | bottom = 4 } ] <|
                     text <|
                         "Deepnight Revelation Navigation Console"
                 , Element.html <|
@@ -2280,6 +2258,9 @@ update msg model =
 
         ZoomScaleChanged newScale ->
             ( { model | hexScale = newScale }, Cmd.none )
+
+        SetHexSize newSize ->
+            ( { model | hexScale = toFloat newSize }, Cmd.none )
 
         DownloadSolarSystems ->
             let
