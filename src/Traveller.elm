@@ -1962,13 +1962,13 @@ errorDialog httpErrors =
         ]
 
 
-renderFAIcon : String -> Element.Element Msg
-renderFAIcon icon =
-    let
-        iconSpacing =
-            { zeroEach | right = 4 }
-    in
-    Element.html <| UnstyledHtml.i [ UnstyledHtmlAttrs.class icon ] []
+renderFAIcon : String -> Int -> Element.Element Msg
+renderFAIcon icon size =
+    Element.el [ Element.width (Element.px size), Element.height (Element.px size) ] <|
+        Element.html <|
+            UnstyledHtml.i
+                [ UnstyledHtmlAttrs.style "font-size" (String.fromInt size ++ "px"), UnstyledHtmlAttrs.class icon ]
+                []
 
 
 
@@ -1995,10 +1995,10 @@ view model =
                         "Total hexes: "
                             ++ String.fromInt (numHexCols * numHexRows)
                 , -- zoom slider
-                  row [ Element.spacing 2 ]
-                    [ renderFAIcon "fa-regular fa-hexagon"
-                    , renderFAIcon "fa-regular fa-hexagon"
-                    , renderFAIcon "fa-regular fa-hexagon"
+                  row [ Element.spacing 6 ]
+                    [ renderFAIcon "fa-regular fa-hexagon" 80
+                    , renderFAIcon "fa-regular fa-hexagon" 60
+                    , renderFAIcon "fa-regular fa-hexagon" 50
                     , zoomSlider model.hexScale
                     ]
                 , column
