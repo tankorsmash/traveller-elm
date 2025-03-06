@@ -803,10 +803,10 @@ isEmptyHex maybeSolarSystem =
 
 hexColOffset row =
     if remainderBy 2 row == 0 then
-        0
+        1
 
     else
-        1
+        0
 
 
 calcVisualOrigin : Int -> { row : Int, col : Int } -> VisualHexOrigin
