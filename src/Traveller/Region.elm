@@ -12,7 +12,7 @@ type alias Region =
     , colour : Color
     , name : String
     , labelPosition : HexAddress
-    , parsecs : List HexAddress
+    , hexes : List HexAddress
     }
 
 
@@ -37,10 +37,11 @@ codecColour =
 
 codec : Codec Region
 codec =
-    Codec.object Region
+    Codec.object (\x y id colour name hexes -> Region id colour name { x = x, y = y } hexes)
+        |> Codec.field "label_x" (.labelPosition >> .x) Codec.int
+        |> Codec.field "label_y" (.labelPosition >> .y) Codec.int
         |> Codec.field "id" .id Codec.int
         |> Codec.field "colour" .colour codecColour
         |> Codec.field "name" .name Codec.string
-        |> Codec.field "label_position" .labelPosition HexAddress.codec
-        |> Codec.field "parsecs" .parsecs (Codec.list HexAddress.codec)
+        |> Codec.field "hexes" .hexes (Codec.list HexAddress.codec)
         |> Codec.buildObject

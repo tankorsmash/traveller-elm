@@ -1062,7 +1062,7 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } { solarSystemDict, h
                         else
                             case Dict.get (HexAddress.toKey hexAddr) hexColours of
                                 Just color ->
-                                    Color.Convert.colorToHex <| Color.Manipulate.lighten 0.25 color
+                                    Color.Convert.colorToHex <| color
 
                                 Nothing ->
                                     defaultHexBg
@@ -2435,6 +2435,11 @@ update msg model =
 
         DownloadedRegions requestEntry (Ok regions) ->
             let
+                parsecList : Region -> List ( String, Color )
+                parsecList region =
+                    List.map (\p -> ( HexAddress.toKey p, region.colour ))
+                        region.hexes
+
                 regionDict =
                     List.foldl
                         (\region acc ->
@@ -2442,9 +2447,30 @@ update msg model =
                         )
                         Dict.empty
                         regions
+
+                hexColourDict : Dict.Dict String Color
+                hexColourDict =
+                    List.map
+                        (\region ->
+                            parsecList region
+                        )
+                        regions
+                        |> List.concat
+                        |> Dict.fromList
+
+                regionLabelDict : Dict.Dict String String
+                regionLabelDict =
+                    List.map
+                        (\region ->
+                            ( HexAddress.toKey region.labelPosition, region.name )
+                        )
+                        regions
+                        |> Dict.fromList
             in
             ( { model
                 | regions = regionDict
+                , hexColours = hexColourDict
+                , regionLabels = regionLabelDict
               }
             , Cmd.none
             )
@@ -2454,7 +2480,7 @@ update msg model =
                 parsecList : Region -> List ( String, Color )
                 parsecList region =
                     List.map (\p -> ( HexAddress.toKey p, region.colour ))
-                        region.parsecs
+                        region.hexes
 
                 stub : Region
                 stub =
@@ -2462,7 +2488,7 @@ update msg model =
                     , colour = Color.blue
                     , name = "Stub Hennlix Nebula"
                     , labelPosition = { x = -308, y = -104 }
-                    , parsecs =
+                    , hexes =
                         [ { x = -308, y = -104 }
                         , { x = -308, y = -105 }
                         , { x = -307, y = -104 }
