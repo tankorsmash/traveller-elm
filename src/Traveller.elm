@@ -45,15 +45,15 @@ import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
 import Svg.Styled.Lazy
 import Task
-import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, sectorColumns, sectorRows, toSectorAddress, toUniversalAddress)
+import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, toSectorAddress, toUniversalAddress)
 import Traveller.Point exposing (StellarPoint)
 import Traveller.Region as Region exposing (Region, RegionDict)
 import Traveller.Route as Route exposing (Route, RouteList)
 import Traveller.Sector exposing (Sector, SectorDict, codec, sectorKey)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
-import Traveller.SolarSystemStars exposing (FallibleStarSystem, StarSystem, StarType, StarTypeData, fallibleStarSystemDecoder, getStarTypeData, isBrownDwarfType, starSystemCodec)
+import Traveller.SolarSystemStars exposing (FallibleStarSystem, StarSystem, StarType, StarTypeData, fallibleStarSystemDecoder, getStarTypeData, isBrownDwarfType)
 import Traveller.StarColour exposing (starColourRGB)
-import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, getInnerStarData, getSafeJumpTime, getStellarOrbit, isBrownDwarf)
+import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, getInnerStarData, getStellarOrbit, isBrownDwarf)
 import Url.Builder
 
 
@@ -466,16 +466,6 @@ isOnRoute : RouteList -> HexAddress -> Bool
 isOnRoute route address =
     List.any (\a -> a.address == address)
         route
-
-
-isCurrentLocation : Model -> HexAddress -> Bool
-isCurrentLocation model address =
-    case model.currentAddress of
-        Just a ->
-            a == address
-
-        Nothing ->
-            False
 
 
 viewHexEmpty : Int -> Int -> Int -> Int -> Int -> String -> String -> Svg Msg
@@ -2544,7 +2534,7 @@ update msg model =
             let
                 si =
                     case model.referee of
-                        Just r ->
+                        Just _ ->
                             refereeSI
 
                         Nothing ->
