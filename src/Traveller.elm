@@ -1964,98 +1964,95 @@ view : Model -> Element.Element Msg
 view model =
     let
         sidebarColumn =
-            column []
-                [ el [ Font.size 14, Font.color <| fontDarkTextColor ] <|
-                    text <|
-                        "Viewing "
-                            ++ String.fromInt numHexCols
-                            ++ " columns and "
-                            ++ String.fromInt numHexRows
-                            ++ " rows"
-                , el [ Font.size 14, Font.color <| fontDarkTextColor ] <|
-                    text <|
-                        "Total hexes: "
-                            ++ String.fromInt (numHexCols * numHexRows)
-                , let
-                    clickableIcon size =
-                        let
-                            selectorColor =
-                                if model.hexScale == size // 2 then
-                                    deepnightColor
+            column [ Element.spacing 10, Element.height Element.fill ]
+                [ -- Main Content (Flexible Space)
+                  column [ Element.width Element.fill ]
+                    [ let
+                        clickableIcon size =
+                            let
+                                selectorColor =
+                                    if model.hexScale == size // 2 then
+                                        deepnightColor
 
-                                else
-                                    textColor
+                                    else
+                                        textColor
 
-                            hexStyle =
-                                if model.hexScale == size // 2 then
-                                    "fa-regular"
+                                hexStyle =
+                                    if model.hexScale == size // 2 then
+                                        "fa-regular"
 
-                                else
-                                    "fa-thin"
-                        in
-                        renderFAIcon (hexStyle ++ " fa-hexagon") size
-                            |> Element.el
-                                [ Element.pointer
-                                , Element.mouseOver [ Font.color <| convertColor (Color.Manipulate.lighten 0.15 selectorColor) ]
-                                , Element.Events.onClick <| SetHexSize <| size // 2
-                                , Font.color <| convertColor selectorColor
-                                ]
-                  in
-                  row [ Element.spacing 6, Element.centerX ]
-                    [ clickableIcon 80
-                    , clickableIcon 60
-                    , clickableIcon 50
-                    ]
-                , column
-                    [ Font.size 14
-                    , Font.color <| fontTextColor
-                    ]
-                    [ column [ Element.spacing 15 ]
-                        [ row [ Element.spacing 2 ]
-                            [ text "Revelation location:"
-                            , text <| universalHexLabel model.sectors model.playerHex
-                            ]
+                                    else
+                                        "fa-thin"
+                            in
+                            renderFAIcon (hexStyle ++ " fa-hexagon") size
+                                |> Element.el
+                                    [ Element.pointer
+                                    , Element.mouseOver [ Font.color <| convertColor (Color.Manipulate.lighten 0.15 selectorColor) ]
+                                    , Element.Events.onClick <| SetHexSize <| size // 2
+                                    , Font.color <| convertColor selectorColor
+                                    ]
+                      in
+                      row [ Element.spacing 6, Element.centerX ]
+                        [ clickableIcon 80
+                        , clickableIcon 60
+                        , clickableIcon 50
                         ]
+                    , case model.selectedHex of
+                        Just viewingAddress ->
+                            column [ centerY, Element.paddingXY 0 10 ]
+                                [ case model.solarSystems |> Dict.get (HexAddress.toKey viewingAddress) of
+                                    Just (LoadedSolarSystem s) ->
+                                        Element.none
+
+                                    Just LoadingSolarSystem ->
+                                        text "loading..."
+
+                                    Just LoadedEmptyHex ->
+                                        Element.none
+
+                                    Just (FailedSolarSystem httpError) ->
+                                        text "failed."
+
+                                    Just (FailedStarsSolarSystem _) ->
+                                        text "decoding a star failed"
+
+                                    Nothing ->
+                                        text "No solar system data found for system."
+                                , text <| universalHexLabel model.sectors viewingAddress
+                                ]
+
+                        Nothing ->
+                            column [ centerX, centerY, Font.size 10 ]
+                                [ text "Select hex in console to view parsec details."
+                                ]
+                    , case model.selectedSystem of
+                        Just solarSystem ->
+                            viewSystemDetailsSidebar
+                                solarSystem
+                                model.selectedStellarObject
+
+                        Nothing ->
+                            column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                                [ text "Click a hex to view system details."
+                                ]
                     ]
-                , case model.selectedHex of
-                    Just viewingAddress ->
-                        column [ centerY, Element.paddingXY 0 10 ]
-                            [ case model.solarSystems |> Dict.get (HexAddress.toKey viewingAddress) of
-                                Just (LoadedSolarSystem s) ->
-                                    Element.none
 
-                                Just LoadingSolarSystem ->
-                                    text "loading..."
+                -- Push the bottom content down
+                , Element.el [ Element.width Element.fill, Element.height Element.fill ] Element.none
 
-                                Just LoadedEmptyHex ->
-                                    Element.none
+                -- Bottom Content (Pinned)
+                , column [ Element.alignBottom, Element.paddingXY 0 10 ]
+                    [ case model.selectedHex of
+                        Just viewingAddress ->
+                            column [ centerX, centerY, Font.size 10 ]
+                                [ text <| Debug.toString viewingAddress
+                                ]
 
-                                Just (FailedSolarSystem httpError) ->
-                                    text "failed."
-
-                                Just (FailedStarsSolarSystem _) ->
-                                    text "decoding a star failed"
-
-                                Nothing ->
-                                    text "No solar system data found for system."
-                            , text <| Debug.toString viewingAddress
-                            , text <| universalHexLabel model.sectors viewingAddress
-                            ]
-
-                    Nothing ->
-                        column [ centerX, centerY, Font.size 10 ]
-                            [ text "Click a hex to view system details."
-                            ]
-                , case model.selectedSystem of
-                    Just solarSystem ->
-                        viewSystemDetailsSidebar
-                            solarSystem
-                            model.selectedStellarObject
-
-                    Nothing ->
-                        column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
-                            [ text "Click a hex to view system details."
-                            ]
+                        Nothing ->
+                            column [ centerX, centerY, Font.size 10 ]
+                                [ text "Deepnight Corporation LLC"
+                                ]
+                    ]
                 ]
 
         renderError : String -> UnstyledHtml.Html msg
@@ -2083,9 +2080,15 @@ view model =
 
         hexesColumn =
             column []
-                [ el [ Font.size 20, Font.color <| colorToElementColor <| deepnightColor, Element.paddingEach { zeroEach | bottom = 4 } ] <|
-                    text <|
-                        "Deepnight Revelation Navigation Console"
+                [ row [ Element.spacing 8, Element.width Element.fill ]
+                    [ el [ Font.size 20, Font.color <| colorToElementColor <| deepnightColor, Element.paddingEach { zeroEach | bottom = 4 } ] <|
+                        text <|
+                            "Deepnight Revelation Navigation Console"
+                    , el [ Font.size 16, Font.color <| colorToElementColor <| deepnightColor, Element.paddingEach { zeroEach | bottom = 4 }, Element.alignRight ] <|
+                        text <|
+                            "Revelation:"
+                                ++ universalHexLabel model.sectors model.playerHex
+                    ]
                 , Element.html <|
                     -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
                     case model.viewport of
