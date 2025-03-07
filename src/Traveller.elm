@@ -65,6 +65,10 @@ import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidB
 import Url.Builder
 
 
+refereeSI =
+    99
+
+
 gasGiantSI =
     5
 
@@ -214,6 +218,7 @@ type alias Model =
     , regions : RegionDict
     , regionLabels : Dict.Dict String String
     , hexColours : Dict.Dict String Color
+    , referee : Maybe String
     }
 
 
@@ -256,8 +261,8 @@ type alias Flags =
     }
 
 
-init : Flags -> Browser.Navigation.Key -> HostConfig.HostConfig -> ( Model, Cmd Msg )
-init settings key hostConfig =
+init : Flags -> Browser.Navigation.Key -> HostConfig.HostConfig -> Maybe String -> ( Model, Cmd Msg )
+init settings key hostConfig referee =
     let
         -- requestHistory : RequestHistory
         ( initSystemDict, initRequestHistory ) =
@@ -333,6 +338,7 @@ init settings key hostConfig =
             , regions = Dict.empty
             , regionLabels = Dict.empty
             , hexColours = Dict.empty
+            , referee = referee
             }
     in
     ( model
@@ -2331,13 +2337,21 @@ update msg model =
                                 in
                                 if not hasFailed then
                                     let
+                                        si =
+                                            case model.referee of
+                                                Just r ->
+                                                    refereeSI
+
+                                                Nothing ->
+                                                    fallibleSystem.surveyIndex
+
                                         starSystem : StarSystem
                                         starSystem =
                                             { address = fallibleSystem.address
                                             , sectorName = fallibleSystem.sectorName
                                             , name = fallibleSystem.name
                                             , scanPoints = fallibleSystem.scanPoints
-                                            , surveyIndex = fallibleSystem.surveyIndex
+                                            , surveyIndex = si
                                             , gasGiantCount = fallibleSystem.gasGiantCount
                                             , terrestrialPlanetCount = fallibleSystem.terrestrialPlanetCount
                                             , planetoidBeltCount = fallibleSystem.planetoidBeltCount
@@ -2539,8 +2553,22 @@ update msg model =
             ( { model | newSolarSystemErrors = ( err, url ) :: model.newSolarSystemErrors }, Cmd.none )
 
         FetchedSolarSystem (Ok solarSystem) ->
+            let
+                si =
+                    case model.referee of
+                        Just r ->
+                            refereeSI
+
+                        Nothing ->
+                            solarSystem.surveyIndex
+
+                updatedSS =
+                    { solarSystem
+                        | surveyIndex = si
+                    }
+            in
             ( { model
-                | selectedSystem = Just solarSystem
+                | selectedSystem = Just updatedSS
               }
             , Cmd.none
             )

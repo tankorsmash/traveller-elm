@@ -68,6 +68,10 @@ type alias Flags =
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
+        referee : Maybe String
+        referee =
+            Url.Parser.parse (Url.Parser.query (Url.Parser.Query.string "referee")) url |> Maybe.join
+
         hostConfig : HostConfig.HostConfig
         hostConfig =
             Url.Parser.parse HostConfig.urlParser url
@@ -84,7 +88,7 @@ init flags url key =
                    )
 
         ( travellerModel, travellerCmds ) =
-            Traveller.init flags key hostConfig
+            Traveller.init flags key hostConfig referee
 
         model : Model
         model =

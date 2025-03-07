@@ -31,13 +31,13 @@
 * [ ] modify UWP display based on survey index
 * [ ] uncharted space link displays the full map of uncharted space
 * [X] Render regions
-* [ ] Referee view
+* [X] Referee view
 ** [ ] Link to map url, player friendly 
-** [ ] API endpoint for regions
-* [ ] sector selecter - centre map on the sector selected
+** [X] API endpoint for regions
+* [ ] sector selector - centre map on the sector selected
 * [ ] display name if known
-* [ ] 3 Hex sizes
-* [ ] scroll performance
+* [X] 3 Hex sizes
+* [X] scroll performance
 * [ ] making HexAddress fail on invalid addresses
 * [ ] render neutron star
 * [ ] prettier ui somehow
