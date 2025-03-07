@@ -65,6 +65,10 @@ import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidB
 import Url.Builder
 
 
+uiDeepnightColorFontColour =
+    Font.color <| colorToElementColor <| deepnightColor
+
+
 refereeSI =
     99
 
@@ -2036,18 +2040,18 @@ view model =
                                 ]
                     ]
                 , Element.el [ Element.width Element.fill, Element.height Element.fill ] Element.none
-                , column [ Element.alignBottom, Element.paddingXY 0 10 ]
-                    [ case model.selectedHex of
-                        Just viewingAddress ->
-                            column [ centerX, Font.size 10, Font.color <| colorToElementColor <| deepnightColor ]
-                                [ text <| Debug.toString viewingAddress
-                                ]
 
-                        Nothing ->
-                            column [ centerX, centerY, Font.size 10, Font.color <| colorToElementColor <| deepnightColor ]
-                                [ text "Deepnight Corporation LLC"
-                                ]
-                    ]
+                --, column [ Element.height Element.fill, Element.alignBottom, Element.paddingXY 0 10 ]
+                , case model.selectedHex of
+                    Just viewingAddress ->
+                        column [ Element.height Element.fill, Element.alignBottom, centerX, Font.size 10, uiDeepnightColorFontColour ]
+                            [ text <| Debug.toString viewingAddress
+                            ]
+
+                    Nothing ->
+                        column [ centerX, centerY, Font.size 10, uiDeepnightColorFontColour ]
+                            [ text "Deepnight Corporation LLC"
+                            ]
                 ]
 
         renderError : String -> UnstyledHtml.Html msg
@@ -2076,15 +2080,15 @@ view model =
         hexesColumn =
             column []
                 [ row [ Element.spacing 8, Element.width Element.fill ]
-                    [ el [ Font.size 20, Font.color <| colorToElementColor <| deepnightColor, Element.paddingEach { zeroEach | bottom = 4 } ] <|
+                    [ el [ Font.size 20, uiDeepnightColorFontColour, Element.paddingEach { zeroEach | bottom = 4 } ] <|
                         text <|
                             "Deepnight Navigation Console"
-                    , el [ Font.size 16, Font.color <| colorToElementColor <| deepnightColor, Element.paddingEach { zeroEach | bottom = 4, left = 12 }, Element.centerX ] <|
+                    , el [ Font.size 16, uiDeepnightColorFontColour, Element.paddingEach { zeroEach | bottom = 4, left = 12 }, Element.centerX ] <|
                         text <|
                             universalHexLabel model.sectors model.upperLeftHex
                                 ++ " – "
                                 ++ universalHexLabel model.sectors model.lowerRightHex
-                    , el [ Font.size 16, Font.color <| colorToElementColor <| deepnightColor, Element.paddingEach { zeroEach | bottom = 4 }, Element.alignRight ] <|
+                    , el [ Font.size 16, uiDeepnightColorFontColour, Element.paddingEach { zeroEach | bottom = 4 }, Element.alignRight ] <|
                         text <|
                             "Revelation:"
                                 ++ universalHexLabel model.sectors model.playerHex
