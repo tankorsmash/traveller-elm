@@ -828,16 +828,13 @@ calcVisualOrigin iHexSize { row, col } =
 
 
 viewHex :
-    Browser.Dom.Viewport
-    -> ( HexAddress, HexAddress )
-    -> Int
+    Int
     -> SolarSystemDict
-    -> ( Float, Float )
     -> HexAddress
     -> VisualHexOrigin
     -> String
     -> ( Svg Msg, Int )
-viewHex widestViewport ( upperLeftHex, lowerRightHex ) hexSize solarSystemDict ( viewportWidth, viewportHeight ) hexAddress visualHexOrigin hexColour =
+viewHex hexSize solarSystemDict hexAddress visualHexOrigin hexColour =
     let
         solarSystem =
             Dict.get (HexAddress.toKey hexAddress) solarSystemDict
@@ -1001,9 +998,6 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } { solarSystemDict, h
                 Just hexmapViewport ->
                     hexmapViewport
 
-        sectorUpperLeft =
-            upperLeftHex |> HexAddress.toSectorAddress
-
         ( zero_x, zero_y ) =
             ( 0, 0 )
 
@@ -1069,11 +1063,8 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } { solarSystemDict, h
 
                     ( hexSVG, isEmpty ) =
                         viewHex
-                            widestViewport
-                            ( upperLeftHex, lowerRightHex )
                             iHexSize
                             solarSystemDict
-                            ( svgWidth, svgHeight )
                             hexAddr
                             hexSVGOrigin
                             hexColour
@@ -2168,8 +2159,6 @@ sendSolarSystemRequest requestEntry hostConfig upperLeft lowerRight =
     let
         solarSystemsDecoder : JsDecode.Decoder (List FallibleStarSystem)
         solarSystemsDecoder =
-            -- Codec.list starSystemCodec
-            --     |> Codec.decoder
             JsDecode.list fallibleStarSystemDecoder
 
         ( urlHostRoot, urlHostPath ) =
@@ -2805,39 +2794,6 @@ auToKMs au =
 kmsToAU : Float -> Float
 kmsToAU kms =
     kms / 149597871.0
-
-
-
---sendRouteRequest : RequestEntry -> HostConfig -> Cmd Msg
---sendRouteRequest requestEntry hostConfig =
---    let
---        routeDecoder : JsDecode.Decoder (List Route)
---        routeDecoder =
---            Codec.list codecRoute
---                |> Codec.decoder
---
---        ( urlHostRoot, urlHostPath ) =
---            hostConfig
---
---        url =
---            Url.Builder.crossOrigin
---                urlHostRoot
---                (urlHostPath ++ [ "route" ])
---                []
---
---        requestCmd =
---            -- using Http.request instead of Http.get, to allow setting a timeout
---            Http.request
---                { method = "GET"
---                , headers = []
---                , url = url
---                , body = Http.emptyBody
---                , expect = Http.expectJson (DownloadedRoute requestEntry) routeDecoder
---                , timeout = Just 5000
---                , tracker = Nothing
---                }
---    in
---    requestCmd
 
 
 sendRegionRequest : RequestEntry -> HostConfig -> Cmd Msg
