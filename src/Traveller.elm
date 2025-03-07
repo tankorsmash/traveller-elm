@@ -1,6 +1,8 @@
 port module Traveller exposing (Model, Msg(..), auToKMs, init, kmsToAU, numHexCols, numHexRows, subscriptions, update, view)
 
 --import Traveller.HexId as HexId exposing (HexId, RawHexId)
+--import FontAwesome.Attributes as Icon
+--import FontAwesome.Styles as Icon
 
 import Browser.Dom
 import Browser.Events
@@ -30,9 +32,7 @@ import Element.Events
 import Element.Font as Font
 import Element.Input as Input
 import FontAwesome as Icon exposing (Icon)
-import FontAwesome.Attributes as Icon
 import FontAwesome.Solid as Icon
-import FontAwesome.Styles as Icon
 import HostConfig exposing (HostConfig)
 import Html as UnstyledHtml
 import Html.Attributes as UnstyledHtmlAttrs
@@ -2085,14 +2085,14 @@ view model =
                     [ el [ Font.size 20, uiDeepnightColorFontColour, Element.paddingEach { zeroEach | bottom = 4 } ] <|
                         text <|
                             "Deepnight Navigation Console"
-                    , el [ Font.size 16, uiDeepnightColorFontColour, Element.paddingEach { zeroEach | bottom = 4, left = 12 }, Element.centerX ] <|
+                    , el [ Font.size 14, uiDeepnightColorFontColour, Element.paddingEach { zeroEach | bottom = 4, left = 12 }, Element.centerX ] <|
                         text <|
                             universalHexLabel model.sectors model.upperLeftHex
                                 ++ " – "
                                 ++ universalHexLabel model.sectors model.lowerRightHex
-                    , el [ Font.size 16, uiDeepnightColorFontColour, Element.paddingEach { zeroEach | bottom = 4 }, Element.alignRight ] <|
+                    , el [ Font.size 14, uiDeepnightColorFontColour, Element.paddingEach { zeroEach | bottom = 4 }, Element.alignRight ] <|
                         text <|
-                            "Revelation:"
+                            "Revelation @ "
                                 ++ universalHexLabel model.sectors model.playerHex
                     ]
                 , Element.html <|
