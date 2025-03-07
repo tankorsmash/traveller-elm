@@ -85,6 +85,10 @@ planetoidSI =
     6
 
 
+sidebarWidth =
+    400
+
+
 type DragMode
     = IsDragging ( Float, Float )
     | NoDragging
@@ -2039,12 +2043,10 @@ view model =
                                 [ text "Click a hex to view system details."
                                 ]
                     ]
-                , Element.el [ Element.width Element.fill, Element.height Element.fill ] Element.none
-
-                --, column [ Element.height Element.fill, Element.alignBottom, Element.paddingXY 0 10 ]
+                , Element.el [ Element.height Element.fill ] Element.none
                 , case model.selectedHex of
                     Just viewingAddress ->
-                        column [ Element.height Element.fill, Element.alignBottom, centerX, Font.size 10, uiDeepnightColorFontColour ]
+                        column [ Element.alignBottom, centerX, Font.size 10, uiDeepnightColorFontColour ]
                             [ text <| Debug.toString viewingAddress
                             ]
 
@@ -2148,7 +2150,7 @@ view model =
             , Font.color <| fontTextColor
             , Element.paddingXY 15 0
             ]
-            [ el [ Element.width <| Element.px 400, Element.alignTop, Element.alignLeft ] <|
+            [ el [ Element.width <| Element.px sidebarWidth, Element.alignTop, Element.alignLeft ] <|
                 sidebarColumn
             , el [ Element.alignTop ] <|
                 hexesColumn
