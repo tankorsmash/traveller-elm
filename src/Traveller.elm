@@ -512,12 +512,14 @@ viewHexEmpty hx hy x y size childSvgTxt hexColour =
             , SvgAttrs.y <| String.fromInt <| y - (floor <| toFloat size * 0.65)
             , SvgAttrs.fontSize
                 (if size > 15 then
-                    "10"
+                    "9"
 
                  else
                     "5"
                 )
             , SvgAttrs.textAnchor "middle"
+            , SvgAttrs.fontFamily "Tomorrow"
+            , SvgAttrs.fontWeight "400"
             ]
             [ HexAddress.hexLabel hexAddress |> Svg.text
             ]
@@ -701,12 +703,14 @@ renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin)
                 , SvgAttrs.y <| String.fromInt <| voy - (floor <| size * 0.65)
                 , SvgAttrs.fontSize
                     (if size > 15 then
-                        "10"
+                        "9"
 
                      else
                         "5"
                     )
                 , SvgAttrs.textAnchor "middle"
+                , SvgAttrs.fontFamily "Tomorrow"
+                , SvgAttrs.fontWeight "400"
                 ]
                 [ HexAddress.hexLabel hexAddress |> Svg.text
                 ]
@@ -718,12 +722,14 @@ renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin)
                     , SvgAttrs.y <| String.fromInt <| voy - (floor <| size * 0.65)
                     , SvgAttrs.fontSize
                         (if size > 15 then
-                            "10"
+                            "9"
 
                          else
                             "5"
                         )
                     , SvgAttrs.textAnchor "middle"
+                    , SvgAttrs.fontFamily "Tomorrow"
+                    , SvgAttrs.fontWeight "400"
                     ]
                     [ HexAddress.hexLabel hexAddress |> Svg.text
                     ]
@@ -1087,8 +1093,8 @@ viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } { solarSystemDict, h
                                         , SvgAttrs.y <| String.fromInt <| Tuple.second (labelPos hexAddress)
                                         , SvgAttrs.textAnchor "middle"
                                         , SvgAttrs.dominantBaseline "middle"
-                                        , SvgAttrs.fontFamily "Quantico"
-                                        , SvgAttrs.fontWeight "700"
+                                        , SvgAttrs.fontFamily "Tomorrow"
+                                        , SvgAttrs.fontWeight "500"
                                         , SvgAttrs.fill "#0A0A0A"
                                         ]
                                         [ Svg.text name ]
