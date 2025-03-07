@@ -1,8 +1,4 @@
-port module Traveller exposing (Model, Msg(..), auToKMs, init, kmsToAU, numHexCols, numHexRows, subscriptions, update, view)
-
---import Traveller.HexId as HexId exposing (HexId, RawHexId)
---import FontAwesome.Attributes as Icon
---import FontAwesome.Styles as Icon
+port module Traveller exposing (Model, Msg(..), auToKMs, init, subscriptions, update, view)
 
 import Browser.Dom
 import Browser.Events
@@ -41,19 +37,15 @@ import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as HtmlStyledAttrs
 import Http
 import Json.Decode as JsDecode
-import Parser
 import RemoteData exposing (RemoteData(..))
 import Result.Extra as Result
 import Round
-import Svg.Attributes exposing (transform)
 import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
-import Svg.Styled.Keyed
 import Svg.Styled.Lazy
 import Task
-import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, hexLabel, sectorColumns, sectorRows, toSectorAddress, toSectorKey, toUniversalAddress, universalHexX, universalHexY)
-import Traveller.Parser as TravellerParser
+import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, sectorColumns, sectorRows, toSectorAddress, toUniversalAddress)
 import Traveller.Point exposing (StellarPoint)
 import Traveller.Region as Region exposing (Region, RegionDict)
 import Traveller.Route as Route exposing (Route, RouteList)
@@ -492,9 +484,6 @@ viewHexEmpty hx hy x y size childSvgTxt hexColour =
         origin =
             ( x, y )
 
-        si =
-            0
-
         hexAddress =
             HexAddress hx hy
 
@@ -814,7 +803,7 @@ defaultHexSize =
 isEmptyHex : Maybe a -> Int
 isEmptyHex maybeSolarSystem =
     case maybeSolarSystem of
-        Just solarSystem ->
+        Just _ ->
             1
 
         Nothing ->
@@ -1835,16 +1824,6 @@ travellerRed =
     Element.rgb 0.882 0.024 0
 
 
-numHexCols : number
-numHexCols =
-    sectorColumns
-
-
-numHexRows : number
-numHexRows =
-    sectorRows
-
-
 universalHexLabel : SectorDict -> HexAddress -> String
 universalHexLabel sectors hexAddress =
     case Dict.get (HexAddress.toSectorKey <| HexAddress.toSectorAddress hexAddress) sectors of
@@ -2008,7 +1987,7 @@ view model =
                         Just viewingAddress ->
                             column [ centerY, Element.paddingXY 0 10 ]
                                 [ case model.solarSystems |> Dict.get (HexAddress.toKey viewingAddress) of
-                                    Just (LoadedSolarSystem s) ->
+                                    Just (LoadedSolarSystem _) ->
                                         Element.none
 
                                     Just LoadingSolarSystem ->
@@ -2017,7 +1996,7 @@ view model =
                                     Just LoadedEmptyHex ->
                                         Element.none
 
-                                    Just (FailedSolarSystem httpError) ->
+                                    Just (FailedSolarSystem _) ->
                                         text "failed."
 
                                     Just (FailedStarsSolarSystem _) ->
@@ -2348,7 +2327,7 @@ update msg model =
                                     let
                                         si =
                                             case model.referee of
-                                                Just r ->
+                                                Just _ ->
                                                     refereeSI
 
                                                 Nothing ->
@@ -2832,11 +2811,6 @@ sendSectorRequest requestEntry hostConfig =
 auToKMs : Float -> Float
 auToKMs au =
     au * 149597871.0
-
-
-kmsToAU : Float -> Float
-kmsToAU kms =
-    kms / 149597871.0
 
 
 sendRegionRequest : RequestEntry -> HostConfig -> Cmd Msg
