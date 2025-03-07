@@ -1965,8 +1965,7 @@ view model =
     let
         sidebarColumn =
             column [ Element.spacing 10, Element.height Element.fill ]
-                [ -- Main Content (Flexible Space)
-                  column [ Element.width Element.fill ]
+                [ column [ Element.width Element.fill ]
                     [ let
                         clickableIcon size =
                             let
@@ -2036,20 +2035,16 @@ view model =
                                 [ text "Click a hex to view system details."
                                 ]
                     ]
-
-                -- Push the bottom content down
                 , Element.el [ Element.width Element.fill, Element.height Element.fill ] Element.none
-
-                -- Bottom Content (Pinned)
                 , column [ Element.alignBottom, Element.paddingXY 0 10 ]
                     [ case model.selectedHex of
                         Just viewingAddress ->
-                            column [ centerX, centerY, Font.size 10 ]
+                            column [ centerX, Font.size 10, Font.color <| colorToElementColor <| deepnightColor ]
                                 [ text <| Debug.toString viewingAddress
                                 ]
 
                         Nothing ->
-                            column [ centerX, centerY, Font.size 10 ]
+                            column [ centerX, centerY, Font.size 10, Font.color <| colorToElementColor <| deepnightColor ]
                                 [ text "Deepnight Corporation LLC"
                                 ]
                     ]
@@ -2083,7 +2078,12 @@ view model =
                 [ row [ Element.spacing 8, Element.width Element.fill ]
                     [ el [ Font.size 20, Font.color <| colorToElementColor <| deepnightColor, Element.paddingEach { zeroEach | bottom = 4 } ] <|
                         text <|
-                            "Deepnight Revelation Navigation Console"
+                            "Deepnight Navigation Console"
+                    , el [ Font.size 16, Font.color <| colorToElementColor <| deepnightColor, Element.paddingEach { zeroEach | bottom = 4, left = 12 }, Element.centerX ] <|
+                        text <|
+                            universalHexLabel model.sectors model.upperLeftHex
+                                ++ " – "
+                                ++ universalHexLabel model.sectors model.lowerRightHex
                     , el [ Font.size 16, Font.color <| colorToElementColor <| deepnightColor, Element.paddingEach { zeroEach | bottom = 4 }, Element.alignRight ] <|
                         text <|
                             "Revelation:"
