@@ -391,6 +391,26 @@ hexagonPointZero iSize n =
     buildPoint
 
 
+rawHexagonPoint : Int -> Float -> ( Float, Float )
+rawHexagonPoint iSize n =
+    let
+        size =
+            toFloat iSize
+
+        a =
+            2 * pi / 6
+
+        -- angle deg =
+        --     (deg + 90) * pi / 180
+        x =
+            size * cos (a * n)
+
+        y =
+            size * sin (a * n)
+    in
+    ( x, y )
+
+
 hexagonPoint : ( Int, Int ) -> Int -> Float -> ( Float, Float )
 hexagonPoint ( xOrigin, yOrigin ) iSize n =
     let
@@ -416,14 +436,32 @@ hexagonPoint ( xOrigin, yOrigin ) iSize n =
     buildPoint
 
 
-hexagonPoints : ( Int, Int ) -> Int -> String
+hexagonPoints : ( Float, Float ) -> Int -> String
 hexagonPoints ( xOrigin, yOrigin ) size =
     List.range 0 5
         |> List.map
             (toFloat
-                >> hexagonPoint ( xOrigin, yOrigin ) size
-                >> (\( x, y ) -> String.fromFloat x ++ "," ++ String.fromFloat y)
+                >> rawHexagonPoint size
+                >> (\( x, y ) -> String.fromFloat (xOrigin + x) ++ "," ++ String.fromFloat (yOrigin + y))
             )
+        |> String.join " "
+
+
+{-| hexagon points indepedent of origin
+-}
+rawHexagonPoints : Int -> List ( Float, Float )
+rawHexagonPoints size =
+    List.range 0 5
+        |> List.map (toFloat >> rawHexagonPoint size)
+
+
+{-| localize the hexagon points to the visualOrigin
+-}
+convertRawHexagonPoints : ( Float, Float ) -> List ( Float, Float ) -> String
+convertRawHexagonPoints ( xOrigin, yOrigin ) points =
+    points
+        |> List.map
+            (\( x, y ) -> String.fromFloat (xOrigin + x) ++ "," ++ String.fromFloat (yOrigin + y))
         |> String.join " "
 
 
@@ -481,7 +519,7 @@ viewHexEmpty : Int -> Int -> Int -> Int -> Int -> String -> String -> Svg Msg
 viewHexEmpty hx hy x y size childSvgTxt hexColour =
     let
         origin =
-            ( x, y )
+            ( toFloat x, toFloat y )
 
         hexAddress =
             HexAddress hx hy
@@ -576,10 +614,8 @@ renderPolygon points_ fill =
         []
 
 
-
--- a decoder that takes JSON and emits either a decode failure or a Msg
-
-
+{-| a decoder that takes JSON and emits either a decode failure or a Msg
+-}
 downDecoder : JsDecode.Decoder Msg
 downDecoder =
     let
@@ -630,8 +666,8 @@ drawStar ( starX, starY ) radius iSize starColor =
         []
 
 
-renderHexWithStar : StarSystem -> String -> HexAddress -> VisualHexOrigin -> Int -> Svg Msg
-renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin) iSize =
+renderHexWithStar : StarSystem -> String -> HexAddress -> VisualHexOrigin -> Int -> List ( Float, Float ) -> Svg Msg
+renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin) iSize rawHexaPoints =
     let
         size =
             toFloat iSize
@@ -653,7 +689,7 @@ renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin)
         ]
         [ -- background hex
           Svg.Styled.Lazy.lazy2 renderPolygon
-            (hexagonPoints visualOrigin iSize)
+            (convertRawHexagonPoints ( toFloat vox, toFloat voy ) rawHexaPoints)
             hexColour
         , -- center star
           if showStar then
@@ -852,8 +888,9 @@ viewHex :
     -> HexAddress
     -> VisualHexOrigin
     -> String
+    -> List ( Float, Float )
     -> ( Svg Msg, Int )
-viewHex hexSize solarSystemDict hexAddress visualHexOrigin hexColour =
+viewHex hexSize solarSystemDict hexAddress visualHexOrigin hexColour rawHexaPoints =
     let
         solarSystem =
             Dict.get (HexAddress.toKey hexAddress) solarSystemDict
@@ -867,12 +904,15 @@ viewHex hexSize solarSystemDict hexAddress visualHexOrigin hexColour =
         hexSVG =
             case solarSystem of
                 Just (LoadedSolarSystem ss) ->
-                    Svg.Styled.Lazy.lazy5 renderHexWithStar
+                    -- TODO: make this lazy again, since rawHexaPoints isnt cached per iteration
+                    -- Svg.Styled.Lazy.lazy6 renderHexWithStar
+                    renderHexWithStar
                         ss
                         hexColour
                         hexAddress
                         visualHexOrigin
                         hexSize
+                        rawHexaPoints
 
                 Just LoadingSolarSystem ->
                     viewEmptyHelper "Loading..."
@@ -984,6 +1024,10 @@ viewHexes { upperLeftHex, lowerRightHex } { screenVp, hexmapVp } { solarSystemDi
         svgWidth =
             screenVp.viewport.width - 420
 
+        rawHexaPoints =
+            -- hexagon points not yet localized to the visualOrigin
+            rawHexagonPoints iHexSize
+
         renderCurrentAddressOutline : HexAddress -> Svg Msg
         renderCurrentAddressOutline ca =
             let
@@ -991,8 +1035,8 @@ viewHexes { upperLeftHex, lowerRightHex } { screenVp, hexmapVp } { solarSystemDi
                     calcVisualOrigin iHexSize
                         { row = upperLeftHex.y - ca.y, col = ca.x - upperLeftHex.x }
                         |> (\( x, y ) ->
-                                ( x - zero_x
-                                , y - zero_y
+                                ( toFloat <| x - zero_x
+                                , toFloat <| y - zero_y
                                 )
                            )
 
@@ -1086,6 +1130,7 @@ viewHexes { upperLeftHex, lowerRightHex } { screenVp, hexmapVp } { solarSystemDi
                             hexAddr
                             hexSVGOrigin
                             hexColour
+                            rawHexaPoints
                 in
                 hexSVG
             )
