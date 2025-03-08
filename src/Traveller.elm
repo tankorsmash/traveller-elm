@@ -157,8 +157,8 @@ This is so we have less chance of getting the history out of sync with the
 entries, because this is the only way to construct a RequestEntry.
 
 -}
-prepNextRequest : ( SolarSystemDict, RequestHistory ) -> HexAddress -> HexAddress -> ( RequestEntry, ( SolarSystemDict, RequestHistory ) )
-prepNextRequest ( oldSolarSystemDict, requestHistory ) upperLeftHex lowerRightHex =
+prepNextRequest : ( SolarSystemDict, RequestHistory ) -> HexRect -> ( RequestEntry, ( SolarSystemDict, RequestHistory ) )
+prepNextRequest ( oldSolarSystemDict, requestHistory ) { upperLeftHex, lowerRightHex } =
     let
         requestNum =
             nextRequestNum requestHistory
@@ -210,8 +210,7 @@ type alias Model =
     , viewport : Maybe Browser.Dom.Viewport
     , hexmapViewport : Maybe (Result Browser.Dom.Error Browser.Dom.Viewport)
     , selectedStellarObject : Maybe StellarObject
-    , upperLeftHex : HexAddress
-    , lowerRightHex : HexAddress
+    , hexRect : HexRect
     , currentAddress : Maybe HexAddress
     , hostConfig : HostConfig.HostConfig
     , route : RouteList
@@ -269,12 +268,12 @@ init settings key hostConfig referee =
             ( Dict.empty, [] )
 
         ( ( ssReqEntry, secReqEntry, routeReqEntry ), ( solarSystemDict, requestHistory ) ) =
-            prepNextRequest ( initSystemDict, initRequestHistory ) upperLeftHex lowerRightHex
+            prepNextRequest ( initSystemDict, initRequestHistory ) hexRect
                 |> -- build a new request entry for sector request
                    (\( ssReqEntry_, oldSsDictAndReqHistory ) ->
                         let
                             ( newReqEntry, ssDictAndReqHistory ) =
-                                prepNextRequest oldSsDictAndReqHistory upperLeftHex lowerRightHex
+                                prepNextRequest oldSsDictAndReqHistory hexRect
                         in
                         ( ( ssReqEntry_, newReqEntry ), ssDictAndReqHistory )
                    )
@@ -282,34 +281,38 @@ init settings key hostConfig referee =
                    (\( ( ssReqEntry_, secReqEntry_ ), oldSsDictAndReqHistory ) ->
                         let
                             ( routeReqEntry_, ssDictAndReqHistory ) =
-                                prepNextRequest oldSsDictAndReqHistory upperLeftHex lowerRightHex
+                                prepNextRequest oldSsDictAndReqHistory hexRect
                         in
                         ( ( ssReqEntry_, secReqEntry_, routeReqEntry_ ), ssDictAndReqHistory )
                    )
 
-        upperLeftHex =
-            case settings.upperLeft of
-                Just ( x, y ) ->
-                    HexAddress x y
-
-                Nothing ->
-                    toUniversalAddress
-                        { sectorX = -10
-                        , sectorY = -2
-                        , x = 21
-                        , y = 12
-                        }
-
-        lowerRightHex =
+        hexRect =
             let
-                squareSize =
-                    30
+                upperLeftHex =
+                    case settings.upperLeft of
+                        Just ( x, y ) ->
+                            HexAddress x y
+
+                        Nothing ->
+                            toUniversalAddress
+                                { sectorX = -10
+                                , sectorY = -2
+                                , x = 21
+                                , y = 12
+                                }
+
+                lowerRightHex =
+                    let
+                        squareSize =
+                            30
+                    in
+                    upperLeftHex
+                        |> HexAddress.shiftAddressBy
+                            { deltaX = squareSize
+                            , deltaY = squareSize
+                            }
             in
-            upperLeftHex
-                |> HexAddress.shiftAddressBy
-                    { deltaX = squareSize
-                    , deltaY = squareSize
-                    }
+            { upperLeftHex = upperLeftHex, lowerRightHex = lowerRightHex }
 
         model : Model
         model =
@@ -329,8 +332,7 @@ init settings key hostConfig referee =
             , hexmapViewport = Nothing
             , key = key
             , selectedStellarObject = Nothing
-            , upperLeftHex = upperLeftHex
-            , lowerRightHex = lowerRightHex
+            , hexRect = hexRect
             , hostConfig = hostConfig
             , sectors = Dict.empty
             , route = []
@@ -343,7 +345,7 @@ init settings key hostConfig referee =
     in
     ( model
     , Cmd.batch
-        [ sendSolarSystemRequest ssReqEntry model.hostConfig model.upperLeftHex model.lowerRightHex
+        [ sendSolarSystemRequest ssReqEntry model.hostConfig model.hexRect
         , sendSectorRequest secReqEntry model.hostConfig
         , sendRegionRequest secReqEntry model.hostConfig -- Josh to fix later
         , sendRouteRequest routeReqEntry model.hostConfig
@@ -957,14 +959,13 @@ renderSectorOutline ( upperLeftHex, zero_x, zero_y ) hexSize hex =
 
 
 viewHexes :
-    HexAddress
-    -> HexAddress
+    HexRect
     -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport }
     -> { solarSystemDict : SolarSystemDict, hexColours : HexColorDict, regionLabels : RegionLabelDict }
     -> ( RouteList, Maybe HexAddress )
     -> Int
     -> Html Msg
-viewHexes upperLeftHex lowerRightHex { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) iHexSize =
+viewHexes { upperLeftHex, lowerRightHex } { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) iHexSize =
     let
         hexSize =
             toFloat iHexSize
@@ -1953,6 +1954,10 @@ renderFAIcon icon size =
                 []
 
 
+type alias HexRect =
+    { upperLeftHex : HexAddress, lowerRightHex : HexAddress }
+
+
 view : Model -> Element.Element Msg
 view model =
     let
@@ -2053,11 +2058,11 @@ view model =
                             "Deepnight Navigation Console"
                     , el [ Element.alignBottom, Font.size 14, uiDeepnightColorFontColour, Element.centerX ] <|
                         text <|
-                            (universalHexLabelMaybe model.sectors model.upperLeftHex
+                            (universalHexLabelMaybe model.sectors model.hexRect.upperLeftHex
                                 |> Maybe.withDefault "???"
                             )
                                 ++ " – "
-                                ++ (universalHexLabelMaybe model.sectors model.lowerRightHex
+                                ++ (universalHexLabelMaybe model.sectors model.hexRect.lowerRightHex
                                         |> Maybe.withDefault "???"
                                    )
                     , el [ Element.alignBottom, Font.size 14, uiDeepnightColorFontColour, Element.alignRight ] <|
@@ -2092,8 +2097,7 @@ view model =
                                             defaultViewport
                             in
                             viewHexes
-                                model.upperLeftHex
-                                model.lowerRightHex
+                                model.hexRect
                                 viewPortConfig
                                 { solarSystemDict = model.solarSystems, hexColours = model.hexColours, regionLabels = model.regionLabels }
                                 ( model.route, model.currentAddress )
@@ -2117,8 +2121,8 @@ view model =
         ]
 
 
-sendSolarSystemRequest : RequestEntry -> HostConfig -> HexAddress -> HexAddress -> Cmd Msg
-sendSolarSystemRequest requestEntry hostConfig upperLeft lowerRight =
+sendSolarSystemRequest : RequestEntry -> HostConfig -> HexRect -> Cmd Msg
+sendSolarSystemRequest requestEntry hostConfig { upperLeftHex, lowerRightHex } =
     let
         solarSystemsDecoder : JsDecode.Decoder (List FallibleStarSystem)
         solarSystemsDecoder =
@@ -2131,10 +2135,10 @@ sendSolarSystemRequest requestEntry hostConfig upperLeft lowerRight =
             Url.Builder.crossOrigin
                 urlHostRoot
                 (urlHostPath ++ [ "stars" ])
-                [ Url.Builder.int "ulx" upperLeft.x
-                , Url.Builder.int "uly" upperLeft.y
-                , Url.Builder.int "lrx" lowerRight.x
-                , Url.Builder.int "lry" lowerRight.y
+                [ Url.Builder.int "ulx" upperLeftHex.x
+                , Url.Builder.int "uly" upperLeftHex.y
+                , Url.Builder.int "lrx" lowerRightHex.x
+                , Url.Builder.int "lry" lowerRightHex.y
                 ]
 
         requestCmd =
@@ -2246,13 +2250,13 @@ update msg model =
         DownloadSolarSystems ->
             let
                 ( nextRequestEntry, ( newSolarSystemDict, newRequestHistory ) ) =
-                    prepNextRequest ( model.solarSystems, model.requestHistory ) model.upperLeftHex model.lowerRightHex
+                    prepNextRequest ( model.solarSystems, model.requestHistory ) model.hexRect
             in
             ( { model
                 | requestHistory = newRequestHistory
                 , solarSystems = newSolarSystemDict
               }
-            , sendSolarSystemRequest nextRequestEntry model.hostConfig model.upperLeftHex model.lowerRightHex
+            , sendSolarSystemRequest nextRequestEntry model.hostConfig model.hexRect
             )
 
         DownloadedSolarSystems ( requestEntry, url_ ) (Ok fallibleSolarSystems) ->
@@ -2660,14 +2664,14 @@ update msg model =
         MapMouseUp ->
             let
                 ( nextRequestEntry, ( newSolarSystemDict, newRequestHistory ) ) =
-                    prepNextRequest ( model.solarSystems, model.requestHistory ) model.upperLeftHex model.lowerRightHex
+                    prepNextRequest ( model.solarSystems, model.requestHistory ) model.hexRect
             in
             ( { model
                 | dragMode = NoDragging
                 , requestHistory = newRequestHistory
                 , solarSystems = newSolarSystemDict
               }
-            , sendSolarSystemRequest nextRequestEntry model.hostConfig model.upperLeftHex model.lowerRightHex
+            , sendSolarSystemRequest nextRequestEntry model.hostConfig model.hexRect
             )
 
         MapMouseMove ( newX, newY ) ->
@@ -2685,16 +2689,20 @@ update msg model =
                                 { deltaX = xDelta, deltaY = yDelta }
                                 hex
 
+                        newHexRect =
+                            { lowerRightHex = shiftAddress model.hexRect.lowerRightHex
+                            , upperLeftHex = shiftAddress model.hexRect.upperLeftHex
+                            }
+
                         newModel =
                             { model
                                 | dragMode = IsDragging ( newX, newY )
-                                , lowerRightHex = shiftAddress model.lowerRightHex
-                                , upperLeftHex = shiftAddress model.upperLeftHex
+                                , hexRect = newHexRect
                             }
                     in
                     if xDelta /= 0 || yDelta /= 0 then
                         ( newModel
-                        , saveMapCoords newModel.upperLeftHex
+                        , saveMapCoords newModel.hexRect.upperLeftHex
                         )
 
                     else
