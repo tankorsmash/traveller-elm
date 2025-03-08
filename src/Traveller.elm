@@ -1823,6 +1823,13 @@ universalHexLabel sectors hexAddress =
             sector.name ++ " " ++ HexAddress.hexLabel hexAddress
 
 
+universalHexLabelMaybe : SectorDict -> HexAddress -> Maybe String
+universalHexLabelMaybe sectors hexAddress =
+    sectors
+        |> Dict.get (HexAddress.toSectorKey <| HexAddress.toSectorAddress hexAddress)
+        |> Maybe.map (\sector -> sector.name ++ " " ++ HexAddress.hexLabel hexAddress)
+
+
 errorDialog : List ( Http.Error, String ) -> UnstyledHtml.Html Msg
 errorDialog httpErrors =
     let
@@ -2028,44 +2035,27 @@ view model =
                             text "Deepnight Corporation LLC"
                 ]
 
-        renderError : String -> UnstyledHtml.Html msg
-        renderError txt =
-            Html.toUnstyled <|
-                Html.div [ HtmlStyledAttrs.css [ Css.color (Css.hex "#ff0000") ] ]
-                    [ Html.text txt ]
-
-        renderHttpError httpError =
-            case httpError of
-                Http.BadBody error ->
-                    renderError error
-
-                Http.BadUrl url ->
-                    renderError <| "Invalid URL: " ++ url
-
-                Http.NetworkError ->
-                    renderError "Network Error"
-
-                Http.BadStatus statusCode ->
-                    renderError <| "BadStatus: " ++ String.fromInt statusCode
-
-                Http.Timeout ->
-                    renderError "Request timedout"
-
         hexesColumn =
             column []
-                [ row [ Element.spacing 8, Element.width Element.fill ]
-                    [ el [ Font.size 20, uiDeepnightColorFontColour, Element.paddingEach { zeroEach | bottom = 4 } ] <|
+                [ row [ Element.spacing 8, Element.width Element.fill, Element.paddingEach { zeroEach | bottom = 4 } ]
+                    [ el [ Font.size 20, uiDeepnightColorFontColour ] <|
                         text <|
                             "Deepnight Navigation Console"
-                    , el [ Font.size 14, uiDeepnightColorFontColour, Element.paddingEach { zeroEach | bottom = 4, left = 12 }, Element.centerX ] <|
+                    , el [ Element.alignBottom, Font.size 14, uiDeepnightColorFontColour, Element.centerX ] <|
                         text <|
-                            universalHexLabel model.sectors model.upperLeftHex
+                            (universalHexLabelMaybe model.sectors model.upperLeftHex
+                                |> Maybe.withDefault "???"
+                            )
                                 ++ " – "
-                                ++ universalHexLabel model.sectors model.lowerRightHex
-                    , el [ Font.size 14, uiDeepnightColorFontColour, Element.paddingEach { zeroEach | bottom = 4 }, Element.alignRight ] <|
+                                ++ (universalHexLabelMaybe model.sectors model.lowerRightHex
+                                        |> Maybe.withDefault "???"
+                                   )
+                    , el [ Element.alignBottom, Font.size 14, uiDeepnightColorFontColour, Element.alignRight ] <|
                         text <|
                             "Revelation @ "
-                                ++ universalHexLabel model.sectors model.playerHex
+                                ++ (universalHexLabelMaybe model.sectors model.playerHex
+                                        |> Maybe.withDefault "???"
+                                   )
                     ]
                 , Element.html <|
                     -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
@@ -2100,50 +2090,20 @@ view model =
                                 model.hexScale
                                 |> Html.toUnstyled
 
-                        -- ( RemoteData.Failure httpError, _ ) ->
-                        --     renderHttpError httpError
-                        --
-                        -- ( NotAsked, _ ) ->
-                        --     Html.toUnstyled <|
-                        --         Html.div [ Html.Styled.Attributes.css [ Css.color (Css.rgb 100 100 100) ] ]
-                        --             [ Html.text "Not yet asked" ]
-                        --
-                        -- ( Loading, _ ) ->
-                        --     Html.toUnstyled <| Html.text "Loading..."
-                        --
                         Nothing ->
                             Html.toUnstyled <| Html.text "Have sector data but no viewport"
                 ]
     in
-    column [ width fill ]
-        [ row
-            [ width fill
-            , Font.size 20
-            , Font.color <| fontTextColor
-            , Element.paddingXY 15 0
-            ]
-            [ el [ Element.height fill, Element.width <| Element.px sidebarWidth, Element.alignTop, Element.alignLeft ] <|
-                sidebarColumn
-            , el [ Element.alignTop ] <|
-                hexesColumn
-            , Element.html <| errorDialog model.newSolarSystemErrors
-            ]
-
-        -- , -- TODO: bring this back
-        -- displaying json errors for SectorData
-        --   case model.solarSystems of
-        --     Failure (Http.BadBody error) ->
-        --         (-- use <pre> to preserve whitespace
-        --          Html.pre [ Html.Styled.Attributes.css [ Css.overflow Css.hidden ] ]
-        --             [ Html.text error ]
-        --             -- convert from elm-css's HTML
-        --             |> Html.toUnstyled
-        --             -- turn html into elm-ui
-        --             |> Element.html
-        --         )
-        --
-        --     _ ->
-        --         Element.none
+    row
+        [ width fill
+        , Font.size 20
+        , Font.color <| fontTextColor
+        , Element.paddingXY 15 0
+        ]
+        [ el [ Element.height fill, Element.width <| Element.px sidebarWidth, Element.alignTop, Element.alignLeft ] <|
+            sidebarColumn
+        , el [ Element.alignTop ] <| hexesColumn
+        , Element.html <| errorDialog model.newSolarSystemErrors
         ]
 
 
