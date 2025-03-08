@@ -361,6 +361,13 @@ hoverableStyle =
         ]
 
 
+sunShadowStyle : Css.Style
+sunShadowStyle =
+    Css.batch
+        [ Css.filter <| Css.dropShadow (Css.px 2) (Css.px 2) (Just <| Css.px 2) (Just <| Css.rgba 0 0 0 0.25)
+        ]
+
+
 hexagonPointZero : Int -> Float -> ( Float, Float )
 hexagonPointZero iSize n =
     let
@@ -606,6 +613,9 @@ drawStar ( starX, starY ) radius iSize starColor =
         , SvgAttrs.cy <| String.fromFloat <| starY
         , SvgAttrs.r <| String.fromFloat <| scaleAttr size radius
         , SvgAttrs.fill starColor -- <| starColourRGB star.colour
+
+        -- , SvgAttrs.css [ sunShadowStyle ]
+        , SvgAttrs.style "filter: drop-shadow( 2px 2px 2px rgba(0, 0, 0, .25))"
         ]
         []
 
