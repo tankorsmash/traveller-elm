@@ -546,7 +546,7 @@ viewHexEmpty hx hy x y size childSvgTxt hexColour =
           SvgEvents.on "mousedown" downDecoder
         , SvgEvents.on "mousemove" moveDecoder
         , SvgAttrs.style "cursor: pointer; user-select: none"
-        , SvgAttrs.id <| HexAddress.toKey hexAddress
+        , SvgAttrs.id <| "rendered-hex:" ++ HexAddress.toKey hexAddress
         ]
         [ -- background hex
           Svg.Styled.Lazy.lazy2 renderPolygon
