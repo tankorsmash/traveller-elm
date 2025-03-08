@@ -1650,6 +1650,9 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCh
         -- , Element.paddingEach {top=10, left=5, right=5, bottom=10}
         , Element.padding 10
         , Border.rounded 10
+        , Element.width <| Element.minimum 200 Element.fill
+        , Element.spacing 10
+        , Element.paddingXY 0 10
         ]
         [ row [ Font.alignLeft, Element.alignLeft ]
             [ if starData.orbitPosition.x == 0 && starData.orbitPosition.y == 0 then
@@ -1764,9 +1767,12 @@ viewSystemDetailsSidebar solarSystem selectedStellarObject =
                             Just <| travelTimeInSeconds (jumpShadowDistanceKMs - objToStarKMs) 4
                     )
     in
-    column [ Element.spacing 10, Element.paddingXY 0 10 ] <|
-        [ displayStarDetails solarSystem.surveyIndex solarSystem.primaryStar 0 jumpShadowCheckers selectedStellarObject
-        ]
+    displayStarDetails
+        solarSystem.surveyIndex
+        solarSystem.primaryStar
+        0
+        jumpShadowCheckers
+        selectedStellarObject
 
 
 colorToElementColor : Color.Color -> Element.Color
@@ -1941,7 +1947,7 @@ view : Model -> Element.Element Msg
 view model =
     let
         sidebarColumn =
-            column [ Element.spacing 10, Element.height Element.fill ]
+            column [ Element.spacing 10, Element.centerX, Element.height Element.fill ]
                 [ column [ Element.width Element.fill ]
                     [ let
                         clickableIcon size =
