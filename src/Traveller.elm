@@ -1138,9 +1138,10 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
 
                     renderRegionLabel : HexAddress -> Maybe (Svg.Svg msg)
                     renderRegionLabel hexAddress =
-                        case Dict.get (HexAddress.toKey hexAddress) regionLabels of
-                            Just name ->
-                                Just <|
+                        regionLabels
+                            |> Dict.get (HexAddress.toKey hexAddress)
+                            |> Maybe.map
+                                (\name ->
                                     Svg.text_
                                         [ SvgAttrs.x <| String.fromInt <| Tuple.first (labelPos hexAddress)
                                         , SvgAttrs.y <| String.fromInt <| Tuple.second (labelPos hexAddress)
@@ -1151,16 +1152,11 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                                         , SvgAttrs.fill "#0A0A0A"
                                         ]
                                         [ Svg.text name ]
-
-                            Nothing ->
-                                Nothing
+                                )
 
                     labels =
                         hexRange
-                            |> List.filterMap
-                                (\hexAddress ->
-                                    renderRegionLabel hexAddress
-                                )
+                            |> List.filterMap renderRegionLabel
                 in
                 hexSvgs ++ labels
            )
