@@ -43,6 +43,7 @@ import Round
 import Svg.Styled as Svg exposing (Svg)
 import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
 import Svg.Styled.Events as SvgEvents
+import Svg.Styled.Keyed
 import Svg.Styled.Lazy
 import Task
 import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, toSectorAddress, toUniversalAddress)
@@ -891,7 +892,7 @@ viewHex :
     -> VisualHexOrigin
     -> String
     -> List ( Float, Float )
-    -> ( Svg Msg, Int )
+    -> Svg Msg
 viewHex hexSize solarSystemDict hexAddress visualHexOrigin hexColour rawHexaPoints =
     let
         solarSystem =
@@ -929,7 +930,7 @@ viewHex hexSize solarSystemDict hexAddress visualHexOrigin hexColour rawHexaPoin
                 Nothing ->
                     viewEmptyHelper ""
     in
-    ( hexSVG, isEmptyHex solarSystem )
+    hexSVG
 
 
 type RemoteSolarSystem
@@ -1095,6 +1096,10 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
         |> List.map
             (\hexAddr ->
                 let
+                    foo : HexAddress
+                    foo =
+                        hexAddr
+
                     hexSVGOrigin =
                         calcVisualOrigin iHexSize
                             { row = hexAddr.y, col = hexAddr.x }
@@ -1119,14 +1124,16 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                                 Nothing ->
                                     defaultHexBg
 
-                    ( hexSVG, isEmpty ) =
-                        viewHex
+                    hexSVG =
+                        ( hexAddr
+                        , viewHex
                             iHexSize
                             solarSystemDict
                             hexAddr
                             hexSVGOrigin
                             hexColour
                             rawHexaPoints
+                        )
                 in
                 hexSVG
             )
@@ -1158,22 +1165,27 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                         hexRange
                             |> List.filterMap renderRegionLabel
                 in
-                hexSvgs ++ labels
+                ( hexSvgs, labels )
            )
-        |> (\hexSvgsWithHexAddress ->
+        |> (\( hexSvgsWithHexAddress, labels ) ->
                 let
                     singlePolyHex =
                         Maybe.map renderCurrentAddressOutline currentAddress
                             |> Maybe.withDefault (Svg.text "")
+
+                    keyedHexes : Svg Msg
+                    keyedHexes =
+                        Svg.Styled.Keyed.node "g" [] <|
+                            List.map (Tuple.mapFirst HexAddress.toKey) hexSvgsWithHexAddress
                 in
-                [ renderSectorOutline
+                [ keyedHexes
+                , renderSectorOutline
                     ( upperLeftHex, zero_x, zero_y + (floor <| hexSize / 1.6) )
                     iHexSize
                     (upperLeftHex |> HexAddress.toSectorAddress)
                 , renderSectorOutline ( upperLeftHex, zero_x, zero_y ) iHexSize (lowerRightHex |> HexAddress.toSectorAddress)
                 , singlePolyHex
                 ]
-                    ++ hexSvgsWithHexAddress
            )
         |> (let
                 widthString =
