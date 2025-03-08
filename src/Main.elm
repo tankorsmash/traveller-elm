@@ -200,7 +200,8 @@ view model =
             , Html.nav [ class "navbar navbar-expand m-3" ]
                 [ a [ href "?", class "navbar-brand" ] [ text "Navigation" ]
                 , Html.ul [ class "navbar-nav" ]
-                    [ Html.li [ class "nav-item" ] [ a [ class "nav-link", href "/" ] [ text "Uncharted Space" ] ]
+                    [ Html.li [ class "nav-item" ]
+                        [ a [ class "nav-link", href "/" ] [ text "Uncharted Space" ] ]
                     ]
                 ]
             , Html.map GotTravellerMsg <|
