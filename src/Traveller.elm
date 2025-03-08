@@ -1017,9 +1017,6 @@ viewHexes :
     -> Html Msg
 viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) iHexSize =
     let
-        hexSize =
-            toFloat iHexSize
-
         svgHeight =
             screenVp.viewport.height - 112
 
@@ -1067,16 +1064,13 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
         ( visualHexWidth, visualHexHeight ) =
             let
                 ( left_x, left_y ) =
-                    calcVisualOrigin iHexSize
-                        { row = 1, col = 1 }
+                    calcVisualOrigin iHexSize { row = 1, col = 1 }
 
                 ( right_x, _ ) =
-                    calcVisualOrigin iHexSize
-                        { row = 1, col = 2 }
+                    calcVisualOrigin iHexSize { row = 1, col = 2 }
 
                 ( _, down_y ) =
-                    calcVisualOrigin iHexSize
-                        { row = 2, col = 1 }
+                    calcVisualOrigin iHexSize { row = 2, col = 1 }
             in
             ( left_x - right_x |> abs, down_y - left_y |> abs )
 
