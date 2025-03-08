@@ -24,7 +24,7 @@ import Element
         )
 import Element.Background as Background
 import Element.Border as Border
-import Element.Events
+import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import FontAwesome as Icon exposing (Icon)
@@ -243,6 +243,7 @@ type Msg
     | MapMouseMove ( Float, Float )
     | DownloadedRoute ( RequestEntry, String ) (Result Http.Error (List Route))
     | SetHexSize Int
+    | ZoomToHex HexAddress
 
 
 {-| Where the Hex is on the screen, in pixel coordinates
@@ -260,6 +261,11 @@ type alias Flags =
     { upperLeft : Maybe ( Int, Int )
     , hexSize : Int
     }
+
+
+defaultHexRectSize : Int
+defaultHexRectSize =
+    30
 
 
 init : Flags -> Browser.Navigation.Key -> HostConfig.HostConfig -> Maybe String -> ( Model, Cmd Msg )
@@ -304,14 +310,10 @@ init settings key hostConfig referee =
                                 }
 
                 lowerRightHex =
-                    let
-                        squareSize =
-                            30
-                    in
                     upperLeftHex
                         |> HexAddress.shiftAddressBy
-                            { deltaX = squareSize
-                            , deltaY = squareSize
+                            { deltaX = defaultHexRectSize
+                            , deltaY = defaultHexRectSize
                             }
             in
             { upperLeftHex = upperLeftHex, lowerRightHex = lowerRightHex }
@@ -1545,7 +1547,7 @@ renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarOb
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
-        , Element.Events.onClick <| FocusInSidebar stellarObject
+        , Events.onClick <| FocusInSidebar stellarObject
         ]
         [ renderRawOrbit gasGiantData.au
         , renderOrbitSequence gasGiantData.orbitSequence
@@ -1569,7 +1571,7 @@ renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selec
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
-        , Element.Events.onClick <| FocusInSidebar planet
+        , Events.onClick <| FocusInSidebar planet
         ]
         [ renderRawOrbit terrestrialData.au
         , renderOrbitSequence terrestrialData.orbitSequence
@@ -1593,7 +1595,7 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selecte
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
-        , Element.Events.onClick <| FocusInSidebar belt
+        , Events.onClick <| FocusInSidebar belt
         ]
         [ renderRawOrbit planetoidBeltData.au
         , renderOrbitSequence planetoidBeltData.orbitSequence
@@ -1617,7 +1619,7 @@ renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellar
         [ Element.spacing 8
         , Element.moveRight <| calcNestedOffset newNestingLevel
         , Font.size 14
-        , Element.Events.onClick <| FocusInSidebar planet
+        , Events.onClick <| FocusInSidebar planet
         ]
         [ renderRawOrbit planetoidData.au
         , renderOrbitSequence planetoidData.orbitSequence
@@ -2023,7 +2025,7 @@ view model =
                                 |> Element.el
                                     [ Element.pointer
                                     , Element.mouseOver [ Font.color <| convertColor (Color.Manipulate.lighten 0.15 selectorColor) ]
-                                    , Element.Events.onClick <| SetHexSize <| size // 2
+                                    , Events.onClick <| SetHexSize <| size // 2
                                     , Font.color <| convertColor selectorColor
                                     ]
                       in
@@ -2103,12 +2105,21 @@ view model =
                                 ++ (universalHexLabelMaybe model.sectors model.hexRect.lowerRightHex
                                         |> Maybe.withDefault "???"
                                    )
-                    , el [ Element.alignBottom, Font.size 14, uiDeepnightColorFontColour, Element.alignRight ] <|
-                        text <|
-                            "Revelation @ "
-                                ++ (universalHexLabelMaybe model.sectors model.playerHex
-                                        |> Maybe.withDefault "???"
-                                   )
+                    , el
+                        [ Font.underline
+                        , Element.pointer
+                        , Element.alignBottom
+                        , Font.size 14
+                        , uiDeepnightColorFontColour
+                        , Element.alignRight
+                        , Events.onClick (ZoomToHex model.playerHex)
+                        ]
+                        ("Revelation @ "
+                            ++ (universalHexLabelMaybe model.sectors model.playerHex
+                                    |> Maybe.withDefault "???"
+                               )
+                            |> text
+                        )
                     ]
                 , Element.html <|
                     -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
@@ -2759,6 +2770,36 @@ update msg model =
 
         ClearAllErrors ->
             ( { model | newSolarSystemErrors = [], oldSolarSystemErrors = model.newSolarSystemErrors ++ model.oldSolarSystemErrors }, Cmd.none )
+
+        ZoomToHex hexAddress ->
+            let
+                newUpperLeft =
+                    hexAddress
+                        |> HexAddress.shiftAddressBy
+                            { deltaX = -5
+                            , deltaY = -5
+                            }
+
+                newHexRect =
+                    { upperLeftHex = newUpperLeft
+                    , lowerRightHex =
+                        newUpperLeft
+                            |> HexAddress.shiftAddressBy
+                                { deltaX = defaultHexRectSize
+                                , deltaY = defaultHexRectSize
+                                }
+                    }
+
+                ( nextRequestEntry, ( newSolarSystemDict, newRequestHistory ) ) =
+                    prepNextRequest ( model.solarSystems, model.requestHistory ) newHexRect
+            in
+            ( { model
+                | hexRect = newHexRect
+                , requestHistory = newRequestHistory
+                , solarSystems = newSolarSystemDict
+              }
+            , sendSolarSystemRequest nextRequestEntry model.hostConfig model.hexRect
+            )
 
 
 stripDataFromRemoteData : RemoteData err data -> RemoteData err ()
