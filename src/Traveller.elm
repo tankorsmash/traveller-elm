@@ -195,6 +195,7 @@ prepNextRequest ( oldSolarSystemDict, requestHistory ) { upperLeftHex, lowerRigh
 type alias Model =
     { key : Browser.Navigation.Key
     , hexScale : Int
+    , rawHexaPoints : List ( Float, Float )
     , solarSystems : SolarSystemDict
     , newSolarSystemErrors : List ( Http.Error, String )
     , oldSolarSystemErrors : List ( Http.Error, String )
@@ -317,6 +318,7 @@ init settings key hostConfig referee =
         model : Model
         model =
             { hexScale = settings.hexSize
+            , rawHexaPoints = rawHexagonPoints settings.hexSize
             , solarSystems = solarSystemDict
             , newSolarSystemErrors = []
             , oldSolarSystemErrors = []
@@ -904,9 +906,7 @@ viewHex hexSize solarSystemDict hexAddress visualHexOrigin hexColour rawHexaPoin
         hexSVG =
             case solarSystem of
                 Just (LoadedSolarSystem ss) ->
-                    -- TODO: make this lazy again, since rawHexaPoints isnt cached per iteration
-                    -- Svg.Styled.Lazy.lazy6 renderHexWithStar
-                    renderHexWithStar
+                    Svg.Styled.Lazy.lazy6 renderHexWithStar
                         ss
                         hexColour
                         hexAddress
@@ -1007,13 +1007,13 @@ renderSectorOutline ( upperLeftHex, zero_x, zero_y ) hexSize hex =
 
 
 viewHexes :
-    HexRect
+    (HexRect, List (Float, Float))
     -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport }
     -> { solarSystemDict : SolarSystemDict, hexColours : HexColorDict, regionLabels : RegionLabelDict }
     -> ( RouteList, Maybe HexAddress )
     -> Int
     -> Html Msg
-viewHexes { upperLeftHex, lowerRightHex } { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) iHexSize =
+viewHexes ({ upperLeftHex, lowerRightHex }, rawHexaPoints) { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) iHexSize =
     let
         hexSize =
             toFloat iHexSize
@@ -1023,10 +1023,6 @@ viewHexes { upperLeftHex, lowerRightHex } { screenVp, hexmapVp } { solarSystemDi
 
         svgWidth =
             screenVp.viewport.width - 420
-
-        rawHexaPoints =
-            -- hexagon points not yet localized to the visualOrigin
-            rawHexagonPoints iHexSize
 
         renderCurrentAddressOutline : HexAddress -> Svg Msg
         renderCurrentAddressOutline ca =
@@ -2150,7 +2146,7 @@ view model =
                                             defaultViewport
                             in
                             viewHexes
-                                model.hexRect
+                                (model.hexRect, model.rawHexaPoints)
                                 viewPortConfig
                                 { solarSystemDict = model.solarSystems, hexColours = model.hexColours, regionLabels = model.regionLabels }
                                 ( model.route, model.currentAddress )
@@ -2298,7 +2294,12 @@ update msg model =
             ( model, Cmd.none )
 
         SetHexSize newSize ->
-            ( { model | hexScale = newSize }, saveHexSize newSize )
+            ( { model
+                | hexScale = newSize
+                , rawHexaPoints = rawHexagonPoints newSize
+              }
+            , saveHexSize newSize
+            )
 
         DownloadSolarSystems ->
             let
