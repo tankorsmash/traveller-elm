@@ -86,6 +86,10 @@ sidebarWidth =
     400
 
 
+type alias HexMapViewport =
+    Result Browser.Dom.Error Browser.Dom.Viewport
+
+
 type DragMode
     = IsDragging ( Float, Float )
     | NoDragging
@@ -156,6 +160,44 @@ nextRequestNum requestHistory =
     MkRequestNum (lastRequestNum + 1)
 
 
+hexWidth : Int -> Float
+hexWidth hexScale =
+    toFloat hexScale * (1.0 + cos hexSizeFactor)
+
+
+hexHeight : Int -> Float
+hexHeight hexScale =
+    toFloat hexScale * (1.0 + sin hexSizeFactor)
+
+
+horizontalHexes : Maybe HexMapViewport -> Int -> Int
+horizontalHexes hexmapViewport hexScale =
+    case hexmapViewport of
+        Just vp ->
+            case vp of
+                Ok viewport ->
+                    (viewport.viewport.width / hexWidth hexScale) |> floor
+
+                Err _ ->
+                    defaultHorizontalHexes
+
+        Nothing ->
+            defaultHorizontalHexes
+
+
+verticalHexes : Maybe HexMapViewport -> Int -> Int
+verticalHexes hexmapViewport hexScale =
+    case hexmapViewport of
+        Just (Ok viewport) ->
+            (viewport.viewport.height / hexHeight hexScale) |> floor
+
+        Just (Err _) ->
+            defaultVerticalHexes
+
+        Nothing ->
+            defaultVerticalHexes
+
+
 {-| Builds a RequestEntry and updates the existing History with it.
 
 This is so we have less chance of getting the history out of sync with the
@@ -213,10 +255,10 @@ type alias Model =
     , selectedSystem : Maybe SolarSystem
     , sidebarHoverText : Maybe String
     , viewport : Maybe Browser.Dom.Viewport
-    , hexmapViewport : Maybe (Result Browser.Dom.Error Browser.Dom.Viewport)
+    , hexmapViewport : Maybe HexMapViewport
     , selectedStellarObject : Maybe StellarObject
     , hexRect : HexRect
-    , currentAddress : Maybe HexAddress
+    , currentAddress : HexAddress
     , hostConfig : HostConfig.HostConfig
     , route : RouteList
     , regions : RegionDict
@@ -247,7 +289,7 @@ type Msg
     | DownloadedRoute ( RequestEntry, String ) (Result Http.Error (List Route))
     | SetHexSize Int
     | JumpToShip
-    | ZoomToHex HexAddress
+    | ZoomToHex HexAddress Bool
 
 
 {-| Where the Hex is on the screen, in pixel coordinates
@@ -270,6 +312,16 @@ type alias Flags =
 defaultHexRectSize : Int
 defaultHexRectSize =
     30
+
+
+defaultHorizontalHexes : Int
+defaultHorizontalHexes =
+    30
+
+
+defaultVerticalHexes : Int
+defaultVerticalHexes =
+    25
 
 
 init : Flags -> Browser.Navigation.Key -> HostConfig.HostConfig -> Maybe String -> ( Model, Cmd Msg )
@@ -344,7 +396,7 @@ init settings key hostConfig referee =
             , hostConfig = hostConfig
             , sectors = Dict.empty
             , route = []
-            , currentAddress = Nothing
+            , currentAddress = toUniversalAddress { sectorX = -10, sectorY = -2, x = 31, y = 24 }
             , regions = Dict.empty
             , regionLabels = Dict.empty
             , hexColours = Dict.empty
@@ -1001,7 +1053,7 @@ viewHexes :
     ( HexRect, List ( Float, Float ) )
     -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport }
     -> { solarSystemDict : SolarSystemDict, hexColours : HexColorDict, regionLabels : RegionLabelDict }
-    -> ( RouteList, Maybe HexAddress )
+    -> ( RouteList, HexAddress )
     -> Int
     -> Html Msg
 viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) iHexSize =
@@ -1082,7 +1134,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                             { row = hexAddr.y, col = hexAddr.x }
 
                     hexColour =
-                        if Just hexAddr == currentAddress then
+                        if hexAddr == currentAddress then
                             currentAddressHexBg
 
                         else if isOnRoute route hexAddr then
@@ -1142,8 +1194,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
         |> (\( hexSvgsWithHexAddress, labels ) ->
                 let
                     singlePolyHex =
-                        Maybe.map renderCurrentAddressOutline currentAddress
-                            |> Maybe.withDefault (Svg.text "")
+                        renderCurrentAddressOutline currentAddress
 
                     keyedHexes : Svg Msg
                     keyedHexes =
@@ -2095,7 +2146,6 @@ view model =
                     , el
                         [ Element.alignBottom
                         , Font.size 14
-                        , Font.underline
                         , uiDeepnightColorFontColour
                         , Element.alignRight
                         , Element.pointer
@@ -2104,13 +2154,8 @@ view model =
                       <|
                         text <|
                             "Revelation @ "
-                                ++ (case model.currentAddress of
-                                        Just hexAddress ->
-                                            universalHexLabelMaybe model.sectors hexAddress
-                                                |> Maybe.withDefault "???"
-
-                                        Nothing ->
-                                            "???"
+                                ++ (universalHexLabelMaybe model.sectors model.currentAddress
+                                        |> Maybe.withDefault "???"
                                    )
                     ]
                 , Element.html <|
@@ -2539,12 +2584,25 @@ update msg model =
         --in
         --( { model | newSolarSystemErrors = ( err, url ) :: model.newSolarSystemErrors }, Cmd.none )
         DownloadedRoute ( requestEntry, url ) (Ok route) ->
-            ( { model
-                | route = route
-                , currentAddress = List.reverse route |> List.head |> Maybe.map .address
-              }
-            , Cmd.none
-            )
+            let
+                firstEntry =
+                    List.reverse route |> List.head |> Maybe.map .address
+            in
+            case firstEntry of
+                Just address ->
+                    ( { model
+                        | route = route
+                        , currentAddress = address
+                      }
+                    , Cmd.none
+                    )
+
+                Nothing ->
+                    ( { model
+                        | route = route
+                      }
+                    , Cmd.none
+                    )
 
         DownloadedRoute ( requestEntry, url ) (Err err) ->
             let
@@ -2702,77 +2760,28 @@ update msg model =
 
         JumpToShip ->
             let
-                xSize =
-                    toFloat model.hexScale * (1.0 + cos hexSizeFactor)
-
-                ySize =
-                    toFloat model.hexScale * (1.0 + sin hexSizeFactor)
-
                 deltaX =
-                    case model.hexmapViewport of
-                        Just vp ->
-                            case vp of
-                                Ok viewport ->
-                                    2 + (viewport.viewport.width / xSize) |> floor
-
-                                Err _ ->
-                                    20
-
-                        Nothing ->
-                            20
+                    horizontalHexes model.hexmapViewport model.hexScale // 2
 
                 deltaY =
-                    case model.hexmapViewport of
-                        Just vp ->
-                            case vp of
-                                Ok viewport ->
-                                    (viewport.viewport.height / ySize) |> floor
+                    verticalHexes model.hexmapViewport model.hexScale // 2
 
-                                Err _ ->
-                                    20
+                newHexRect =
+                    { upperLeftHex = shiftAddressBy { deltaX = -1 * deltaX, deltaY = -1 * deltaY } model.currentAddress
+                    , lowerRightHex = shiftAddressBy { deltaX = deltaX, deltaY = deltaY } model.currentAddress
+                    }
 
-                        Nothing ->
-                            20
-
-                ( ( ssReqEntry, secReqEntry, routeReqEntry ), ( solarSystemDict, requestHistory ) ) =
-                    prepNextRequest ( model.solarSystems, model.requestHistory ) model.hexRect
-                        |> -- build a new request entry for sector request
-                           (\( ssReqEntry_, oldSsDictAndReqHistory ) ->
-                                let
-                                    ( newReqEntry, ssDictAndReqHistory ) =
-                                        prepNextRequest oldSsDictAndReqHistory model.hexRect
-                                in
-                                ( ( ssReqEntry_, newReqEntry ), ssDictAndReqHistory )
-                           )
-                        |> -- take the old ones and build a new one for route request
-                           (\( ( ssReqEntry_, secReqEntry_ ), oldSsDictAndReqHistory ) ->
-                                let
-                                    ( routeReqEntry_, ssDictAndReqHistory ) =
-                                        prepNextRequest oldSsDictAndReqHistory model.hexRect
-                                in
-                                ( ( ssReqEntry_, secReqEntry_, routeReqEntry_ ), ssDictAndReqHistory )
-                           )
+                ( nextRequestEntry, ( newSolarSystemDict, newRequestHistory ) ) =
+                    prepNextRequest ( model.solarSystems, model.requestHistory ) newHexRect
             in
-            case model.currentAddress of
-                Just hexAddress ->
-                    let
-                        newModel =
-                            { model
-                                | hexRect =
-                                    { upperLeftHex = shiftAddressBy { deltaX = -1 * (deltaX // 2), deltaY = -1 * (deltaY // 2) } hexAddress
-                                    , lowerRightHex = shiftAddressBy { deltaX = deltaX // 2, deltaY = deltaY // 2 } hexAddress
-                                    }
-                            }
-                    in
-                    ( newModel
-                    , Cmd.batch
-                        [ saveMapCoords newModel.hexRect.upperLeftHex
-                        , sendSolarSystemRequest ssReqEntry model.hostConfig newModel.hexRect
-                        ]
-                    )
-
-                Nothing ->
-                    ( model, Cmd.none )
+            ( { model
+                | hexRect = newHexRect
+              }
+            , Cmd.batch
+                [ saveMapCoords newHexRect.upperLeftHex
+                , sendSolarSystemRequest nextRequestEntry model.hostConfig newHexRect
+                ]
+            )
 
         MapMouseDown ( x, y ) ->
             ( { model
@@ -2837,22 +2846,36 @@ update msg model =
         ClearAllErrors ->
             ( { model | newSolarSystemErrors = [], oldSolarSystemErrors = model.newSolarSystemErrors ++ model.oldSolarSystemErrors }, Cmd.none )
 
-        ZoomToHex hexAddress ->
+        ZoomToHex hexAddress centre ->
             let
+                hHexes =
+                    horizontalHexes model.hexmapViewport model.hexScale
+
+                vHexes =
+                    verticalHexes model.hexmapViewport model.hexScale
+
                 newUpperLeft =
-                    hexAddress
-                        |> HexAddress.shiftAddressBy
-                            { deltaX = -5
-                            , deltaY = -5
-                            }
+                    if centre then
+                        hexAddress
+                            |> HexAddress.shiftAddressBy
+                                { deltaX = -1 * hHexes // 2
+                                , deltaY = 1 * vHexes // 2
+                                }
+
+                    else
+                        hexAddress
+                            |> HexAddress.shiftAddressBy
+                                { deltaX = -2
+                                , deltaY = 2
+                                }
 
                 newHexRect =
                     { upperLeftHex = newUpperLeft
                     , lowerRightHex =
                         newUpperLeft
                             |> HexAddress.shiftAddressBy
-                                { deltaX = defaultHexRectSize
-                                , deltaY = defaultHexRectSize
+                                { deltaX = hHexes
+                                , deltaY = -1 * vHexes
                                 }
                     }
 
