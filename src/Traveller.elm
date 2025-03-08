@@ -950,35 +950,35 @@ type OffsetDir
     | Right
 
 
-renderSectorOutline : ( HexAddress, Int, Int ) -> Int -> SectorHexAddress -> Svg Msg
-renderSectorOutline ( upperLeftHex, zero_x, zero_y ) hexSize hex =
+renderSectorOutline : ( Int, Int ) -> Int -> SectorHexAddress -> Svg Msg
+renderSectorOutline ( zero_x, zero_y ) hexSize hex =
     let
         -- calcVisualOrigin
         topLeft : HexAddress
         topLeft =
-            { hex | x = 1, y = 1 } |> HexAddress.toUniversalAddress
+            { hex | x = 0, y = 0 } |> HexAddress.toUniversalAddress
 
         botRight =
             { hex | x = 32, y = 40 } |> HexAddress.toUniversalAddress
 
         topRight =
-            { hex | x = 32, y = 1 } |> HexAddress.toUniversalAddress
+            { hex | x = 32, y = 0 } |> HexAddress.toUniversalAddress
 
         botLeft =
-            { hex | x = 1, y = 40 } |> HexAddress.toUniversalAddress
+            { hex | x = 0, y = 40 } |> HexAddress.toUniversalAddress
 
         ( offsetNum1, _ ) =
-            hexagonPointZero hexSize 2
+            hexagonPointZero hexSize 1.4
 
         ( offsetNum2, _ ) =
-            hexagonPointZero hexSize 3
+            hexagonPointZero hexSize 1.6
 
         avgNum =
-            (offsetNum1 + offsetNum2) / 2 |> floor
+            (offsetNum1 + offsetNum2) / 1.6 |> floor
 
         adjustPos ( hexAddr, offsetDir ) =
             calcVisualOrigin hexSize
-                { row = upperLeftHex.y - hexAddr.y, col = hexAddr.x - upperLeftHex.x }
+                { row = hexAddr.y, col = hexAddr.x }
                 |> (\( x, y ) ->
                         case offsetDir of
                             Left ->
@@ -988,9 +988,9 @@ renderSectorOutline ( upperLeftHex, zero_x, zero_y ) hexSize hex =
                                 ( x + avgNum, y )
                    )
                 |> (\( x, y ) ->
-                        (x - zero_x |> String.fromInt)
+                        (x |> String.fromInt)
                             ++ ", "
-                            ++ (y - zero_y |> String.fromInt)
+                            ++ (y |> String.fromInt)
                    )
 
         points_ =
@@ -999,7 +999,8 @@ renderSectorOutline ( upperLeftHex, zero_x, zero_y ) hexSize hex =
     in
     Svg.polyline
         [ points points_
-        , SvgAttrs.stroke "#0a0a0a"
+        , SvgAttrs.id "sectorOutline"
+        , SvgAttrs.stroke "#0a0a0a40"
         , SvgAttrs.fill "none"
         , SvgAttrs.strokeWidth "6"
         , SvgAttrs.pointerEvents "visiblePainted"
@@ -1032,8 +1033,8 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                     calcVisualOrigin iHexSize
                         { row = upperLeftHex.y - ca.y, col = ca.x - upperLeftHex.x }
                         |> (\( x, y ) ->
-                                ( toFloat <| x - zero_x
-                                , toFloat <| y - zero_y
+                                ( toFloat <| x
+                                , toFloat <| y
                                 )
                            )
 
@@ -1056,9 +1057,6 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
 
                 Just hexmapViewport ->
                     hexmapViewport
-
-        ( zero_x, zero_y ) =
-            ( 0, 0 )
 
         hexRange =
             HexAddress.betweenWithMax
@@ -1096,18 +1094,9 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
         |> List.map
             (\hexAddr ->
                 let
-                    foo : HexAddress
-                    foo =
-                        hexAddr
-
                     hexSVGOrigin =
                         calcVisualOrigin iHexSize
                             { row = hexAddr.y, col = hexAddr.x }
-                            |> (\( x, y ) ->
-                                    ( x - zero_x
-                                    , y - zero_y
-                                    )
-                               )
 
                     hexColour =
                         if Just hexAddr == currentAddress then
@@ -1179,11 +1168,8 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                             List.map (Tuple.mapFirst HexAddress.toKey) hexSvgsWithHexAddress
                 in
                 [ keyedHexes
-                , renderSectorOutline
-                    ( upperLeftHex, zero_x, zero_y + (floor <| hexSize / 1.6) )
-                    iHexSize
-                    (upperLeftHex |> HexAddress.toSectorAddress)
-                , renderSectorOutline ( upperLeftHex, zero_x, zero_y ) iHexSize (lowerRightHex |> HexAddress.toSectorAddress)
+                , renderSectorOutline ( 0, 0 ) iHexSize (upperLeftHex |> HexAddress.toSectorAddress)
+                , renderSectorOutline ( 0, 0 ) iHexSize (lowerRightHex |> HexAddress.toSectorAddress)
                 , singlePolyHex
                 ]
            )
