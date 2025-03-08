@@ -46,7 +46,7 @@ import Svg.Styled.Events as SvgEvents
 import Svg.Styled.Keyed
 import Svg.Styled.Lazy
 import Task
-import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, toSectorAddress, toUniversalAddress)
+import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, shiftAddressBy, toSectorAddress, toUniversalAddress)
 import Traveller.Point exposing (StellarPoint)
 import Traveller.Region as Region exposing (Region, RegionDict)
 import Traveller.Route as Route exposing (Route, RouteList)
@@ -60,6 +60,10 @@ import Url.Builder
 
 uiDeepnightColorFontColour =
     Font.color <| colorToElementColor <| deepnightColor
+
+
+hexSizeFactor =
+    2 * pi / 6
 
 
 refereeSI =
@@ -204,7 +208,6 @@ type alias Model =
     , requestHistory : RequestHistory
     , dragMode : DragMode
     , sectors : SectorDict
-    , playerHex : HexAddress
     , hoveringHex : Maybe HexAddress
     , selectedHex : Maybe HexAddress
     , selectedSystem : Maybe SolarSystem
@@ -243,6 +246,7 @@ type Msg
     | MapMouseMove ( Float, Float )
     | DownloadedRoute ( RequestEntry, String ) (Result Http.Error (List Route))
     | SetHexSize Int
+    | JumpToShip
 
 
 {-| Where the Hex is on the screen, in pixel coordinates
@@ -326,7 +330,6 @@ init settings key hostConfig referee =
             , lastSolarSystemError = Nothing
             , requestHistory = requestHistory
             , dragMode = NoDragging
-            , playerHex = toUniversalAddress { sectorX = -10, sectorY = -2, x = 31, y = 24 }
             , hoveringHex = Nothing
             , selectedHex = Nothing
             , selectedSystem = Nothing
@@ -379,14 +382,11 @@ hexagonPointZero iSize n =
         size =
             toFloat iSize
 
-        a =
-            2 * pi / 6
-
         x =
-            size * cos (a * n)
+            size * cos (hexSizeFactor * n)
 
         y =
-            size * sin (a * n)
+            size * sin (hexSizeFactor * n)
 
         buildPoint =
             ( x, y )
@@ -400,16 +400,11 @@ rawHexagonPoint iSize n =
         size =
             toFloat iSize
 
-        a =
-            2 * pi / 6
-
-        -- angle deg =
-        --     (deg + 90) * pi / 180
         x =
-            size * cos (a * n)
+            size * cos (hexSizeFactor * n)
 
         y =
-            size * sin (a * n)
+            size * sin (hexSizeFactor * n)
     in
     ( x, y )
 
@@ -420,18 +415,13 @@ hexagonPoint ( xOrigin, yOrigin ) iSize n =
         size =
             toFloat iSize
 
-        a =
-            2 * pi / 6
-
-        -- angle deg =
-        --     (deg + 90) * pi / 180
         x =
             toFloat xOrigin
-                + (size * cos (a * n))
+                + (size * cos (hexSizeFactor * n))
 
         y =
             toFloat yOrigin
-                + (size * sin (a * n))
+                + (size * sin (hexSizeFactor * n))
 
         buildPoint =
             ( x, y )
@@ -873,14 +863,11 @@ calcVisualOrigin iHexSize { row, col } =
         hexSize =
             toFloat iHexSize
 
-        a =
-            2 * pi / 6
-
         x =
-            hexSize + toFloat col * (hexSize + hexSize * cos a)
+            hexSize + toFloat col * (hexSize + hexSize * cos hexSizeFactor)
 
         y =
-            -1 * (hexSize + toFloat row * 2 * hexSize * sin a + hexSize * hexColOffset col * sin a)
+            -1 * (hexSize + toFloat row * 2 * hexSize * sin hexSizeFactor + hexSize * hexColOffset col * sin hexSizeFactor)
     in
     ( floor x, floor y )
 
@@ -2103,11 +2090,24 @@ view model =
                                 ++ (universalHexLabelMaybe model.sectors model.hexRect.lowerRightHex
                                         |> Maybe.withDefault "???"
                                    )
-                    , el [ Element.alignBottom, Font.size 14, uiDeepnightColorFontColour, Element.alignRight ] <|
+                    , el
+                        [ Element.alignBottom
+                        , Font.size 14
+                        , uiDeepnightColorFontColour
+                        , Element.alignRight
+                        , Element.pointer
+                        , Element.Events.onClick <| JumpToShip
+                        ]
+                      <|
                         text <|
                             "Revelation @ "
-                                ++ (universalHexLabelMaybe model.sectors model.playerHex
-                                        |> Maybe.withDefault "???"
+                                ++ (case model.currentAddress of
+                                        Just hexAddress ->
+                                            universalHexLabelMaybe model.sectors hexAddress
+                                                |> Maybe.withDefault "???"
+
+                                        Nothing ->
+                                            "???"
                                    )
                     ]
                 , Element.html <|
@@ -2696,6 +2696,80 @@ update msg model =
             ( { model | selectedStellarObject = Just stellarObject }
             , Cmd.none
             )
+
+        JumpToShip ->
+            let
+                xSize =
+                    toFloat model.hexScale * (1.0 + cos hexSizeFactor)
+
+                ySize =
+                    toFloat model.hexScale * (1.0 + sin hexSizeFactor)
+
+                deltaX =
+                    case model.hexmapViewport of
+                        Just vp ->
+                            case vp of
+                                Ok viewport ->
+                                    2 + (viewport.viewport.width / xSize) |> floor
+
+                                Err _ ->
+                                    20
+
+                        Nothing ->
+                            20
+
+                deltaY =
+                    case model.hexmapViewport of
+                        Just vp ->
+                            case vp of
+                                Ok viewport ->
+                                    (viewport.viewport.height / ySize) |> floor
+
+                                Err _ ->
+                                    20
+
+                        Nothing ->
+                            20
+
+                ( ( ssReqEntry, secReqEntry, routeReqEntry ), ( solarSystemDict, requestHistory ) ) =
+                    prepNextRequest ( model.solarSystems, model.requestHistory ) model.hexRect
+                        |> -- build a new request entry for sector request
+                           (\( ssReqEntry_, oldSsDictAndReqHistory ) ->
+                                let
+                                    ( newReqEntry, ssDictAndReqHistory ) =
+                                        prepNextRequest oldSsDictAndReqHistory model.hexRect
+                                in
+                                ( ( ssReqEntry_, newReqEntry ), ssDictAndReqHistory )
+                           )
+                        |> -- take the old ones and build a new one for route request
+                           (\( ( ssReqEntry_, secReqEntry_ ), oldSsDictAndReqHistory ) ->
+                                let
+                                    ( routeReqEntry_, ssDictAndReqHistory ) =
+                                        prepNextRequest oldSsDictAndReqHistory model.hexRect
+                                in
+                                ( ( ssReqEntry_, secReqEntry_, routeReqEntry_ ), ssDictAndReqHistory )
+                           )
+            in
+            case model.currentAddress of
+                Just hexAddress ->
+                    let
+                        newModel =
+                            { model
+                                | hexRect =
+                                    { upperLeftHex = shiftAddressBy { deltaX = -1 * (deltaX // 2), deltaY = -1 * (deltaY // 2) } hexAddress
+                                    , lowerRightHex = shiftAddressBy { deltaX = deltaX // 2, deltaY = deltaY // 2 } hexAddress
+                                    }
+                            }
+                    in
+                    ( newModel
+                    , Cmd.batch
+                        [ saveMapCoords newModel.hexRect.upperLeftHex
+                        , sendSolarSystemRequest ssReqEntry model.hostConfig newModel.hexRect
+                        ]
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
 
         MapMouseDown ( x, y ) ->
             ( { model
