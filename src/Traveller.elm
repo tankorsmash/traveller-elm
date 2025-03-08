@@ -53,7 +53,7 @@ import Traveller.Sector exposing (Sector, SectorDict, codec, sectorKey)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.SolarSystemStars exposing (FallibleStarSystem, StarSystem, StarType, StarTypeData, fallibleStarSystemDecoder, getStarTypeData, isBrownDwarfType)
 import Traveller.StarColour exposing (starColourRGB)
-import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, getInnerStarData, getStellarOrbit, isBrownDwarf)
+import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, getInnerStarData, getStarData, getStellarOrbit, isBrownDwarf)
 import Url.Builder
 
 
@@ -1742,14 +1742,7 @@ viewSystemDetailsSidebar solarSystem selectedStellarObject =
         jumpShadowCheckers : JumpShadowCheckers
         jumpShadowCheckers =
             List.filterMap
-                (\o ->
-                    case o of
-                        Star star ->
-                            Just (getInnerStarData star)
-
-                        otherwise ->
-                            Nothing
-                )
+                (getStarData >> Maybe.map getInnerStarData)
                 (Star solarSystem.primaryStar :: (getInnerStarData solarSystem.primaryStar).stellarObjects)
                 |> List.map
                     (\star so ->

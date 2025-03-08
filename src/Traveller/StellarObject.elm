@@ -1,4 +1,4 @@
-module Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, codecStarData, codecStellarObject, getInnerStarData, getSafeJumpTime, getStellarOrbit, isBrownDwarf)
+module Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, codecStarData, codecStellarObject, extractStellarOrbit, getStarData, getInnerStarData, getSafeJumpTime, getStellarOrbit, isBrownDwarf)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -236,6 +236,66 @@ type StellarObject
     | PlanetoidBelt PlanetoidBeltData
     | Planetoid PlanetoidData
     | Star StarData
+
+
+{-| Returns the StarData if the StellarObject is a Star, otherwise Nothing
+-}
+getStarData : StellarObject -> Maybe StarData
+getStarData stellarObject =
+    case stellarObject of
+        Star starData ->
+            Just starData
+
+        _ ->
+            Nothing
+
+
+{-| Returns the GasGiantData if the StellarObject is a GasGiant, otherwise Nothing
+-}
+getGasGiantData : StellarObject -> Maybe GasGiantData
+getGasGiantData stellarObject =
+    case stellarObject of
+        GasGiant gasGiantData ->
+            Just gasGiantData
+
+        _ ->
+            Nothing
+
+
+{-| Returns the TerrestrialData if the StellarObject is a TerrestrialPlanet, otherwise Nothing
+-}
+getTerrestrialData : StellarObject -> Maybe TerrestrialData
+getTerrestrialData stellarObject =
+    case stellarObject of
+        TerrestrialPlanet terrestrialData ->
+            Just terrestrialData
+
+        _ ->
+            Nothing
+
+
+{-| Returns the PlanetoidBeltData if the StellarObject is a PlanetoidBelt, otherwise Nothing
+-}
+getPlanetoidBeltData : StellarObject -> Maybe PlanetoidBeltData
+getPlanetoidBeltData stellarObject =
+    case stellarObject of
+        PlanetoidBelt planetoidBeltData ->
+            Just planetoidBeltData
+
+        _ ->
+            Nothing
+
+
+{-| Returns the PlanetoidData if the StellarObject is a Planetoid, otherwise Nothing
+-}
+getPlanetoidData : StellarObject -> Maybe PlanetoidData
+getPlanetoidData stellarObject =
+    case stellarObject of
+        Planetoid planetoidData ->
+            Just planetoidData
+
+        _ ->
+            Nothing
 
 
 codecPlanetoidBeltData : Codec PlanetoidBeltData
