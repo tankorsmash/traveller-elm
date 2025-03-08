@@ -1107,7 +1107,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                                 Nothing ->
                                     defaultHexBg
 
-                    hexSVG =
+                    hexSvgsWithHexAddr =
                         ( hexAddr
                         , viewHex
                             iHexSize
@@ -1118,9 +1118,9 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                             rawHexaPoints
                         )
                 in
-                hexSVG
+                hexSvgsWithHexAddr
             )
-        |> (\hexSvgs ->
+        |> (\hexSvgsWithHexAddress ->
                 let
                     labelPos hexAddr =
                         calcVisualOrigin iHexSize
@@ -1148,7 +1148,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                         hexRange
                             |> List.filterMap renderRegionLabel
                 in
-                ( hexSvgs, labels )
+                ( hexSvgsWithHexAddress, labels )
            )
         |> (\( hexSvgsWithHexAddress, labels ) ->
                 let
@@ -1166,6 +1166,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                 , renderSectorOutline ( 0, 0 ) iHexSize (lowerRightHex |> HexAddress.toSectorAddress)
                 , singlePolyHex
                 ]
+                    ++ labels
            )
         |> (let
                 widthString =
