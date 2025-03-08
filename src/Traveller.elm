@@ -586,15 +586,23 @@ downDecoder =
         -- takes a raw JS mouse event and turns it into a parsed Elm mouse event
         jsMouseEventDecoder =
             Html.Events.Extra.Mouse.eventDecoder
+                |> JsDecode.andThen
+                    (\evt ->
+                        case evt.button of
+                            Html.Events.Extra.Mouse.MainButton ->
+                                JsDecode.succeed evt
 
-        -- takes an Elm Mouse event and creates our Msg
-        msgConstructor evt =
-            MapMouseDown <| evt.offsetPos
+                            _ ->
+                                -- We fail decoding here, to signal to Elm that we don't want
+                                --   to process the event.
+                                -- So we'll never see the decoder failure, unlike our Codecs
+                                JsDecode.fail "Won't drag on non-main/left button"
+                    )
     in
     -- run the mouse event decoder
     jsMouseEventDecoder
         |> -- then if that succeeds, pass the event object into msgConstructor
-           JsDecode.map msgConstructor
+           JsDecode.map (\evt -> MapMouseDown evt.offsetPos)
 
 
 moveDecoder : JsDecode.Decoder Msg
