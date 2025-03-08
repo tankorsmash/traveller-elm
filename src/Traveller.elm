@@ -2012,17 +2012,21 @@ view model =
                                 [ text "Click a hex to view system details."
                                 ]
                     ]
-                , Element.el [ Element.height Element.fill ] Element.none
-                , case model.selectedHex of
-                    Just viewingAddress ->
-                        column [ Element.alignBottom, centerX, Font.size 10, uiDeepnightColorFontColour ]
-                            [ text <| Debug.toString viewingAddress
-                            ]
+                , -- footer
+                  Element.el
+                    [ Element.padding 10
+                    , Element.alignBottom
+                    , centerX
+                    , Font.size 10
+                    , uiDeepnightColorFontColour
+                    ]
+                  <|
+                    case model.selectedHex of
+                        Just viewingAddress ->
+                            text <| Debug.toString viewingAddress
 
-                    Nothing ->
-                        column [ centerX, centerY, Font.size 10, uiDeepnightColorFontColour ]
-                            [ text "Deepnight Corporation LLC"
-                            ]
+                        Nothing ->
+                            text "Deepnight Corporation LLC"
                 ]
 
         renderError : String -> UnstyledHtml.Html msg
@@ -2119,7 +2123,7 @@ view model =
             , Font.color <| fontTextColor
             , Element.paddingXY 15 0
             ]
-            [ el [ Element.width <| Element.px sidebarWidth, Element.alignTop, Element.alignLeft ] <|
+            [ el [ Element.height fill, Element.width <| Element.px sidebarWidth, Element.alignTop, Element.alignLeft ] <|
                 sidebarColumn
             , el [ Element.alignTop ] <|
                 hexesColumn
