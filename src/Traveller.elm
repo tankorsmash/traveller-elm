@@ -669,7 +669,7 @@ drawStar ( starX, starY ) radius iSize starColor =
 
 
 renderHexWithStar : StarSystem -> String -> HexAddress -> VisualHexOrigin -> Int -> List ( Float, Float ) -> Svg Msg
-renderHexWithStar starSystem hexColour hexAddress (( vox, voy ) as visualOrigin) iSize rawHexaPoints =
+renderHexWithStar starSystem hexColour hexAddress ( vox, voy ) iSize rawHexaPoints =
     let
         size =
             toFloat iSize
@@ -1007,13 +1007,13 @@ renderSectorOutline ( upperLeftHex, zero_x, zero_y ) hexSize hex =
 
 
 viewHexes :
-    (HexRect, List (Float, Float))
+    ( HexRect, List ( Float, Float ) )
     -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport }
     -> { solarSystemDict : SolarSystemDict, hexColours : HexColorDict, regionLabels : RegionLabelDict }
     -> ( RouteList, Maybe HexAddress )
     -> Int
     -> Html Msg
-viewHexes ({ upperLeftHex, lowerRightHex }, rawHexaPoints) { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) iHexSize =
+viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) iHexSize =
     let
         hexSize =
             toFloat iHexSize
@@ -1130,7 +1130,7 @@ viewHexes ({ upperLeftHex, lowerRightHex }, rawHexaPoints) { screenVp, hexmapVp 
                 in
                 hexSVG
             )
-        |> (\hexSvgsWithHexAddress ->
+        |> (\hexSvgs ->
                 let
                     labelPos hexAddr =
                         calcVisualOrigin iHexSize
@@ -1162,7 +1162,7 @@ viewHexes ({ upperLeftHex, lowerRightHex }, rawHexaPoints) { screenVp, hexmapVp 
                                     renderRegionLabel hexAddress
                                 )
                 in
-                hexSvgsWithHexAddress ++ labels
+                hexSvgs ++ labels
            )
         |> (\hexSvgsWithHexAddress ->
                 let
@@ -2146,7 +2146,7 @@ view model =
                                             defaultViewport
                             in
                             viewHexes
-                                (model.hexRect, model.rawHexaPoints)
+                                ( model.hexRect, model.rawHexaPoints )
                                 viewPortConfig
                                 { solarSystemDict = model.solarSystems, hexColours = model.hexColours, regionLabels = model.regionLabels }
                                 ( model.route, model.currentAddress )
