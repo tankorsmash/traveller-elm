@@ -2351,7 +2351,8 @@ view model =
                         [ clickableIcon 80
                         , clickableIcon 60
                         , clickableIcon 50
-                        , clickableIcon 30
+
+                        --, clickableIcon 30
                         , let
                             selectorColor =
                                 if model.viewMode == FullJourney then
