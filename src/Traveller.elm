@@ -2826,11 +2826,14 @@ update msg model =
 
         ZoomToHex hexAddress centre ->
             let
+                extraPadding =
+                    2
+
                 hHexes =
-                    horizontalHexes model.hexmapViewport model.hexScale
+                    horizontalHexes model.hexmapViewport model.hexScale + extraPadding
 
                 vHexes =
-                    verticalHexes model.hexmapViewport model.hexScale
+                    verticalHexes model.hexmapViewport model.hexScale + extraPadding
 
                 newUpperLeft =
                     if centre then
