@@ -2758,31 +2758,6 @@ update msg model =
             , Cmd.none
             )
 
-        JumpToShip ->
-            let
-                deltaX =
-                    horizontalHexes model.hexmapViewport model.hexScale // 2
-
-                deltaY =
-                    verticalHexes model.hexmapViewport model.hexScale // 2
-
-                newHexRect =
-                    { upperLeftHex = shiftAddressBy { deltaX = -1 * deltaX, deltaY = -1 * deltaY } model.currentAddress
-                    , lowerRightHex = shiftAddressBy { deltaX = deltaX, deltaY = deltaY } model.currentAddress
-                    }
-
-                ( nextRequestEntry, ( newSolarSystemDict, newRequestHistory ) ) =
-                    prepNextRequest ( model.solarSystems, model.requestHistory ) newHexRect
-            in
-            ( { model
-                | hexRect = newHexRect
-              }
-            , Cmd.batch
-                [ saveMapCoords newHexRect.upperLeftHex
-                , sendSolarSystemRequest nextRequestEntry model.hostConfig newHexRect
-                ]
-            )
-
         MapMouseDown ( x, y ) ->
             ( { model
                 | dragMode = IsDragging ( x, y )
@@ -2846,6 +2821,9 @@ update msg model =
         ClearAllErrors ->
             ( { model | newSolarSystemErrors = [], oldSolarSystemErrors = model.newSolarSystemErrors ++ model.oldSolarSystemErrors }, Cmd.none )
 
+        JumpToShip ->
+            update (ZoomToHex model.currentAddress True) model
+
         ZoomToHex hexAddress centre ->
             let
                 hHexes =
@@ -2859,14 +2837,14 @@ update msg model =
                         hexAddress
                             |> HexAddress.shiftAddressBy
                                 { deltaX = -1 * hHexes // 2
-                                , deltaY = 1 * vHexes // 2
+                                , deltaY = -1 * vHexes // 2
                                 }
 
                     else
                         hexAddress
                             |> HexAddress.shiftAddressBy
                                 { deltaX = -2
-                                , deltaY = 2
+                                , deltaY = -2
                                 }
 
                 newHexRect =
@@ -2875,7 +2853,7 @@ update msg model =
                         newUpperLeft
                             |> HexAddress.shiftAddressBy
                                 { deltaX = hHexes
-                                , deltaY = -1 * vHexes
+                                , deltaY = vHexes
                                 }
                     }
 
@@ -2887,7 +2865,10 @@ update msg model =
                 , requestHistory = newRequestHistory
                 , solarSystems = newSolarSystemDict
               }
-            , sendSolarSystemRequest nextRequestEntry model.hostConfig model.hexRect
+            , Cmd.batch
+                [ saveMapCoords newHexRect.upperLeftHex
+                , sendSolarSystemRequest nextRequestEntry model.hostConfig newHexRect
+                ]
             )
 
 
