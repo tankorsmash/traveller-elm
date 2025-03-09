@@ -248,6 +248,7 @@ type alias Model =
     { key : Browser.Navigation.Key
     , hexScale : Int
     , viewMode : ViewMode
+    , journeyZoomScale : Float
     , rawHexaPoints : List ( Float, Float )
     , solarSystems : SolarSystemDict
     , newSolarSystemErrors : List ( Http.Error, String )
@@ -274,6 +275,11 @@ type alias Model =
     }
 
 
+type ZoomType
+    = ZoomIn
+    | ZoomOut
+
+
 type Msg
     = NoOpMsg
     | DownloadSolarSystems
@@ -296,6 +302,7 @@ type Msg
     | SetHexSize Int
     | ToggleHexmap
     | JumpToShip
+    | JourneyZoom ZoomType
     | ZoomToHex HexAddress Bool
 
 
@@ -385,6 +392,7 @@ init settings key hostConfig referee =
         model =
             { hexScale = settings.hexSize
             , viewMode = HexMap
+            , journeyZoomScale = 1.0
             , rawHexaPoints = rawHexagonPoints settings.hexSize
             , solarSystems = solarSystemDict
             , newSolarSystemErrors = []
@@ -2047,6 +2055,99 @@ type alias HexRect =
     { upperLeftHex : HexAddress, lowerRightHex : HexAddress }
 
 
+viewFullJourney : Model -> Browser.Dom.Viewport -> Element.Element Msg
+viewFullJourney model viewport =
+    let
+        maxWidth =
+            viewport.viewport.width - sidebarWidth - 50
+
+        imageSize =
+            maxWidth * model.journeyZoomScale
+    in
+    el
+        [ Element.alignTop
+        , width <| Element.px <| floor maxWidth
+        , Element.clip
+        ]
+    <|
+        Element.image
+            [ width <| Element.px <| floor <| imageSize
+            ]
+            { src = "/public/uncharted-space.png", description = "Full Journey Map" }
+
+
+viewStatusRow : Model -> Element.Element Msg
+viewStatusRow model =
+    let
+        extras =
+            case model.viewMode of
+                HexMap ->
+                    [ el [ Element.alignBottom, Font.size 14, uiDeepnightColorFontColour, Element.centerX ] <|
+                        text <|
+                            (universalHexLabelMaybe model.sectors model.hexRect.upperLeftHex
+                                |> Maybe.withDefault "???"
+                            )
+                                ++ " – "
+                                ++ (universalHexLabelMaybe model.sectors model.hexRect.lowerRightHex
+                                        |> Maybe.withDefault "???"
+                                   )
+                    , row
+                        [ uiDeepnightColorFontColour
+                        , Font.size 14
+                        , Element.spacing 5
+                        , Element.pointer
+                        , Events.onClick JumpToShip
+                        , Element.alignBottom
+                        , Element.mouseOver
+                            [ Font.color <| convertColor (Color.Manipulate.lighten 0.25 deepnightColor)
+                            ]
+                        ]
+                        [ text "Revelation"
+                        , renderFAIcon "fa-regular fa-crosshairs-simple" 14
+                        , text <|
+                            (universalHexLabelMaybe model.sectors model.currentAddress
+                                |> Maybe.withDefault "???"
+                            )
+                        ]
+                    ]
+
+                FullJourney ->
+                    [ el
+                        [ uiDeepnightColorFontColour
+                        , Font.size 14
+                        , Element.spacing 5
+                        , Element.pointer
+                        , Events.onClick <| JourneyZoom ZoomIn
+                        , Element.alignBottom
+                        , Element.mouseOver
+                            [ Font.color <| convertColor (Color.Manipulate.lighten 0.25 deepnightColor)
+                            ]
+                        ]
+                      <|
+                        renderFAIcon "fa-regular fa-magnifying-glass-plus" 14
+                    , el
+                        [ uiDeepnightColorFontColour
+                        , Font.size 14
+                        , Element.spacing 5
+                        , Element.pointer
+                        , Events.onClick <| JourneyZoom ZoomOut
+                        , Element.alignBottom
+                        , Element.mouseOver
+                            [ Font.color <| convertColor (Color.Manipulate.lighten 0.25 deepnightColor)
+                            ]
+                        ]
+                      <|
+                        renderFAIcon "fa-regular fa-magnifying-glass-minus" 14
+                    ]
+    in
+    Element.wrappedRow [ Element.spacing 8, Element.width Element.fill, Element.paddingEach { zeroEach | bottom = 4 } ] <|
+        [ el [ Font.size 20, uiDeepnightColorFontColour ] <|
+            text <|
+                "Deepnight Navigation Console"
+        ]
+            ++ extras
+
+
 view : Model -> Element.Element Msg
 view model =
     let
@@ -2211,38 +2312,7 @@ view model =
         [ el [ Element.height fill, Element.width <| Element.px sidebarWidth, Element.alignTop, Element.alignLeft ] <|
             sidebarColumn
         , column []
-            [ Element.wrappedRow [ Element.spacing 8, Element.width Element.fill, Element.paddingEach { zeroEach | bottom = 4 } ]
-                [ el [ Font.size 20, uiDeepnightColorFontColour ] <|
-                    text <|
-                        "Deepnight Navigation Console"
-                , el [ Element.alignBottom, Font.size 14, uiDeepnightColorFontColour, Element.centerX ] <|
-                    text <|
-                        (universalHexLabelMaybe model.sectors model.hexRect.upperLeftHex
-                            |> Maybe.withDefault "???"
-                        )
-                            ++ " – "
-                            ++ (universalHexLabelMaybe model.sectors model.hexRect.lowerRightHex
-                                    |> Maybe.withDefault "???"
-                               )
-                , row
-                    [ uiDeepnightColorFontColour
-                    , Font.size 14
-                    , Element.spacing 5
-                    , Element.pointer
-                    , Events.onClick JumpToShip
-                    , Element.alignBottom
-                    , Element.mouseOver
-                        [ Font.color <| convertColor (Color.Manipulate.lighten 0.25 deepnightColor)
-                        ]
-                    ]
-                    [ text "Revelation"
-                    , renderFAIcon "fa-regular fa-crosshairs-simple" 14
-                    , text <|
-                        (universalHexLabelMaybe model.sectors model.currentAddress
-                            |> Maybe.withDefault "???"
-                        )
-                    ]
-                ]
+            [ viewStatusRow model
             , case model.viewMode of
                 HexMap ->
                     el [ Element.alignTop ] <| hexesColumn
@@ -2250,17 +2320,7 @@ view model =
                 FullJourney ->
                     case model.viewport of
                         Just viewport ->
-                            let
-                                maxWidth =
-                                    viewport.viewport.width - sidebarWidth
-                            in
-                            el
-                                [ Element.alignTop
-                                , width <| Element.px <| floor (maxWidth - 20)
-                                , Element.clip
-                                ]
-                            <|
-                                Element.image [] { src = "/public/uncharted-space.png", description = "Full Journey Map" }
+                            viewFullJourney model viewport
 
                         Nothing ->
                             -- no viewport
@@ -2948,6 +3008,18 @@ update msg model =
                         HexMap
             in
             ( { model | viewMode = newViewMode }, Cmd.none )
+
+        JourneyZoom zoomType ->
+            let
+                newZoomScale =
+                    case zoomType of
+                        ZoomIn ->
+                            model.journeyZoomScale * 1.5
+
+                        ZoomOut ->
+                            model.journeyZoomScale / 1.5
+            in
+            ( { model | journeyZoomScale = Debug.log "new zoom" newZoomScale }, Cmd.none )
 
 
 stripDataFromRemoteData : RemoteData err data -> RemoteData err ()
