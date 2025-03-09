@@ -41,7 +41,7 @@
 * [ ] making HexAddress fail on invalid addresses
 * [ ] render neutron star
 * [ ] prettier ui somehow
-* [ ] sector borders
+* [X] sector borders
 * [ ] subsector borders
 
 ## 1.0
