@@ -2024,7 +2024,11 @@ errorDialog httpErrors =
 
 renderFAIcon : String -> Int -> Element.Element Msg
 renderFAIcon icon size =
-    Element.el [ Element.width (Element.px size), Element.height (Element.px size) ] <|
+    Element.el
+        [ Element.width (Element.px size)
+        , Element.height (Element.px size)
+        ]
+    <|
         Element.html <|
             UnstyledHtml.i
                 [ UnstyledHtmlAttrs.style "font-size" (String.fromInt size ++ "px"), UnstyledHtmlAttrs.class icon ]
@@ -2142,20 +2146,24 @@ view model =
                                 ++ (universalHexLabelMaybe model.sectors model.hexRect.lowerRightHex
                                         |> Maybe.withDefault "???"
                                    )
-                    , el
-                        [ Element.alignBottom
+                    , row
+                        [ uiDeepnightColorFontColour
                         , Font.size 14
-                        , uiDeepnightColorFontColour
-                        , Element.alignRight
+                        , Element.spacing 5
                         , Element.pointer
-                        , Events.onClick <| JumpToShip
+                        , Events.onClick JumpToShip
+                        , Element.alignBottom
+                        , Element.mouseOver
+                            [ Font.color <| convertColor (Color.Manipulate.lighten 0.25 deepnightColor)
+                            ]
                         ]
-                      <|
-                        text <|
-                            "Revelation @ "
-                                ++ (universalHexLabelMaybe model.sectors model.currentAddress
-                                        |> Maybe.withDefault "???"
-                                   )
+                        [ text "Revelation"
+                        , renderFAIcon "fa-regular fa-crosshairs-simple" 14
+                        , text <|
+                            (universalHexLabelMaybe model.sectors model.currentAddress
+                                |> Maybe.withDefault "???"
+                            )
+                        ]
                     ]
                 , Element.html <|
                     -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
