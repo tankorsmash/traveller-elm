@@ -32,6 +32,7 @@ import FontAwesome.Solid as Icon
 import HostConfig exposing (HostConfig)
 import Html as UnstyledHtml
 import Html.Attributes as UnstyledHtmlAttrs
+import Html.Events
 import Html.Events.Extra.Mouse
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as HtmlStyledAttrs
@@ -249,6 +250,8 @@ type alias Model =
     , hexScale : Int
     , viewMode : ViewMode
     , journeyZoomScale : Float
+    , journeyZoomOffset : ( Float, Float )
+    , journeyDragMode : DragMode
     , rawHexaPoints : List ( Float, Float )
     , solarSystems : SolarSystemDict
     , newSolarSystemErrors : List ( Http.Error, String )
@@ -303,6 +306,9 @@ type Msg
     | ToggleHexmap
     | JumpToShip
     | JourneyZoom ZoomType
+    | JourneyMapDown ( Float, Float )
+    | JourneyMapMove ( Float, Float )
+    | JourneyMapUp
     | ZoomToHex HexAddress Bool
 
 
@@ -393,6 +399,8 @@ init settings key hostConfig referee =
             { hexScale = settings.hexSize
             , viewMode = HexMap
             , journeyZoomScale = 1.0
+            , journeyZoomOffset = ( 0, 0 )
+            , journeyDragMode = NoDragging
             , rawHexaPoints = rawHexagonPoints settings.hexSize
             , solarSystems = solarSystemDict
             , newSolarSystemErrors = []
@@ -601,8 +609,8 @@ viewHexEmpty hx hy x y size childSvgTxt hexColour =
         , SvgEvents.onClick (ViewingHex hexAddress)
         , SvgEvents.onMouseUp MapMouseUp
         , -- listens for the JS 'mousedown' event and then runs the `downDecoder` on the JS Event, returning the Msg
-          SvgEvents.on "mousedown" downDecoder
-        , SvgEvents.on "mousemove" moveDecoder
+          SvgEvents.on "mousedown" <| downDecoder MapMouseDown
+        , SvgEvents.on "mousemove" <| moveDecoder MapMouseMove
         , SvgAttrs.style "cursor: pointer; user-select: none"
         , SvgAttrs.id <| "rendered-hex:" ++ HexAddress.toKey hexAddress
         ]
@@ -679,8 +687,8 @@ renderPolygon points_ fill =
 
 {-| a decoder that takes JSON and emits either a decode failure or a Msg
 -}
-downDecoder : JsDecode.Decoder Msg
-downDecoder =
+downDecoder : (( Float, Float ) -> msg) -> JsDecode.Decoder msg
+downDecoder onDownMsg =
     let
         -- takes a raw JS mouse event and turns it into a parsed Elm mouse event
         jsMouseEventDecoder =
@@ -701,14 +709,14 @@ downDecoder =
     -- run the mouse event decoder
     jsMouseEventDecoder
         |> -- then if that succeeds, pass the event object into msgConstructor
-           JsDecode.map (\evt -> MapMouseDown evt.offsetPos)
+           JsDecode.map (\evt -> onDownMsg evt.offsetPos)
 
 
-moveDecoder : JsDecode.Decoder Msg
-moveDecoder =
+moveDecoder : (( Float, Float ) -> msg) -> JsDecode.Decoder msg
+moveDecoder onMoveMsg =
     -- equivalent to the `downDecoder`, only it returns `MapMouseMove` instead
     Html.Events.Extra.Mouse.eventDecoder
-        |> JsDecode.map (.offsetPos >> MapMouseMove)
+        |> JsDecode.map (.offsetPos >> onMoveMsg)
 
 
 drawStar : ( Float, Float ) -> Int -> Int -> String -> Svg Msg
@@ -746,8 +754,8 @@ renderHexWithStar starSystem hexColour hexAddress ( vox, voy ) iSize rawHexaPoin
         , SvgEvents.onClick (ViewingHex hexAddress)
         , SvgEvents.onMouseUp MapMouseUp
         , -- listens for the JS 'mousedown' event and then runs the `downDecoder` on the JS Event, returning the Msg
-          SvgEvents.on "mousedown" downDecoder
-        , SvgEvents.on "mousemove" moveDecoder
+          SvgEvents.on "mousedown" <| downDecoder MapMouseDown
+        , SvgEvents.on "mousemove" <| moveDecoder MapMouseMove
         , SvgAttrs.style "cursor: pointer; user-select: none"
         ]
         [ -- background hex
@@ -2063,15 +2071,32 @@ viewFullJourney model viewport =
 
         imageSize =
             maxWidth * model.journeyZoomScale
+
+        ( offsetLeft, offsetTop ) =
+            model.journeyZoomOffset
+
+        -- case model.journeyDragMode of
+        --     IsDragging ( x, y ) ->
+        --         ( x, y )
+        --
+        --     NoDragging ->
+        --         ( 0, 0 )
     in
     el
         [ Element.alignTop
         , width <| Element.px <| floor maxWidth
         , Element.clip
+        , Element.htmlAttribute <| Html.Events.on "mousemove" <| moveDecoder JourneyMapMove
+        , Element.htmlAttribute <| Html.Events.on "mousedown" <| downDecoder JourneyMapDown
+        , Events.onMouseUp JourneyMapUp
         ]
     <|
         Element.image
             [ width <| Element.px <| floor <| imageSize
+            , Element.moveRight <| offsetLeft
+            , Element.moveDown <| offsetTop
+            , Element.htmlAttribute <| UnstyledHtmlAttrs.style "pointer-events" "none"
+            , Element.htmlAttribute <| UnstyledHtmlAttrs.style "user-select" "none"
             ]
             { src = "/public/uncharted-space.png", description = "Full Journey Map" }
 
@@ -3020,6 +3045,51 @@ update msg model =
                             model.journeyZoomScale / 1.5
             in
             ( { model | journeyZoomScale = Debug.log "new zoom" newZoomScale }, Cmd.none )
+
+        JourneyMapDown originalPos ->
+            ( { model | journeyDragMode = IsDragging originalPos }, Cmd.none )
+
+        JourneyMapMove ( newX, newY ) ->
+            let
+                _ =
+                    Debug.log " new pos" ( newX, newY )
+            in
+            case model.journeyDragMode of
+                IsDragging ( originalX, originalY ) ->
+                    let
+                        xDelta =
+                            newX - originalX
+
+                        yDelta =
+                            newY - originalY
+
+                        ( oldX, oldY ) =
+                            model.journeyZoomOffset
+
+                        newModel =
+                            { model
+                                | journeyDragMode = IsDragging ( newX, newY )
+                                , journeyZoomOffset =
+                                    ( oldX + xDelta
+                                    , oldY + yDelta
+                                    )
+                            }
+                    in
+                    if xDelta /= 0 || yDelta /= 0 then
+                        ( newModel
+                        , Cmd.none
+                        )
+
+                    else
+                        ( model
+                        , Cmd.none
+                        )
+
+                NoDragging ->
+                    ( model, Cmd.none )
+
+        JourneyMapUp ->
+            ( { model | journeyDragMode = NoDragging }, Cmd.none )
 
 
 stripDataFromRemoteData : RemoteData err data -> RemoteData err ()
