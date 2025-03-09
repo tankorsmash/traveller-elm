@@ -2121,13 +2121,30 @@ userSelectNone =
     Element.htmlAttribute <| UnstyledHtmlAttrs.style "user-select" "none"
 
 
+{-| Element attribute that does nothing
+-}
+noopAttribute : Element.Attribute msg
+noopAttribute =
+    Element.htmlAttribute <| UnstyledHtmlAttrs.style "" ""
+
+
+conditionalAttribute : Bool -> Element.Attribute msg -> Element.Attribute msg
+conditionalAttribute condition attribute =
+    if condition then
+        attribute
+
+    else
+        noopAttribute
+
+
 viewStatusRow : Model -> Element.Element Msg
 viewStatusRow model =
     let
         extras =
             case model.viewMode of
                 HexMap ->
-                    [ el [ Element.alignBottom, Font.size 14, uiDeepnightColorFontColour, Element.centerX ] <|
+                    [ -- hex rect display
+                      el [ Element.alignBottom, Font.size 14, uiDeepnightColorFontColour, Element.centerX ] <|
                         text <|
                             (universalHexLabelMaybe model.sectors model.hexRect.upperLeftHex
                                 |> Maybe.withDefault "???"
@@ -2136,7 +2153,8 @@ viewStatusRow model =
                                 ++ (universalHexLabelMaybe model.sectors model.hexRect.lowerRightHex
                                         |> Maybe.withDefault "???"
                                    )
-                    , row
+                    , -- player location display
+                      row
                         [ uiDeepnightColorFontColour
                         , Font.size 14
                         , Element.spacing 5
@@ -2157,12 +2175,15 @@ viewStatusRow model =
                     ]
 
                 FullJourney ->
-                    [ el
+                    [ -- zoom in button
+                      el
                         [ uiDeepnightColorFontColour
                         , Font.size 14
                         , Element.spacing 5
                         , Element.pointer
-                        , Events.onClick <| JourneyZoom ZoomIn
+                        , conditionalAttribute (model.journeyZoomScale < 7.0) <|
+                            Events.onClick (JourneyZoom ZoomIn)
+                        , Element.transparent <| model.journeyZoomScale >= 7.0
                         , Element.alignBottom
                         , Element.mouseOver
                             [ Font.color <| convertColor (Color.Manipulate.lighten 0.25 deepnightColor)
@@ -2170,12 +2191,15 @@ viewStatusRow model =
                         ]
                       <|
                         renderFAIcon "fa-regular fa-magnifying-glass-plus" 14
-                    , el
+                    , -- zoom out button
+                      el
                         [ uiDeepnightColorFontColour
                         , Font.size 14
                         , Element.spacing 5
                         , Element.pointer
-                        , Events.onClick <| JourneyZoom ZoomOut
+                        , Element.transparent <| model.journeyZoomScale <= 1.0
+                        , conditionalAttribute (model.journeyZoomScale > 1.0) <|
+                            Events.onClick (JourneyZoom ZoomOut)
                         , Element.alignBottom
                         , Element.mouseOver
                             [ Font.color <| convertColor (Color.Manipulate.lighten 0.25 deepnightColor)
@@ -2350,6 +2374,7 @@ view model =
     in
     row
         [ width fill
+        , height fill
         , Font.size 20
         , Font.color <| fontTextColor
         , Element.paddingXY 15 0

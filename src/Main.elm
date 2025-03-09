@@ -194,8 +194,7 @@ view model =
     { title = "Revelation"
     , body =
         [ Dialog.view "error-dialog" ToggleErrorDialog model.dialogBody
-        , div
-            []
+        , div []
             [ elmUiHackLayout
             , Html.nav [ class "navbar navbar-expand m-3" ]
                 [ a [ href "?", class "navbar-brand" ] [ text "Navigation" ]
@@ -204,9 +203,10 @@ view model =
                         [ a [ class "nav-link", href "/" ] [ text "Uncharted Space" ] ]
                     ]
                 ]
-            , Html.map GotTravellerMsg <|
-                Element.layoutWith { options = [ Element.noStaticStyleSheet ] } [ Element.centerX ] <|
-                    Traveller.view model.travellerModel
+            , Traveller.view model.travellerModel
+                |> Element.layoutWith { options = [ Element.noStaticStyleSheet ] }
+                    [ Element.centerX, Element.height Element.fill ]
+                |> Html.map GotTravellerMsg
             ]
         ]
     }
