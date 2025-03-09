@@ -319,6 +319,7 @@ type Msg
     | JourneyMapDown ( Float, Float )
     | JourneyMapMove ( Float, Float )
     | JourneyMapUp
+    | JourneyMapLeave
     | ZoomToHex HexAddress Bool
 
 
@@ -2101,6 +2102,7 @@ viewFullJourney model viewport =
         , Element.clip
         , Element.htmlAttribute <| Html.Events.on "mousemove" <| moveDecoder JourneyMapMove
         , Element.htmlAttribute <| Html.Events.on "mousedown" <| downDecoder JourneyMapDown
+        , Events.onMouseLeave JourneyMapLeave
         , Events.onMouseUp JourneyMapUp
         , Background.color <| Element.rgb 1 0 1
         ]
@@ -3130,6 +3132,9 @@ update msg model =
 
         JourneyMapDown originalPos ->
             ( { model | journeyDragMode = IsDragging originalPos }, Cmd.none )
+
+        JourneyMapLeave ->
+            ( { model | journeyDragMode = NoDragging, journeyHoverPoint = Nothing }, Cmd.none )
 
         JourneyMapMove ( newX, newY ) ->
             case model.journeyDragMode of
