@@ -87,6 +87,14 @@ sidebarWidth =
     400
 
 
+fullJourneyImageWidth =
+    2176
+
+
+fullJourneyImageHeight =
+    2240
+
+
 type alias HexMapViewport =
     Result Browser.Dom.Error Browser.Dom.Viewport
 
@@ -2066,39 +2074,47 @@ type alias HexRect =
 viewFullJourney : Model -> Browser.Dom.Viewport -> Element.Element Msg
 viewFullJourney model viewport =
     let
-        maxWidth =
-            viewport.viewport.width - sidebarWidth - 50
+        ( maxWidth, maxHeight ) =
+            ( viewport.viewport.width - sidebarWidth - 50
+            , viewport.viewport.height - 118
+            )
 
-        imageSize =
-            maxWidth * model.journeyZoomScale
+        ( imageSizeWidth, imageSizeHeight ) =
+            ( maxWidth * model.journeyZoomScale
+            , maxHeight * model.journeyZoomScale
+            )
 
         ( offsetLeft, offsetTop ) =
             model.journeyZoomOffset
-
-        -- case model.journeyDragMode of
-        --     IsDragging ( x, y ) ->
-        --         ( x, y )
-        --
-        --     NoDragging ->
-        --         ( 0, 0 )
     in
     el
         [ Element.alignTop
         , width <| Element.px <| floor maxWidth
+        , height <| Element.px <| floor maxHeight
         , Element.clip
         , Element.htmlAttribute <| Html.Events.on "mousemove" <| moveDecoder JourneyMapMove
         , Element.htmlAttribute <| Html.Events.on "mousedown" <| downDecoder JourneyMapDown
         , Events.onMouseUp JourneyMapUp
+        , Background.color <| Element.rgb 1 0 1
         ]
     <|
         Element.image
-            [ width <| Element.px <| floor <| imageSize
+            [ width <| Element.px <| floor <| imageSizeWidth
+            , height <| Element.px <| floor <| imageSizeHeight
             , Element.moveRight <| offsetLeft
             , Element.moveDown <| offsetTop
-            , Element.htmlAttribute <| UnstyledHtmlAttrs.style "pointer-events" "none"
-            , Element.htmlAttribute <| UnstyledHtmlAttrs.style "user-select" "none"
+            , pointerEventsNone
+            , userSelectNone
             ]
             { src = "/public/uncharted-space.png", description = "Full Journey Map" }
+
+
+pointerEventsNone =
+    Element.htmlAttribute <| UnstyledHtmlAttrs.style "pointer-events" "none"
+
+
+userSelectNone =
+    Element.htmlAttribute <| UnstyledHtmlAttrs.style "user-select" "none"
 
 
 viewStatusRow : Model -> Element.Element Msg
@@ -3050,15 +3066,23 @@ update msg model =
             ( { model | journeyDragMode = IsDragging originalPos }, Cmd.none )
 
         JourneyMapMove ( newX, newY ) ->
-            let
-                _ =
-                    Debug.log " new pos" ( newX, newY )
-            in
             case model.journeyDragMode of
                 IsDragging ( originalX, originalY ) ->
                     let
                         xDelta =
                             newX - originalX
+
+                        ( maxWidth, maxHeight ) =
+                            (case model.viewport of
+                                Just viewport ->
+                                    ( viewport.viewport.width - 420
+                                    , viewport.viewport.height
+                                    )
+
+                                Nothing ->
+                                    ( 0, 0 )
+                            )
+                                |> Debug.log "maxes"
 
                         yDelta =
                             newY - originalY
@@ -3066,13 +3090,22 @@ update msg model =
                         ( oldX, oldY ) =
                             model.journeyZoomOffset
 
+                        ( curImgWidth, curImgHeight ) =
+                            ( maxWidth * model.journeyZoomScale
+                            , maxHeight * model.journeyZoomScale
+                            )
+                                |> Debug.log "cur img sizes"
+
                         newModel =
                             { model
                                 | journeyDragMode = IsDragging ( newX, newY )
                                 , journeyZoomOffset =
-                                    ( oldX + xDelta
-                                    , oldY + yDelta
-                                    )
+                                    Debug.log "new offset" <|
+                                        ( clamp (maxWidth - curImgWidth) 0 <|
+                                            Debug.log "zoom offset width" <|
+                                                (oldX + xDelta)
+                                        , clamp (maxHeight - curImgHeight) 0 <| oldY + yDelta
+                                        )
                             }
                     in
                     if xDelta /= 0 || yDelta /= 0 then
