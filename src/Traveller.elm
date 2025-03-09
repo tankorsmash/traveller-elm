@@ -2113,13 +2113,13 @@ viewFullJourney model viewport =
             , pointerEventsNone
             , userSelectNone
             , case model.journeyHoverPoint of
-                Just ( hx, hy ) ->
+                Just ( hovX, hovY ) ->
                     Element.inFront <|
                         let
                             ( sectorsAcross, sectorsTall ) =
                                 ( 17, 14 )
 
-                            ( cx, cy ) =
+                            ( correctedX, correctedY ) =
                                 let
                                     ( officialX, officialY ) =
                                         ( -21, 2 )
@@ -2129,15 +2129,15 @@ viewFullJourney model viewport =
                                 in
                                 ( officialX + oursX, officialY + oursY )
 
-                            ( sx, sy ) =
-                                ( hx / (imageSizeWidth / sectorsAcross)
-                                , hy / (imageSizeHeight / sectorsTall)
+                            ( sectorX, sectorY ) =
+                                ( (hovX - offsetLeft) / (imageSizeWidth / sectorsAcross)
+                                , (hovY - offsetTop) / (imageSizeHeight / sectorsTall)
                                 )
 
                             ( xoff, yoff ) =
-                                ( (toFloat <| floor sx)
+                                ( (toFloat <| floor sectorX)
                                     * (imageSizeWidth / sectorsAcross)
-                                , (toFloat <| floor sy)
+                                , (toFloat <| floor sectorY)
                                     * (imageSizeHeight / sectorsTall)
                                 )
                         in
@@ -2151,9 +2151,9 @@ viewFullJourney model viewport =
                         <|
                             text <|
                                 "Sector: "
-                                    ++ String.fromInt (cx - floor sx)
+                                    ++ String.fromInt (correctedX - floor sectorX)
                                     ++ ", "
-                                    ++ String.fromInt (cy - floor sy)
+                                    ++ String.fromInt (correctedY - floor sectorY)
 
                 Nothing ->
                     noopAttribute
