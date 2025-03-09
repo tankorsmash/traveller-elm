@@ -296,6 +296,7 @@ type alias Model =
 type ZoomType
     = ZoomIn
     | ZoomOut
+    | ZoomSet Float
 
 
 type Msg
@@ -2270,17 +2271,24 @@ viewStatusRow model =
 
                             zoomAscii =
                                 [ 1, 2, 3, 4, 6, 8 ]
-                                    |> List.map
-                                        (\r ->
+                                    |> List.indexedMap
+                                        (\i r ->
                                             if r == roundedZoom then
-                                                "|"
+                                                text "|"
 
                                             else
-                                                "-"
+                                                el
+                                                    [ Element.pointer
+                                                    , Events.onClick <| JourneyMsg <| Zoom <| ZoomSet (1.5 ^ toFloat i)
+                                                    , Element.mouseOver
+                                                        [ Font.color <| convertColor (Color.Manipulate.lighten 0.25 deepnightColor)
+                                                        ]
+                                                    ]
+                                                <|
+                                                    text "-"
                                         )
-                                    |> String.concat
                         in
-                        text zoomAscii
+                        row [] zoomAscii
                     , -- zoom in button
                       el
                         [ uiDeepnightColorFontColour
@@ -2301,11 +2309,11 @@ viewStatusRow model =
                     ]
     in
     Element.wrappedRow [ Element.spacing 8, Element.width Element.fill, Element.paddingEach { zeroEach | bottom = 4 } ] <|
-        [ el [ Font.size 20, uiDeepnightColorFontColour ] <|
+        (el [ Font.size 20, uiDeepnightColorFontColour ] <|
             text <|
                 "Deepnight Navigation Console"
-        ]
-            ++ extras
+        )
+            :: extras
 
 
 view : Model -> Element.Element Msg
@@ -2613,6 +2621,9 @@ updateJourney journeyMsg ({ journeyModel } as model) =
 
                         ZoomOut ->
                             journeyModel.zoomScale / 1.5
+
+                        ZoomSet newZoom ->
+                            newZoom
 
                 newJourneyModel =
                     { journeyModel | zoomScale = Debug.log "new zoom" newZoomScale }
