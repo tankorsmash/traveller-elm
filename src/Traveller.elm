@@ -239,9 +239,15 @@ prepNextRequest ( oldSolarSystemDict, requestHistory ) { upperLeftHex, lowerRigh
     ( requestEntry, ( newSolarSystemDict, requestEntry :: requestHistory ) )
 
 
+type ViewMode
+    = HexMap
+    | FullJourney
+
+
 type alias Model =
     { key : Browser.Navigation.Key
     , hexScale : Int
+    , viewMode : ViewMode
     , rawHexaPoints : List ( Float, Float )
     , solarSystems : SolarSystemDict
     , newSolarSystemErrors : List ( Http.Error, String )
@@ -288,6 +294,7 @@ type Msg
     | MapMouseMove ( Float, Float )
     | DownloadedRoute ( RequestEntry, String ) (Result Http.Error (List Route))
     | SetHexSize Int
+    | ToggleHexmap
     | JumpToShip
     | ZoomToHex HexAddress Bool
 
@@ -377,6 +384,7 @@ init settings key hostConfig referee =
         model : Model
         model =
             { hexScale = settings.hexSize
+            , viewMode = HexMap
             , rawHexaPoints = rawHexagonPoints settings.hexSize
             , solarSystems = solarSystemDict
             , newSolarSystemErrors = []
@@ -2049,14 +2057,14 @@ view model =
                         clickableIcon size =
                             let
                                 selectorColor =
-                                    if model.hexScale == size // 2 then
+                                    if model.hexScale == size // 2 && model.viewMode == HexMap then
                                         deepnightColor
 
                                     else
                                         textColor
 
                                 hexStyle =
-                                    if model.hexScale == size // 2 then
+                                    if model.hexScale == size // 2 && model.viewMode == HexMap then
                                         "fa-regular"
 
                                     else
@@ -2074,6 +2082,31 @@ view model =
                         [ clickableIcon 80
                         , clickableIcon 60
                         , clickableIcon 50
+                        , let
+                            selectorColor =
+                                if model.viewMode == FullJourney then
+                                    deepnightColor
+
+                                else
+                                    textColor
+
+                            hexStyle =
+                                if model.viewMode == FullJourney then
+                                    "fa-regular"
+
+                                else
+                                    "fa-thin"
+                          in
+                          el
+                            [ Element.width <| Element.px 50
+                            , Element.height <| Element.px 50
+                            , Element.pointer
+                            , Events.onClick ToggleHexmap
+                            , Element.mouseOver [ Font.color <| convertColor (Color.Manipulate.lighten 0.15 selectorColor) ]
+                            , Font.color <| convertColor selectorColor
+                            ]
+                          <|
+                            renderFAIcon (hexStyle ++ " " ++ "fa-map") 50
                         ]
                     , case model.selectedHex of
                         Just viewingAddress ->
@@ -2133,39 +2166,7 @@ view model =
 
         hexesColumn =
             column []
-                [ row [ Element.spacing 8, Element.width Element.fill, Element.paddingEach { zeroEach | bottom = 4 } ]
-                    [ el [ Font.size 20, uiDeepnightColorFontColour ] <|
-                        text <|
-                            "Deepnight Navigation Console"
-                    , el [ Element.alignBottom, Font.size 14, uiDeepnightColorFontColour, Element.centerX ] <|
-                        text <|
-                            (universalHexLabelMaybe model.sectors model.hexRect.upperLeftHex
-                                |> Maybe.withDefault "???"
-                            )
-                                ++ " – "
-                                ++ (universalHexLabelMaybe model.sectors model.hexRect.lowerRightHex
-                                        |> Maybe.withDefault "???"
-                                   )
-                    , row
-                        [ uiDeepnightColorFontColour
-                        , Font.size 14
-                        , Element.spacing 5
-                        , Element.pointer
-                        , Events.onClick JumpToShip
-                        , Element.alignBottom
-                        , Element.mouseOver
-                            [ Font.color <| convertColor (Color.Manipulate.lighten 0.25 deepnightColor)
-                            ]
-                        ]
-                        [ text "Revelation"
-                        , renderFAIcon "fa-regular fa-crosshairs-simple" 14
-                        , text <|
-                            (universalHexLabelMaybe model.sectors model.currentAddress
-                                |> Maybe.withDefault "???"
-                            )
-                        ]
-                    ]
-                , Element.html <|
+                [ Element.html <|
                     -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
                     case model.viewport of
                         Just viewport ->
@@ -2209,7 +2210,62 @@ view model =
         ]
         [ el [ Element.height fill, Element.width <| Element.px sidebarWidth, Element.alignTop, Element.alignLeft ] <|
             sidebarColumn
-        , el [ Element.alignTop ] <| hexesColumn
+        , column []
+            [ Element.wrappedRow [ Element.spacing 8, Element.width Element.fill, Element.paddingEach { zeroEach | bottom = 4 } ]
+                [ el [ Font.size 20, uiDeepnightColorFontColour ] <|
+                    text <|
+                        "Deepnight Navigation Console"
+                , el [ Element.alignBottom, Font.size 14, uiDeepnightColorFontColour, Element.centerX ] <|
+                    text <|
+                        (universalHexLabelMaybe model.sectors model.hexRect.upperLeftHex
+                            |> Maybe.withDefault "???"
+                        )
+                            ++ " – "
+                            ++ (universalHexLabelMaybe model.sectors model.hexRect.lowerRightHex
+                                    |> Maybe.withDefault "???"
+                               )
+                , row
+                    [ uiDeepnightColorFontColour
+                    , Font.size 14
+                    , Element.spacing 5
+                    , Element.pointer
+                    , Events.onClick JumpToShip
+                    , Element.alignBottom
+                    , Element.mouseOver
+                        [ Font.color <| convertColor (Color.Manipulate.lighten 0.25 deepnightColor)
+                        ]
+                    ]
+                    [ text "Revelation"
+                    , renderFAIcon "fa-regular fa-crosshairs-simple" 14
+                    , text <|
+                        (universalHexLabelMaybe model.sectors model.currentAddress
+                            |> Maybe.withDefault "???"
+                        )
+                    ]
+                ]
+            , case model.viewMode of
+                HexMap ->
+                    el [ Element.alignTop ] <| hexesColumn
+
+                FullJourney ->
+                    case model.viewport of
+                        Just viewport ->
+                            let
+                                maxWidth =
+                                    viewport.viewport.width - sidebarWidth
+                            in
+                            el
+                                [ Element.alignTop
+                                , width <| Element.px <| floor (maxWidth - 20)
+                                , Element.clip
+                                ]
+                            <|
+                                Element.image [] { src = "/public/uncharted-space.png", description = "Full Journey Map" }
+
+                        Nothing ->
+                            -- no viewport
+                            text "no viewport"
+            ]
         , Element.html <| errorDialog model.newSolarSystemErrors
         ]
 
@@ -2341,6 +2397,7 @@ update msg model =
             ( { model
                 | hexScale = newSize
                 , rawHexaPoints = rawHexagonPoints newSize
+                , viewMode = HexMap
               }
             , saveHexSize newSize
             )
@@ -2880,6 +2937,17 @@ update msg model =
                 , sendSolarSystemRequest nextRequestEntry model.hostConfig newHexRect
                 ]
             )
+
+        ToggleHexmap ->
+            let
+                newViewMode =
+                    if model.viewMode == HexMap then
+                        FullJourney
+
+                    else
+                        HexMap
+            in
+            ( { model | viewMode = newViewMode }, Cmd.none )
 
 
 stripDataFromRemoteData : RemoteData err data -> RemoteData err ()
