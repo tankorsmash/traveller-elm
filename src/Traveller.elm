@@ -2239,29 +2239,14 @@ viewStatusRow model =
                     ]
 
                 FullJourney ->
-                    [ -- zoom in button
-                      el
-                        [ uiDeepnightColorFontColour
-                        , Font.size 14
-                        , Element.spacing 5
-                        , Element.pointer
-                        , conditionalAttribute (model.journeyModel.zoomScale < 7.0) <|
-                            Events.onClick (JourneyMsg <| Zoom ZoomIn)
-                        , Element.transparent <| model.journeyModel.zoomScale >= 7.0
-                        , Element.alignBottom
-                        , Element.mouseOver
-                            [ Font.color <| convertColor (Color.Manipulate.lighten 0.25 deepnightColor)
-                            ]
-                        ]
-                      <|
-                        renderFAIcon "fa-regular fa-magnifying-glass-plus" 14
-                    , -- zoom out button
+                    [ -- zoom out button
                       el
                         [ uiDeepnightColorFontColour
                         , Font.size 14
                         , Element.spacing 5
                         , Element.pointer
                         , Element.transparent <| model.journeyModel.zoomScale <= 1.0
+                        , userSelectNone
                         , conditionalAttribute (model.journeyModel.zoomScale > 1.0) <|
                             Events.onClick (JourneyMsg <| Zoom ZoomOut)
                         , Element.alignBottom
@@ -2271,6 +2256,48 @@ viewStatusRow model =
                         ]
                       <|
                         renderFAIcon "fa-regular fa-magnifying-glass-minus" 14
+                    , -- zoom indicator
+                      el
+                        [ uiDeepnightColorFontColour
+                        , Font.size 14
+                        , Font.family [ Font.monospace ]
+                        , userSelectNone
+                        ]
+                      <|
+                        let
+                            roundedZoom =
+                                ceiling <| model.journeyModel.zoomScale
+
+                            zoomAscii =
+                                [ 1, 2, 3, 4, 6, 8 ]
+                                    |> List.map
+                                        (\r ->
+                                            if r == roundedZoom then
+                                                "|"
+
+                                            else
+                                                "-"
+                                        )
+                                    |> String.concat
+                        in
+                        text zoomAscii
+                    , -- zoom in button
+                      el
+                        [ uiDeepnightColorFontColour
+                        , Font.size 14
+                        , Element.spacing 5
+                        , Element.pointer
+                        , conditionalAttribute (model.journeyModel.zoomScale < 7.0) <|
+                            Events.onClick (JourneyMsg <| Zoom ZoomIn)
+                        , Element.transparent <| model.journeyModel.zoomScale >= 7.0
+                        , userSelectNone
+                        , Element.alignBottom
+                        , Element.mouseOver
+                            [ Font.color <| convertColor (Color.Manipulate.lighten 0.25 deepnightColor)
+                            ]
+                        ]
+                      <|
+                        renderFAIcon "fa-regular fa-magnifying-glass-plus" 14
                     ]
     in
     Element.wrappedRow [ Element.spacing 8, Element.width Element.fill, Element.paddingEach { zeroEach | bottom = 4 } ] <|
