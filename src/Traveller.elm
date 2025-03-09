@@ -2351,6 +2351,7 @@ view model =
                         [ clickableIcon 80
                         , clickableIcon 60
                         , clickableIcon 50
+                        , clickableIcon 30
                         , let
                             selectorColor =
                                 if model.viewMode == FullJourney then
@@ -2693,9 +2694,27 @@ update msg model =
             ( model, Cmd.none )
 
         SetHexSize newSize ->
+            let
+                hh =
+                    horizontalHexes model.hexmapViewport newSize
+
+                vh =
+                    horizontalHexes model.hexmapViewport newSize
+
+                lr =
+                    HexAddress.shiftAddressBy
+                        { deltaX = hh, deltaY = vh }
+                        model.hexRect.upperLeftHex
+
+                newHexRect =
+                    { lowerRightHex = lr
+                    , upperLeftHex = model.hexRect.upperLeftHex
+                    }
+            in
             ( { model
                 | hexScale = newSize
                 , rawHexaPoints = rawHexagonPoints newSize
+                , hexRect = newHexRect
                 , viewMode = HexMap
               }
             , saveHexSize newSize
