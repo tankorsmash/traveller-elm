@@ -2310,9 +2310,9 @@ view model =
                             text "Deepnight Corporation LLC"
                 ]
 
-        hexesColumn =
-            column []
-                [ Element.html <|
+        contentColumn =
+            case model.viewMode of
+                HexMap ->
                     -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
                     case model.viewport of
                         Just viewport ->
@@ -2343,10 +2343,21 @@ view model =
                                 ( model.route, model.currentAddress )
                                 model.hexScale
                                 |> Html.toUnstyled
+                                |> Element.html
 
                         Nothing ->
-                            Html.toUnstyled <| Html.text "Have sector data but no viewport"
-                ]
+                            Html.text "Have sector data but no viewport"
+                                |> Html.toUnstyled
+                                |> Element.html
+
+                FullJourney ->
+                    case model.viewport of
+                        Just viewport ->
+                            viewFullJourney model viewport
+
+                        Nothing ->
+                            -- no viewport
+                            text "no viewport"
     in
     row
         [ width fill
@@ -2358,18 +2369,7 @@ view model =
             sidebarColumn
         , column []
             [ viewStatusRow model
-            , case model.viewMode of
-                HexMap ->
-                    el [ Element.alignTop ] <| hexesColumn
-
-                FullJourney ->
-                    case model.viewport of
-                        Just viewport ->
-                            viewFullJourney model viewport
-
-                        Nothing ->
-                            -- no viewport
-                            text "no viewport"
+            , el [ Element.alignTop ] <| contentColumn
             ]
         , Element.html <| errorDialog model.newSolarSystemErrors
         ]
