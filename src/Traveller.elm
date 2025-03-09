@@ -3077,7 +3077,7 @@ update msg model =
                             newX - originalX
 
                         ( maxWidth, maxHeight ) =
-                            (case model.viewport of
+                            case model.viewport of
                                 Just viewport ->
                                     ( viewport.viewport.width - sidebarWidth - 50
                                     , viewport.viewport.height
@@ -3085,8 +3085,6 @@ update msg model =
 
                                 Nothing ->
                                     ( 0, 0 )
-                            )
-                                |> Debug.log "maxes"
 
                         yDelta =
                             newY - originalY
@@ -3098,18 +3096,15 @@ update msg model =
                             ( maxWidth * model.journeyZoomScale
                             , maxHeight * model.journeyZoomScale
                             )
-                                |> Debug.log "cur img sizes"
 
                         newModel =
                             { model
                                 | journeyDragMode = IsDragging ( newX, newY )
                                 , journeyZoomOffset =
-                                    Debug.log "new offset" <|
-                                        ( clamp (maxWidth - curImgWidth) 0 <|
-                                            Debug.log "zoom offset width" <|
-                                                (oldX + xDelta)
-                                        , clamp (maxHeight - curImgHeight) 0 <| oldY + yDelta
-                                        )
+                                    ( clamp (maxWidth - curImgWidth) 0 <|
+                                        (oldX + xDelta)
+                                    , clamp (maxHeight - curImgHeight) 0 <| oldY + yDelta
+                                    )
                             }
                     in
                     if xDelta /= 0 || yDelta /= 0 then
