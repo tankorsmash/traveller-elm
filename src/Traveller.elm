@@ -2311,53 +2311,42 @@ view model =
                 ]
 
         contentColumn =
-            case model.viewMode of
-                HexMap ->
-                    -- Note: we use elm-css for type-safe CSS, so we need to use the Html.Styled.* dropins for Html.
-                    case model.viewport of
-                        Just viewport ->
-                            let
-                                defaultViewport =
-                                    { screenVp = viewport, hexmapVp = Nothing }
+            case ( model.viewport, model.viewMode ) of
+                ( Just viewport, HexMap ) ->
+                    let
+                        defaultViewport =
+                            { screenVp = viewport, hexmapVp = Nothing }
 
-                                viewPortConfig =
-                                    case model.hexmapViewport of
-                                        Nothing ->
-                                            defaultViewport
+                        viewPortConfig =
+                            case model.hexmapViewport of
+                                Nothing ->
+                                    defaultViewport
 
-                                        Just (Ok hexmapViewport) ->
-                                            { defaultViewport | hexmapVp = Just hexmapViewport }
+                                Just (Ok hexmapViewport) ->
+                                    { defaultViewport | hexmapVp = Just hexmapViewport }
 
-                                        Just (Err notFoundError) ->
-                                            let
-                                                _ =
-                                                    --TODO handle the hexmap svg not being present
-                                                    Debug.log "cant use, element not present" notFoundError
-                                            in
-                                            defaultViewport
-                            in
-                            viewHexes
-                                ( model.hexRect, model.rawHexaPoints )
-                                viewPortConfig
-                                { solarSystemDict = model.solarSystems, hexColours = model.hexColours, regionLabels = model.regionLabels }
-                                ( model.route, model.currentAddress )
-                                model.hexScale
-                                |> Html.toUnstyled
-                                |> Element.html
+                                Just (Err notFoundError) ->
+                                    let
+                                        _ =
+                                            --TODO handle the hexmap svg not being present
+                                            Debug.log "cant use, element not present" notFoundError
+                                    in
+                                    defaultViewport
+                    in
+                    viewHexes
+                        ( model.hexRect, model.rawHexaPoints )
+                        viewPortConfig
+                        { solarSystemDict = model.solarSystems, hexColours = model.hexColours, regionLabels = model.regionLabels }
+                        ( model.route, model.currentAddress )
+                        model.hexScale
+                        |> Html.toUnstyled
+                        |> Element.html
 
-                        Nothing ->
-                            Html.text "Have sector data but no viewport"
-                                |> Html.toUnstyled
-                                |> Element.html
+                ( Just viewport, FullJourney ) ->
+                    viewFullJourney model viewport
 
-                FullJourney ->
-                    case model.viewport of
-                        Just viewport ->
-                            viewFullJourney model viewport
-
-                        Nothing ->
-                            -- no viewport
-                            text "no viewport"
+                ( Nothing, _ ) ->
+                    text "no browser viewport"
     in
     row
         [ width fill
