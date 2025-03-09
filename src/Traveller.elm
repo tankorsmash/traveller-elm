@@ -254,14 +254,19 @@ type ViewMode
     | FullJourney
 
 
+type alias JourneyModel =
+    { zoomScale : Float
+    , zoomOffset : ( Float, Float )
+    , hoverPoint : Maybe ( Float, Float )
+    , dragMode : DragMode
+    }
+
+
 type alias Model =
     { key : Browser.Navigation.Key
     , hexScale : Int
     , viewMode : ViewMode
-    , journeyZoomScale : Float
-    , journeyZoomOffset : ( Float, Float )
-    , journeyHoverPoint : Maybe ( Float, Float )
-    , journeyDragMode : DragMode
+    , journeyModel : JourneyModel
     , rawHexaPoints : List ( Float, Float )
     , solarSystems : SolarSystemDict
     , newSolarSystemErrors : List ( Http.Error, String )
@@ -315,12 +320,16 @@ type Msg
     | SetHexSize Int
     | ToggleHexmap
     | JumpToShip
-    | JourneyZoom ZoomType
-    | JourneyMapDown ( Float, Float )
-    | JourneyMapMove ( Float, Float )
-    | JourneyMapUp
-    | JourneyMapLeave
     | ZoomToHex HexAddress Bool
+    | JourneyMsg JourneyMsg
+
+
+type JourneyMsg
+    = Zoom ZoomType
+    | MouseDown ( Float, Float )
+    | MouseMove ( Float, Float )
+    | MouseUp
+    | MouseLeave
 
 
 {-| Where the Hex is on the screen, in pixel coordinates
@@ -405,14 +414,19 @@ init settings key hostConfig referee =
             in
             { upperLeftHex = upperLeftHex, lowerRightHex = lowerRightHex }
 
+        journeyModel : JourneyModel
+        journeyModel =
+            { zoomScale = 1.0
+            , zoomOffset = ( 0, 0 )
+            , hoverPoint = Nothing
+            , dragMode = NoDragging
+            }
+
         model : Model
         model =
             { hexScale = settings.hexSize
             , viewMode = HexMap
-            , journeyZoomScale = 1.0
-            , journeyZoomOffset = ( 0, 0 )
-            , journeyHoverPoint = Nothing
-            , journeyDragMode = NoDragging
+            , journeyModel = journeyModel
             , rawHexaPoints = rawHexagonPoints settings.hexSize
             , solarSystems = solarSystemDict
             , newSolarSystemErrors = []
@@ -2075,7 +2089,7 @@ type alias HexRect =
     { upperLeftHex : HexAddress, lowerRightHex : HexAddress }
 
 
-viewFullJourney : Model -> Browser.Dom.Viewport -> Element.Element Msg
+viewFullJourney : JourneyModel -> Browser.Dom.Viewport -> Element.Element Msg
 viewFullJourney model viewport =
     let
         ( maxWidth, maxHeight ) =
@@ -2088,22 +2102,22 @@ viewFullJourney model viewport =
             )
 
         ( imageSizeWidth, imageSizeHeight ) =
-            ( maxWidth * model.journeyZoomScale
-            , maxHeight * model.journeyZoomScale
+            ( maxWidth * model.zoomScale
+            , maxHeight * model.zoomScale
             )
 
         ( offsetLeft, offsetTop ) =
-            model.journeyZoomOffset
+            model.zoomOffset
     in
     el
         [ Element.alignTop
         , width <| Element.px <| floor maxWidth
         , height <| Element.px <| floor maxHeight
         , Element.clip
-        , Element.htmlAttribute <| Html.Events.on "mousemove" <| moveDecoder JourneyMapMove
-        , Element.htmlAttribute <| Html.Events.on "mousedown" <| downDecoder JourneyMapDown
-        , Events.onMouseLeave JourneyMapLeave
-        , Events.onMouseUp JourneyMapUp
+        , Element.htmlAttribute <| Html.Events.on "mousemove" <| moveDecoder (JourneyMsg << MouseMove)
+        , Element.htmlAttribute <| Html.Events.on "mousedown" <| downDecoder (JourneyMsg << MouseDown)
+        , Events.onMouseLeave (JourneyMsg MouseLeave)
+        , Events.onMouseUp (JourneyMsg MouseUp)
         , Background.color <| Element.rgb 1 0 1
         ]
     <|
@@ -2114,7 +2128,7 @@ viewFullJourney model viewport =
             , Element.moveDown <| offsetTop
             , pointerEventsNone
             , userSelectNone
-            , case model.journeyHoverPoint of
+            , case model.hoverPoint of
                 Just ( hovX, hovY ) ->
                     Element.inFront <|
                         let
@@ -2231,9 +2245,9 @@ viewStatusRow model =
                         , Font.size 14
                         , Element.spacing 5
                         , Element.pointer
-                        , conditionalAttribute (model.journeyZoomScale < 7.0) <|
-                            Events.onClick (JourneyZoom ZoomIn)
-                        , Element.transparent <| model.journeyZoomScale >= 7.0
+                        , conditionalAttribute (model.journeyModel.zoomScale < 7.0) <|
+                            Events.onClick (JourneyMsg <| Zoom ZoomIn)
+                        , Element.transparent <| model.journeyModel.zoomScale >= 7.0
                         , Element.alignBottom
                         , Element.mouseOver
                             [ Font.color <| convertColor (Color.Manipulate.lighten 0.25 deepnightColor)
@@ -2247,9 +2261,9 @@ viewStatusRow model =
                         , Font.size 14
                         , Element.spacing 5
                         , Element.pointer
-                        , Element.transparent <| model.journeyZoomScale <= 1.0
-                        , conditionalAttribute (model.journeyZoomScale > 1.0) <|
-                            Events.onClick (JourneyZoom ZoomOut)
+                        , Element.transparent <| model.journeyModel.zoomScale <= 1.0
+                        , conditionalAttribute (model.journeyModel.zoomScale > 1.0) <|
+                            Events.onClick (JourneyMsg <| Zoom ZoomOut)
                         , Element.alignBottom
                         , Element.mouseOver
                             [ Font.color <| convertColor (Color.Manipulate.lighten 0.25 deepnightColor)
@@ -2417,7 +2431,7 @@ view model =
                         |> Element.html
 
                 ( Just viewport, FullJourney ) ->
-                    viewFullJourney model viewport
+                    viewFullJourney model.journeyModel viewport
 
                 ( Nothing, _ ) ->
                     text "no browser viewport"
@@ -2554,6 +2568,84 @@ saveHexSize size =
 
 
 port storeHexSize : Int -> Cmd msg
+
+
+updateJourney : JourneyMsg -> Model -> ( Model, Cmd Msg )
+updateJourney journeyMsg ({ journeyModel } as model) =
+    let
+        setJourneyModel newJourneyModel =
+            { model | journeyModel = newJourneyModel }
+    in
+    case journeyMsg of
+        Zoom zoomType ->
+            let
+                newZoomScale =
+                    case zoomType of
+                        ZoomIn ->
+                            journeyModel.zoomScale * 1.5
+
+                        ZoomOut ->
+                            journeyModel.zoomScale / 1.5
+
+                newJourneyModel =
+                    { journeyModel | zoomScale = Debug.log "new zoom" newZoomScale }
+            in
+            ( setJourneyModel newJourneyModel, Cmd.none )
+
+        MouseDown originalPos ->
+            ( setJourneyModel { journeyModel | dragMode = IsDragging originalPos }, Cmd.none )
+
+        MouseLeave ->
+            ( setJourneyModel { journeyModel | dragMode = NoDragging, hoverPoint = Nothing }, Cmd.none )
+
+        MouseMove ( newX, newY ) ->
+            case journeyModel.dragMode of
+                IsDragging ( originalX, originalY ) ->
+                    let
+                        ( xDelta, yDelta ) =
+                            ( newX - originalX
+                            , newY - originalY
+                            )
+
+                        ( maxWidth, maxHeight ) =
+                            case model.viewport of
+                                Just viewport ->
+                                    ( viewport.viewport.width - sidebarWidth - 50
+                                    , viewport.viewport.height
+                                    )
+
+                                Nothing ->
+                                    ( 0, 0 )
+
+                        ( oldX, oldY ) =
+                            journeyModel.zoomOffset
+
+                        ( curImgWidth, curImgHeight ) =
+                            ( maxWidth * journeyModel.zoomScale
+                            , maxHeight * journeyModel.zoomScale
+                            )
+
+                        newModel =
+                            { journeyModel
+                                | dragMode = IsDragging ( newX, newY )
+                                , zoomOffset =
+                                    ( clamp (maxWidth - curImgWidth) 0 (oldX + xDelta)
+                                    , clamp (maxHeight - curImgHeight) 0 (oldY + yDelta)
+                                    )
+                                , hoverPoint = Nothing
+                            }
+                    in
+                    if xDelta /= 0 || yDelta /= 0 then
+                        ( setJourneyModel newModel, Cmd.none )
+
+                    else
+                        ( setJourneyModel { journeyModel | hoverPoint = Nothing }, Cmd.none )
+
+                NoDragging ->
+                    ( setJourneyModel { journeyModel | hoverPoint = Just ( newX, newY ) }, Cmd.none )
+
+        MouseUp ->
+            ( setJourneyModel { journeyModel | dragMode = NoDragging }, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -3118,72 +3210,8 @@ update msg model =
             in
             ( { model | viewMode = newViewMode }, Cmd.none )
 
-        JourneyZoom zoomType ->
-            let
-                newZoomScale =
-                    case zoomType of
-                        ZoomIn ->
-                            model.journeyZoomScale * 1.5
-
-                        ZoomOut ->
-                            model.journeyZoomScale / 1.5
-            in
-            ( { model | journeyZoomScale = Debug.log "new zoom" newZoomScale }, Cmd.none )
-
-        JourneyMapDown originalPos ->
-            ( { model | journeyDragMode = IsDragging originalPos }, Cmd.none )
-
-        JourneyMapLeave ->
-            ( { model | journeyDragMode = NoDragging, journeyHoverPoint = Nothing }, Cmd.none )
-
-        JourneyMapMove ( newX, newY ) ->
-            case model.journeyDragMode of
-                IsDragging ( originalX, originalY ) ->
-                    let
-                        ( xDelta, yDelta ) =
-                            ( newX - originalX
-                            , newY - originalY
-                            )
-
-                        ( maxWidth, maxHeight ) =
-                            case model.viewport of
-                                Just viewport ->
-                                    ( viewport.viewport.width - sidebarWidth - 50
-                                    , viewport.viewport.height
-                                    )
-
-                                Nothing ->
-                                    ( 0, 0 )
-
-                        ( oldX, oldY ) =
-                            model.journeyZoomOffset
-
-                        ( curImgWidth, curImgHeight ) =
-                            ( maxWidth * model.journeyZoomScale
-                            , maxHeight * model.journeyZoomScale
-                            )
-
-                        newModel =
-                            { model
-                                | journeyDragMode = IsDragging ( newX, newY )
-                                , journeyZoomOffset =
-                                    ( clamp (maxWidth - curImgWidth) 0 (oldX + xDelta)
-                                    , clamp (maxHeight - curImgHeight) 0 (oldY + yDelta)
-                                    )
-                                , journeyHoverPoint = Nothing
-                            }
-                    in
-                    if xDelta /= 0 || yDelta /= 0 then
-                        ( newModel, Cmd.none )
-
-                    else
-                        ( { model | journeyHoverPoint = Nothing }, Cmd.none )
-
-                NoDragging ->
-                    ( { model | journeyHoverPoint = Just ( newX, newY ) }, Cmd.none )
-
-        JourneyMapUp ->
-            ( { model | journeyDragMode = NoDragging }, Cmd.none )
+        JourneyMsg journeyMsg ->
+            updateJourney journeyMsg model
 
 
 stripDataFromRemoteData : RemoteData err data -> RemoteData err ()
