@@ -986,47 +986,46 @@ type alias SolarSystemDict =
     Dict.Dict String RemoteSolarSystem
 
 
-type OffsetDir
+type HorizontalOffsetDir
+    = Top
+    | Bottom
+
+
+type VerticalOffsetDir
     = Left
     | Right
 
 
-renderSectorOutline : ( Int, Int ) -> Int -> SectorHexAddress -> Svg Msg
-renderSectorOutline ( zero_x, zero_y ) hexSize hex =
+renderSectorOutline : Int -> SectorHexAddress -> Svg Msg
+renderSectorOutline hexSize hex =
     let
-        -- calcVisualOrigin
+        hWidth =
+            hexWidth hexSize |> floor
+
+        hHeight =
+            hexHeight hexSize |> floor
+
         topLeft : HexAddress
         topLeft =
             { hex | x = 0, y = 0 } |> HexAddress.toUniversalAddress
 
+        botRight : HexAddress
         botRight =
             { hex | x = 32, y = 40 } |> HexAddress.toUniversalAddress
 
+        topRight : HexAddress
         topRight =
             { hex | x = 32, y = 0 } |> HexAddress.toUniversalAddress
 
+        botLeft : HexAddress
         botLeft =
             { hex | x = 0, y = 40 } |> HexAddress.toUniversalAddress
 
-        ( offsetNum1, _ ) =
-            hexagonPointZero hexSize 1.4
-
-        ( offsetNum2, _ ) =
-            hexagonPointZero hexSize 1.6
-
-        avgNum =
-            (offsetNum1 + offsetNum2) / 1.6 |> floor
-
-        adjustPos ( hexAddr, offsetDir ) =
+        computePoints hexAddr =
             calcVisualOrigin hexSize
                 { row = hexAddr.y, col = hexAddr.x }
                 |> (\( x, y ) ->
-                        case offsetDir of
-                            Left ->
-                                ( x - avgNum, y )
-
-                            Right ->
-                                ( x + avgNum, y )
+                        ( x - hWidth // 2, y - hHeight // 2 )
                    )
                 |> (\( x, y ) ->
                         (x |> String.fromInt)
@@ -1035,7 +1034,7 @@ renderSectorOutline ( zero_x, zero_y ) hexSize hex =
                    )
 
         points_ =
-            List.map adjustPos [ ( topLeft, Left ), ( topRight, Right ), ( botRight, Right ), ( botLeft, Left ), ( topLeft, Left ) ]
+            List.map computePoints [ topLeft, topRight, botRight, botLeft, topLeft ]
                 |> String.join " "
     in
     Svg.polyline
@@ -1043,7 +1042,7 @@ renderSectorOutline ( zero_x, zero_y ) hexSize hex =
         , SvgAttrs.id "sectorOutline"
         , SvgAttrs.stroke "#0a0a0a40"
         , SvgAttrs.fill "none"
-        , SvgAttrs.strokeWidth "6"
+        , SvgAttrs.strokeWidth "3"
         , SvgAttrs.pointerEvents "visiblePainted"
         ]
         []
@@ -1202,8 +1201,8 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                             List.map (Tuple.mapFirst HexAddress.toKey) hexSvgsWithHexAddress
                 in
                 [ keyedHexes
-                , renderSectorOutline ( 0, 0 ) iHexSize (upperLeftHex |> HexAddress.toSectorAddress)
-                , renderSectorOutline ( 0, 0 ) iHexSize (lowerRightHex |> HexAddress.toSectorAddress)
+                , renderSectorOutline iHexSize (upperLeftHex |> HexAddress.toSectorAddress)
+                , renderSectorOutline iHexSize (lowerRightHex |> HexAddress.toSectorAddress)
                 , singlePolyHex
                 ]
                     ++ labels
