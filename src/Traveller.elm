@@ -38,6 +38,7 @@ import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as HtmlStyledAttrs
 import Http
 import Json.Decode as JsDecode
+import Maybe.Extra as Maybe
 import RemoteData exposing (RemoteData(..))
 import Result.Extra as Result
 import Round
@@ -259,6 +260,7 @@ type alias Model =
     , viewMode : ViewMode
     , journeyZoomScale : Float
     , journeyZoomOffset : ( Float, Float )
+    , journeyHoverPoint : Maybe ( Float, Float )
     , journeyDragMode : DragMode
     , rawHexaPoints : List ( Float, Float )
     , solarSystems : SolarSystemDict
@@ -408,6 +410,7 @@ init settings key hostConfig referee =
             , viewMode = HexMap
             , journeyZoomScale = 1.0
             , journeyZoomOffset = ( 0, 0 )
+            , journeyHoverPoint = Nothing
             , journeyDragMode = NoDragging
             , rawHexaPoints = rawHexagonPoints settings.hexSize
             , solarSystems = solarSystemDict
@@ -2109,6 +2112,51 @@ viewFullJourney model viewport =
             , Element.moveDown <| offsetTop
             , pointerEventsNone
             , userSelectNone
+            , case model.journeyHoverPoint of
+                Just ( hx, hy ) ->
+                    Element.inFront <|
+                        let
+                            ( sectorsAcross, sectorsTall ) =
+                                ( 17, 14 )
+
+                            ( cx, cy ) =
+                                let
+                                    ( officialX, officialY ) =
+                                        ( -21, 2 )
+
+                                    ( oursX, oursY ) =
+                                        ( 5, 1 )
+                                in
+                                ( officialX + oursX, officialY + oursY )
+
+                            ( sx, sy ) =
+                                ( hx / (imageSizeWidth / sectorsAcross)
+                                , hy / (imageSizeHeight / sectorsTall)
+                                )
+
+                            ( xoff, yoff ) =
+                                ( (toFloat <| floor sx)
+                                    * (imageSizeWidth / sectorsAcross)
+                                , (toFloat <| floor sy)
+                                    * (imageSizeHeight / sectorsTall)
+                                )
+                        in
+                        Element.el
+                            [ Element.moveRight xoff
+                            , Element.moveDown yoff
+                            , userSelectNone
+                            , pointerEventsNone
+                            , Font.size 14
+                            ]
+                        <|
+                            text <|
+                                "Sector: "
+                                    ++ String.fromInt (cx - floor sx)
+                                    ++ ", "
+                                    ++ String.fromInt (cy - floor sy)
+
+                Nothing ->
+                    noopAttribute
             ]
             { src = "/public/uncharted-space.png", description = "Full Journey Map" }
 
@@ -3117,16 +3165,17 @@ update msg model =
                                     ( clamp (maxWidth - curImgWidth) 0 (oldX + xDelta)
                                     , clamp (maxHeight - curImgHeight) 0 (oldY + yDelta)
                                     )
+                                , journeyHoverPoint = Nothing
                             }
                     in
                     if xDelta /= 0 || yDelta /= 0 then
                         ( newModel, Cmd.none )
 
                     else
-                        ( model, Cmd.none )
+                        ( { model | journeyHoverPoint = Nothing }, Cmd.none )
 
                 NoDragging ->
-                    ( model, Cmd.none )
+                    ( { model | journeyHoverPoint = Just ( newX, newY ) }, Cmd.none )
 
         JourneyMapUp ->
             ( { model | journeyDragMode = NoDragging }, Cmd.none )
