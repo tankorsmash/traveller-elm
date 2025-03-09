@@ -3079,7 +3079,7 @@ update msg model =
                         ( maxWidth, maxHeight ) =
                             (case model.viewport of
                                 Just viewport ->
-                                    ( viewport.viewport.width - 420
+                                    ( viewport.viewport.width - sidebarWidth - 50
                                     , viewport.viewport.height
                                     )
 
