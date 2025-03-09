@@ -2075,8 +2075,12 @@ viewFullJourney : Model -> Browser.Dom.Viewport -> Element.Element Msg
 viewFullJourney model viewport =
     let
         ( maxWidth, maxHeight ) =
-            ( viewport.viewport.width - sidebarWidth - 50
-            , viewport.viewport.height - 118
+            let
+                scaledWidth =
+                    viewport.viewport.width - sidebarWidth - 50
+            in
+            ( scaledWidth
+            , scaledWidth * (fullJourneyImageHeight / fullJourneyImageWidth)
             )
 
         ( imageSizeWidth, imageSizeHeight ) =
