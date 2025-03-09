@@ -3073,8 +3073,10 @@ update msg model =
             case model.journeyDragMode of
                 IsDragging ( originalX, originalY ) ->
                     let
-                        xDelta =
-                            newX - originalX
+                        ( xDelta, yDelta ) =
+                            ( newX - originalX
+                            , newY - originalY
+                            )
 
                         ( maxWidth, maxHeight ) =
                             case model.viewport of
@@ -3085,9 +3087,6 @@ update msg model =
 
                                 Nothing ->
                                     ( 0, 0 )
-
-                        yDelta =
-                            newY - originalY
 
                         ( oldX, oldY ) =
                             model.journeyZoomOffset
@@ -3101,21 +3100,16 @@ update msg model =
                             { model
                                 | journeyDragMode = IsDragging ( newX, newY )
                                 , journeyZoomOffset =
-                                    ( clamp (maxWidth - curImgWidth) 0 <|
-                                        (oldX + xDelta)
-                                    , clamp (maxHeight - curImgHeight) 0 <| oldY + yDelta
+                                    ( clamp (maxWidth - curImgWidth) 0 (oldX + xDelta)
+                                    , clamp (maxHeight - curImgHeight) 0 (oldY + yDelta)
                                     )
                             }
                     in
                     if xDelta /= 0 || yDelta /= 0 then
-                        ( newModel
-                        , Cmd.none
-                        )
+                        ( newModel, Cmd.none )
 
                     else
-                        ( model
-                        , Cmd.none
-                        )
+                        ( model, Cmd.none )
 
                 NoDragging ->
                     ( model, Cmd.none )
