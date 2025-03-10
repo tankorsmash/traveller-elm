@@ -1212,6 +1212,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                                         , SvgAttrs.fontFamily "Tomorrow"
                                         , SvgAttrs.fontWeight "500"
                                         , SvgAttrs.fill "#0A0A0A"
+                                        , SvgAttrs.style "pointer-events: none; user-select: none;"
                                         ]
                                         [ Svg.text name ]
                                 )
