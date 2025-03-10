@@ -2358,7 +2358,7 @@ view model =
                         ]
                     , case model.selectedHex of
                         Just viewingAddress ->
-                            column [ centerY, Element.paddingXY 0 10 ]
+                            column [ centerY, Element.paddingXY 0 10, width fill ]
                                 [ case model.solarSystems |> Dict.get (HexAddress.toKey viewingAddress) of
                                     Just (LoadedSolarSystem _) ->
                                         Element.none
@@ -2377,7 +2377,25 @@ view model =
 
                                     Nothing ->
                                         text "No solar system data found for system."
-                                , text <| universalHexLabel model.sectors viewingAddress
+                                , row [ Element.spacing 5, width fill]
+                                    [ text <| universalHexLabel model.sectors viewingAddress
+                                    , model.regions
+                                        |> Dict.values
+                                        |> -- abusing lists here since we only expect one label,
+                                           -- but this iterates over all the regions
+                                           -- and renders the name if it exists
+                                           List.filterMap
+                                            (\region ->
+                                                if List.member viewingAddress region.hexes then
+                                                    text region.name
+                                                        |> el [ Font.size 12, Font.color <| convertColor region.colour]
+                                                        |> Just
+
+                                                else
+                                                    Nothing
+                                            )
+                                        |> column [ Element.alignRight ]
+                                    ]
                                 ]
 
                         Nothing ->
