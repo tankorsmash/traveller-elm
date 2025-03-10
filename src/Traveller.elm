@@ -2662,11 +2662,14 @@ update msg model =
 
         SetHexSize newSize ->
             let
+                extraPaddingHexes =
+                    2
+
                 hh =
-                    horizontalHexes model.hexmapViewport newSize
+                    horizontalHexes model.hexmapViewport newSize + extraPaddingHexes
 
                 vh =
-                    horizontalHexes model.hexmapViewport newSize
+                    verticalHexes model.hexmapViewport newSize + extraPaddingHexes
 
                 lr =
                     HexAddress.shiftAddressBy
