@@ -866,6 +866,9 @@ renderHexWithStar starSystem hexColour hexAddress ( vox, voy ) size rawHexaPoint
 defaultHexBg =
     "#f5f5f5"
 
+selectedHexBg =
+    "#a5f5a5"
+
 
 routeHexBg =
     "#FCD299"
@@ -1051,8 +1054,9 @@ viewHexes :
     -> { solarSystemDict : SolarSystemDict, hexColours : HexColorDict, regionLabels : RegionLabelDict }
     -> ( RouteList, HexAddress )
     -> Float
+    -> Maybe HexAddress
     -> Html Msg
-viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) hexSize =
+viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) hexSize maybeSelectedHex =
     let
         svgHeight =
             screenVp.viewport.height - 112
@@ -1142,7 +1146,16 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                                     Color.Convert.colorToHex <| color
 
                                 Nothing ->
-                                    defaultHexBg
+                                    case maybeSelectedHex of
+                                        Just selectedHex ->
+                                            if selectedHex == hexAddr then
+                                                selectedHexBg
+
+                                            else
+                                                defaultHexBg
+
+                                        Nothing ->
+                                            defaultHexBg
 
                     hexSvgsWithHexAddr =
                         ( hexAddr
@@ -2422,6 +2435,7 @@ view model =
                         { solarSystemDict = model.solarSystems, hexColours = model.hexColours, regionLabels = model.regionLabels }
                         ( model.route, model.currentAddress )
                         model.hexScale
+                        model.selectedHex
                         |> Element.html
 
                 ( Just viewport, FullJourney ) ->
