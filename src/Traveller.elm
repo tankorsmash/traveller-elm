@@ -33,6 +33,7 @@ import Html exposing (Html)
 import Html.Attributes as HtmlAttrs
 import Html.Events
 import Html.Events.Extra.Mouse
+import Html.Lazy
 import Http
 import Json.Decode as JsDecode
 import Maybe.Extra as Maybe
@@ -1080,6 +1081,20 @@ renderSectorOutline hexSize hex =
         []
 
 
+regionLabel x y name =
+    Svg.text_
+        [ SvgAttrs.x <| String.fromInt x
+        , SvgAttrs.y <| String.fromInt y
+        , SvgAttrs.textAnchor "middle"
+        , SvgAttrs.dominantBaseline "middle"
+        , SvgAttrs.fontFamily "Tomorrow"
+        , SvgAttrs.fontWeight "500"
+        , SvgAttrs.fill "#0A0A0A"
+        , SvgAttrs.style "pointer-events: none; user-select: none;"
+        ]
+        [ Svg.text name ]
+
+
 viewHexes :
     ( HexRect, List ( Float, Float ) )
     -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport }
@@ -1204,17 +1219,11 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                             |> Dict.get (HexAddress.toKey hexAddress)
                             |> Maybe.map
                                 (\name ->
-                                    Svg.text_
-                                        [ SvgAttrs.x <| String.fromInt <| Tuple.first (labelPos hexAddress)
-                                        , SvgAttrs.y <| String.fromInt <| Tuple.second (labelPos hexAddress)
-                                        , SvgAttrs.textAnchor "middle"
-                                        , SvgAttrs.dominantBaseline "middle"
-                                        , SvgAttrs.fontFamily "Tomorrow"
-                                        , SvgAttrs.fontWeight "500"
-                                        , SvgAttrs.fill "#0A0A0A"
-                                        , SvgAttrs.style "pointer-events: none; user-select: none;"
-                                        ]
-                                        [ Svg.text name ]
+                                    let
+                                        ( x, y ) =
+                                            labelPos hexAddress
+                                    in
+                                    Html.Lazy.lazy3 regionLabel x y name
                                 )
 
                     labels =
