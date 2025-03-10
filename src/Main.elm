@@ -61,7 +61,7 @@ routeParser =
 
 type alias Flags =
     { upperLeft : Maybe ( Int, Int )
-    , hexSize : Int
+    , hexSize : Float
     }
 
 

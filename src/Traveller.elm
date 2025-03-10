@@ -168,17 +168,17 @@ nextRequestNum requestHistory =
     MkRequestNum (lastRequestNum + 1)
 
 
-hexWidth : Int -> Float
+hexWidth : Float -> Float
 hexWidth hexScale =
-    toFloat hexScale * (1.0 + cos hexSizeFactor)
+    hexScale * (1.0 + cos hexSizeFactor)
 
 
-hexHeight : Int -> Float
+hexHeight : Float -> Float
 hexHeight hexScale =
-    toFloat hexScale * (1.0 + sin hexSizeFactor)
+    hexScale * (1.0 + sin hexSizeFactor)
 
 
-horizontalHexes : Maybe HexMapViewport -> Int -> Int
+horizontalHexes : Maybe HexMapViewport -> Float -> Int
 horizontalHexes hexmapViewport hexScale =
     case hexmapViewport of
         Just vp ->
@@ -193,7 +193,7 @@ horizontalHexes hexmapViewport hexScale =
             defaultHorizontalHexes
 
 
-verticalHexes : Maybe HexMapViewport -> Int -> Int
+verticalHexes : Maybe HexMapViewport -> Float -> Int
 verticalHexes hexmapViewport hexScale =
     case hexmapViewport of
         Just (Ok viewport) ->
@@ -262,7 +262,7 @@ type alias JourneyModel =
 
 type alias Model =
     { key : Browser.Navigation.Key
-    , hexScale : Int
+    , hexScale : Float
     , viewMode : ViewMode
     , journeyModel : JourneyModel
     , rawHexaPoints : List ( Float, Float )
@@ -317,7 +317,7 @@ type Msg
     | MapMouseMove ( Float, Float )
     | MapMouseLeave
     | DownloadedRoute ( RequestEntry, String ) (Result Http.Error (List Route))
-    | SetHexSize Int
+    | SetHexSize Float
     | ToggleHexmap
     | JumpToShip
     | ZoomToHex HexAddress Bool
@@ -345,7 +345,7 @@ subscriptions _ =
 
 type alias Flags =
     { upperLeft : Maybe ( Int, Int )
-    , hexSize : Int
+    , hexSize : Float
     }
 
 
@@ -427,7 +427,7 @@ init settings key hostConfig referee =
             { hexScale = settings.hexSize
             , viewMode = HexMap
             , journeyModel = journeyModel
-            , rawHexaPoints = rawHexagonPoints settings.hexSize
+            , rawHexaPoints = rawHexagonPoints <| settings.hexSize
             , solarSystems = solarSystemDict
             , newSolarSystemErrors = []
             , oldSolarSystemErrors = []
@@ -465,30 +465,9 @@ init settings key hostConfig referee =
     )
 
 
-hexagonPointZero : Int -> Float -> ( Float, Float )
-hexagonPointZero iSize n =
+rawHexagonPoint : Float -> Float -> ( Float, Float )
+rawHexagonPoint size n =
     let
-        size =
-            toFloat iSize
-
-        x =
-            size * cos (hexSizeFactor * n)
-
-        y =
-            size * sin (hexSizeFactor * n)
-
-        buildPoint =
-            ( x, y )
-    in
-    buildPoint
-
-
-rawHexagonPoint : Int -> Float -> ( Float, Float )
-rawHexagonPoint iSize n =
-    let
-        size =
-            toFloat iSize
-
         x =
             size * cos (hexSizeFactor * n)
 
@@ -498,27 +477,7 @@ rawHexagonPoint iSize n =
     ( x, y )
 
 
-hexagonPoint : ( Int, Int ) -> Int -> Float -> ( Float, Float )
-hexagonPoint ( xOrigin, yOrigin ) iSize n =
-    let
-        size =
-            toFloat iSize
-
-        x =
-            toFloat xOrigin
-                + (size * cos (hexSizeFactor * n))
-
-        y =
-            toFloat yOrigin
-                + (size * sin (hexSizeFactor * n))
-
-        buildPoint =
-            ( x, y )
-    in
-    buildPoint
-
-
-hexagonPoints : ( Float, Float ) -> Int -> String
+hexagonPoints : ( Float, Float ) -> Float -> String
 hexagonPoints ( xOrigin, yOrigin ) size =
     List.range 0 5
         |> List.map
@@ -531,7 +490,7 @@ hexagonPoints ( xOrigin, yOrigin ) size =
 
 {-| hexagon points indepedent of origin
 -}
-rawHexagonPoints : Int -> List ( Float, Float )
+rawHexagonPoints : Float -> List ( Float, Float )
 rawHexagonPoints size =
     List.range 0 5
         |> List.map (toFloat >> rawHexagonPoint size)
@@ -597,7 +556,7 @@ isOnRoute route address =
         route
 
 
-viewHexEmpty : Int -> Int -> Int -> Int -> Int -> String -> String -> Svg Msg
+viewHexEmpty : Int -> Int -> Int -> Int -> Float -> String -> String -> Svg Msg
 viewHexEmpty hx hy x y size childSvgTxt hexColour =
     let
         origin =
@@ -631,7 +590,7 @@ viewHexEmpty hx hy x y size childSvgTxt hexColour =
             hexColour
         , Svg.text_
             [ SvgAttrs.x <| String.fromInt <| x
-            , SvgAttrs.y <| String.fromInt <| y - (floor <| toFloat size * 0.65)
+            , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
             , SvgAttrs.fontSize
                 (if size > 15 then
                     "9"
@@ -731,12 +690,8 @@ moveDecoder onMoveMsg =
         |> JsDecode.map (.offsetPos >> onMoveMsg)
 
 
-drawStar : ( Float, Float ) -> Int -> Int -> String -> Svg Msg
-drawStar ( starX, starY ) radius iSize starColor =
-    let
-        size =
-            toFloat iSize
-    in
+drawStar : ( Float, Float ) -> Int -> Float -> String -> Svg Msg
+drawStar ( starX, starY ) radius size starColor =
     Svg.circle
         [ SvgAttrs.cx <| String.fromFloat <| starX
         , SvgAttrs.cy <| String.fromFloat <| starY
@@ -747,12 +702,9 @@ drawStar ( starX, starY ) radius iSize starColor =
         []
 
 
-renderHexWithStar : StarSystem -> String -> HexAddress -> VisualHexOrigin -> Int -> List ( Float, Float ) -> Svg Msg
-renderHexWithStar starSystem hexColour hexAddress ( vox, voy ) iSize rawHexaPoints =
+renderHexWithStar : StarSystem -> String -> HexAddress -> VisualHexOrigin -> Float -> List ( Float, Float ) -> Svg Msg
+renderHexWithStar starSystem hexColour hexAddress ( vox, voy ) size rawHexaPoints =
     let
-        size =
-            toFloat iSize
-
         si =
             starSystem.surveyIndex
 
@@ -813,12 +765,12 @@ renderHexWithStar starSystem hexColour hexAddress ( vox, voy ) iSize rawHexaPoin
                                     getStarTypeData companion
                             in
                             Svg.g []
-                                [ drawStar starPos 7 iSize <| starColourRGB starData.colour
-                                , drawStar compStarPos 3 iSize <| starColourRGB compStarData.colour
+                                [ drawStar starPos 7 size <| starColourRGB starData.colour
+                                , drawStar compStarPos 3 size <| starColourRGB compStarData.colour
                                 ]
 
                         Nothing ->
-                            drawStar starPos 7 iSize <| starColourRGB starData.colour
+                            drawStar starPos 7 size <| starColourRGB starData.colour
             in
             Svg.g
                 []
@@ -945,12 +897,9 @@ hexColOffset row =
         0
 
 
-calcVisualOrigin : Int -> { row : Int, col : Int } -> VisualHexOrigin
-calcVisualOrigin iHexSize { row, col } =
+calcVisualOrigin : Float -> { row : Int, col : Int } -> VisualHexOrigin
+calcVisualOrigin hexSize { row, col } =
     let
-        hexSize =
-            toFloat iHexSize
-
         x =
             hexSize + toFloat col * (hexSize + hexSize * cos hexSizeFactor)
 
@@ -961,7 +910,7 @@ calcVisualOrigin iHexSize { row, col } =
 
 
 viewHex :
-    Int
+    Float
     -> SolarSystemDict
     -> HexAddress
     -> VisualHexOrigin
@@ -1030,7 +979,7 @@ type VerticalOffsetDir
     | Right
 
 
-renderSectorOutline : Int -> SectorHexAddress -> Svg Msg
+renderSectorOutline : Float -> SectorHexAddress -> Svg Msg
 renderSectorOutline hexSize hex =
     let
         hWidth =
@@ -1101,9 +1050,9 @@ viewHexes :
     -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport }
     -> { solarSystemDict : SolarSystemDict, hexColours : HexColorDict, regionLabels : RegionLabelDict }
     -> ( RouteList, HexAddress )
-    -> Int
+    -> Float
     -> Html Msg
-viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) iHexSize =
+viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) hexSize =
     let
         svgHeight =
             screenVp.viewport.height - 112
@@ -1115,7 +1064,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
         renderCurrentAddressOutline ca =
             let
                 locationOrigin =
-                    calcVisualOrigin iHexSize
+                    calcVisualOrigin hexSize
                         { row = upperLeftHex.y - ca.y, col = ca.x - upperLeftHex.x }
                         |> (\( x, y ) ->
                                 ( toFloat <| x
@@ -1124,7 +1073,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                            )
 
                 points =
-                    case String.split " " <| hexagonPoints locationOrigin iHexSize of
+                    case String.split " " <| hexagonPoints locationOrigin hexSize of
                         first :: points_ ->
                             (first :: points_) ++ [ first ]
 
@@ -1152,13 +1101,13 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
         ( visualHexWidth, visualHexHeight ) =
             let
                 ( left_x, left_y ) =
-                    calcVisualOrigin iHexSize { row = 1, col = 1 }
+                    calcVisualOrigin hexSize { row = 1, col = 1 }
 
                 ( right_x, _ ) =
-                    calcVisualOrigin iHexSize { row = 1, col = 2 }
+                    calcVisualOrigin hexSize { row = 1, col = 2 }
 
                 ( _, down_y ) =
-                    calcVisualOrigin iHexSize { row = 2, col = 1 }
+                    calcVisualOrigin hexSize { row = 2, col = 1 }
             in
             ( left_x - right_x |> abs, down_y - left_y |> abs )
 
@@ -1177,7 +1126,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
             (\hexAddr ->
                 let
                     hexSVGOrigin =
-                        calcVisualOrigin iHexSize
+                        calcVisualOrigin hexSize
                             { row = hexAddr.y, col = hexAddr.x }
 
                     hexColour =
@@ -1198,7 +1147,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                     hexSvgsWithHexAddr =
                         ( hexAddr
                         , viewHex
-                            iHexSize
+                            hexSize
                             solarSystemDict
                             hexAddr
                             hexSVGOrigin
@@ -1211,7 +1160,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
         |> (\hexSvgsWithHexAddress ->
                 let
                     labelPos hexAddr =
-                        calcVisualOrigin iHexSize
+                        calcVisualOrigin hexSize
                             { row = hexAddr.y, col = hexAddr.x }
 
                     renderRegionLabel : HexAddress -> Maybe (Svg.Svg msg)
@@ -1244,8 +1193,8 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                             List.map (Tuple.mapFirst HexAddress.toKey) hexSvgsWithHexAddress
                 in
                 [ keyedHexes
-                , renderSectorOutline iHexSize (upperLeftHex |> HexAddress.toSectorAddress)
-                , renderSectorOutline iHexSize (lowerRightHex |> HexAddress.toSectorAddress)
+                , renderSectorOutline hexSize (upperLeftHex |> HexAddress.toSectorAddress)
+                , renderSectorOutline hexSize (lowerRightHex |> HexAddress.toSectorAddress)
                 , singlePolyHex
                 ]
                     ++ labels
@@ -1263,7 +1212,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                 , SvgAttrs.id "hexmap"
                 , SvgEvents.onMouseOut MapMouseLeave
                 , viewBox <|
-                    toViewBox iHexSize upperLeftHex
+                    toViewBox hexSize upperLeftHex
                         ++ " "
                         ++ widthString
                         ++ " "
@@ -1272,7 +1221,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
            )
 
 
-toViewBox : Int -> HexAddress -> String
+toViewBox : Float -> HexAddress -> String
 toViewBox hexScale { x, y } =
     calcVisualOrigin hexScale { col = x, row = y }
         |> (\( x_, y_ ) ->
@@ -2318,24 +2267,24 @@ view model =
                         clickableIcon size =
                             let
                                 selectorColor =
-                                    if model.hexScale == size // 2 && model.viewMode == HexMap then
+                                    if model.hexScale == size / 2 && model.viewMode == HexMap then
                                         deepnightColor
 
                                     else
                                         textColor
 
                                 hexStyle =
-                                    if model.hexScale == size // 2 && model.viewMode == HexMap then
+                                    if model.hexScale == size / 2 && model.viewMode == HexMap then
                                         "fa-regular"
 
                                     else
                                         "fa-thin"
                             in
-                            renderFAIcon (hexStyle ++ " fa-hexagon") size
+                            renderFAIcon (hexStyle ++ " fa-hexagon") (floor size)
                                 |> Element.el
                                     [ Element.pointer
                                     , Element.mouseOver [ Font.color <| convertColor (Color.Manipulate.lighten 0.15 selectorColor) ]
-                                    , Events.onClick <| SetHexSize <| size // 2
+                                    , Events.onClick <| SetHexSize <| size / 2
                                     , Font.color <| convertColor selectorColor
                                     ]
                       in
@@ -2607,12 +2556,12 @@ saveMapCoords upperLeft =
 port storeInLocalStorage : ( Int, Int ) -> Cmd msg
 
 
-saveHexSize : Int -> Cmd Msg
+saveHexSize : Float -> Cmd Msg
 saveHexSize size =
     storeHexSize size
 
 
-port storeHexSize : Int -> Cmd msg
+port storeHexSize : Float -> Cmd msg
 
 
 updateJourney : JourneyMsg -> Model -> ( Model, Cmd Msg )
@@ -3177,10 +3126,10 @@ update msg model =
                 IsDragging ( originX, originY ) ->
                     let
                         xDelta =
-                            truncate <| (originX - newX) / toFloat model.hexScale
+                            truncate <| (originX - newX) / model.hexScale
 
                         yDelta =
-                            truncate <| (originY - newY) / toFloat model.hexScale
+                            truncate <| (originY - newY) / model.hexScale
 
                         shiftAddress hex =
                             HexAddress.shiftAddressBy
