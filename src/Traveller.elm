@@ -1765,15 +1765,12 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCh
             |> Background.color
         , Element.width Element.fill
         , Element.moveRight <| toFloat <| nestingLevel * 5
-
-        -- , Element.paddingEach {top=10, left=5, right=5, bottom=10}
-        , Element.padding 10
         , Border.rounded 10
         , Element.width <| Element.minimum 200 Element.fill
         , Element.spacing 10
-        , Element.paddingXY 0 10
+        , Element.paddingXY 0 5
         ]
-        [ row [ Font.alignLeft, Element.alignLeft ]
+        [ row [ Element.paddingXY 10 0, Font.alignLeft, Element.alignLeft ]
             [ if starData.orbitPosition.x == 0 && starData.orbitPosition.y == 0 then
                 Element.none
 
@@ -1798,7 +1795,7 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCh
                     displayStarDetails surveyIndex compStarData nextNestingLevel jumpShadowCheckers selectedStellarObject
                 )
             |> Maybe.withDefault Element.none
-        , column [ Element.width Element.fill ] <|
+        , column [ Element.paddingXY 10 0, Element.width Element.fill ] <|
             let
                 red =
                     Element.el
