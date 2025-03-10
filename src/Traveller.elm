@@ -7,7 +7,6 @@ import Codec
 import Color exposing (Color)
 import Color.Convert
 import Color.Manipulate
-import Css
 import Dict
 import Element
     exposing
@@ -30,23 +29,21 @@ import Element.Input as Input
 import FontAwesome as Icon exposing (Icon)
 import FontAwesome.Solid as Icon
 import HostConfig exposing (HostConfig)
-import Html as UnstyledHtml
-import Html.Attributes as UnstyledHtmlAttrs
+import Html exposing (Html)
+import Html.Attributes as HtmlAttrs
 import Html.Events
 import Html.Events.Extra.Mouse
-import Html.Styled as Html exposing (Html)
-import Html.Styled.Attributes as HtmlStyledAttrs
 import Http
 import Json.Decode as JsDecode
 import Maybe.Extra as Maybe
 import RemoteData exposing (RemoteData(..))
 import Result.Extra as Result
 import Round
-import Svg.Styled as Svg exposing (Svg)
-import Svg.Styled.Attributes as SvgAttrs exposing (points, viewBox)
-import Svg.Styled.Events as SvgEvents
-import Svg.Styled.Keyed
-import Svg.Styled.Lazy
+import Svg exposing (Svg)
+import Svg.Attributes as SvgAttrs exposing (points, viewBox)
+import Svg.Events as SvgEvents
+import Svg.Keyed
+import Svg.Lazy
 import Task
 import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, shiftAddressBy, toSectorAddress, toUniversalAddress)
 import Traveller.Point exposing (StellarPoint)
@@ -466,21 +463,6 @@ init settings key hostConfig referee =
     )
 
 
-hoverableStyle : Css.Style
-hoverableStyle =
-    Css.batch
-        [ Css.hover
-            [ Css.fill <| Css.hex "aaaaaa" ]
-        ]
-
-
-sunShadowStyle : Css.Style
-sunShadowStyle =
-    Css.batch
-        [ Css.filter <| Css.dropShadow (Css.px 2) (Css.px 2) (Just <| Css.px 2) (Just <| Css.rgba 0 0 0 0.25)
-        ]
-
-
 hexagonPointZero : Int -> Float -> ( Float, Float )
 hexagonPointZero iSize n =
     let
@@ -642,7 +624,7 @@ viewHexEmpty hx hy x y size childSvgTxt hexColour =
         , SvgAttrs.id <| "rendered-hex:" ++ HexAddress.toKey hexAddress
         ]
         [ -- background hex
-          Svg.Styled.Lazy.lazy2 renderPolygon
+          Svg.Lazy.lazy2 renderPolygon
             (hexagonPoints origin size)
             hexColour
         , Svg.text_
@@ -707,7 +689,8 @@ renderPolygon points_ fill =
         , SvgAttrs.stroke borderColour
         , SvgAttrs.strokeWidth strokeWidth
         , SvgAttrs.pointerEvents "visiblePainted"
-        , SvgAttrs.css [ hoverableStyle ]
+        , -- CSS class from index.html
+          SvgAttrs.class "hex-hover"
         ]
         []
 
@@ -756,9 +739,7 @@ drawStar ( starX, starY ) radius iSize starColor =
         [ SvgAttrs.cx <| String.fromFloat <| starX
         , SvgAttrs.cy <| String.fromFloat <| starY
         , SvgAttrs.r <| String.fromFloat <| scaleAttr size radius
-        , SvgAttrs.fill starColor -- <| starColourRGB star.colour
-
-        -- , SvgAttrs.css [ sunShadowStyle ]
+        , SvgAttrs.fill starColor
         , SvgAttrs.style "filter: drop-shadow( 2px 2px 2px rgba(0, 0, 0, .25))"
         ]
         []
@@ -786,7 +767,7 @@ renderHexWithStar starSystem hexColour hexAddress ( vox, voy ) iSize rawHexaPoin
         , SvgAttrs.style "cursor: pointer; user-select: none"
         ]
         [ -- background hex
-          Svg.Styled.Lazy.lazy2 renderPolygon
+          Svg.Lazy.lazy2 renderPolygon
             (convertRawHexagonPoints ( toFloat vox, toFloat voy ) rawHexaPoints)
             hexColour
         , -- center star
@@ -994,12 +975,12 @@ viewHex hexSize solarSystemDict hexAddress visualHexOrigin hexColour rawHexaPoin
             visualHexOrigin
 
         viewEmptyHelper txt =
-            Svg.Styled.Lazy.lazy7 viewHexEmpty hexAddress.x hexAddress.y vox voy hexSize txt hexColour
+            Svg.Lazy.lazy7 viewHexEmpty hexAddress.x hexAddress.y vox voy hexSize txt hexColour
 
         hexSVG =
             case solarSystem of
                 Just (LoadedSolarSystem ss) ->
-                    Svg.Styled.Lazy.lazy6 renderHexWithStar
+                    Svg.Lazy.lazy6 renderHexWithStar
                         ss
                         hexColour
                         hexAddress
@@ -1017,7 +998,7 @@ viewHex hexSize solarSystemDict hexAddress visualHexOrigin hexColour rawHexaPoin
                     viewEmptyHelper ""
 
                 Just (FailedStarsSolarSystem failedSolarSystem) ->
-                    Svg.Styled.Lazy.lazy7 viewHexEmpty hexAddress.x hexAddress.y vox voy hexSize "Star Failed." "#aaaaaa"
+                    Svg.Lazy.lazy7 viewHexEmpty hexAddress.x hexAddress.y vox voy hexSize "Star Failed." "#aaaaaa"
 
                 Nothing ->
                     viewEmptyHelper ""
@@ -1134,7 +1115,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                         other ->
                             other
             in
-            Svg.Styled.Lazy.lazy2 renderPolyline
+            Svg.Lazy.lazy2 renderPolyline
                 (points |> String.join " ")
                 currentAddressHexBg
 
@@ -1248,7 +1229,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
 
                     keyedHexes : Svg Msg
                     keyedHexes =
-                        Svg.Styled.Keyed.node "g" [] <|
+                        Svg.Keyed.node "g" [] <|
                             List.map (Tuple.mapFirst HexAddress.toKey) hexSvgsWithHexAddress
                 in
                 [ keyedHexes
@@ -1268,19 +1249,6 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
             Svg.svg
                 [ SvgAttrs.width <| widthString
                 , SvgAttrs.height <| heightString
-                , SvgAttrs.css <|
-                    [ Css.before
-                        [ Css.boxShadowMany
-                            [ { offsetX = Css.px 0
-                              , offsetY = Css.px 0
-                              , blurRadius = Just <| Css.px 10
-                              , spreadRadius = Just <| Css.px 10
-                              , color = Just <| Css.hex "#FFFFFF"
-                              , inset = True
-                              }
-                            ]
-                        ]
-                    ]
                 , SvgAttrs.id "hexmap"
                 , viewBox <|
                     toViewBox iHexSize upperLeftHex
@@ -1969,15 +1937,15 @@ universalHexLabelMaybe sectors hexAddress =
         |> Maybe.map (\sector -> sector.name ++ " " ++ HexAddress.hexLabel hexAddress)
 
 
-errorDialog : List ( Http.Error, String ) -> UnstyledHtml.Html Msg
+errorDialog : List ( Http.Error, String ) -> Html Msg
 errorDialog httpErrors =
     let
         openAttr =
             if (not << List.isEmpty) httpErrors then
-                UnstyledHtmlAttrs.attribute "open" "open"
+                HtmlAttrs.attribute "open" "open"
 
             else
-                UnstyledHtmlAttrs.classList []
+                HtmlAttrs.classList []
 
         errorButton { onPress, label } =
             Input.button
@@ -2030,7 +1998,7 @@ errorDialog httpErrors =
                         text "Request timedout"
                 ]
     in
-    UnstyledHtml.node "dialog"
+    Html.node "dialog"
         [ openAttr ]
         [ Element.layoutWith { options = [ Element.noStaticStyleSheet ] }
             [ Element.centerX
@@ -2081,8 +2049,8 @@ renderFAIcon icon size =
         ]
     <|
         Element.html <|
-            UnstyledHtml.i
-                [ UnstyledHtmlAttrs.style "font-size" (String.fromInt size ++ "px"), UnstyledHtmlAttrs.class icon ]
+            Html.i
+                [ HtmlAttrs.style "font-size" (String.fromInt size ++ "px"), HtmlAttrs.class icon ]
                 []
 
 
@@ -2179,18 +2147,18 @@ viewFullJourney model viewport =
 
 
 pointerEventsNone =
-    Element.htmlAttribute <| UnstyledHtmlAttrs.style "pointer-events" "none"
+    Element.htmlAttribute <| HtmlAttrs.style "pointer-events" "none"
 
 
 userSelectNone =
-    Element.htmlAttribute <| UnstyledHtmlAttrs.style "user-select" "none"
+    Element.htmlAttribute <| HtmlAttrs.style "user-select" "none"
 
 
 {-| Element attribute that does nothing
 -}
 noopAttribute : Element.Attribute msg
 noopAttribute =
-    Element.htmlAttribute <| UnstyledHtmlAttrs.style "" ""
+    Element.htmlAttribute <| HtmlAttrs.style "" ""
 
 
 conditionalAttribute : Bool -> Element.Attribute msg -> Element.Attribute msg
@@ -2351,8 +2319,7 @@ view model =
                         [ clickableIcon 80
                         , clickableIcon 60
                         , clickableIcon 50
-
-                        --, clickableIcon 30
+                        , clickableIcon 30
                         , let
                             selectorColor =
                                 if model.viewMode == FullJourney then
@@ -2464,7 +2431,6 @@ view model =
                         { solarSystemDict = model.solarSystems, hexColours = model.hexColours, regionLabels = model.regionLabels }
                         ( model.route, model.currentAddress )
                         model.hexScale
-                        |> Html.toUnstyled
                         |> Element.html
 
                 ( Just viewport, FullJourney ) ->
