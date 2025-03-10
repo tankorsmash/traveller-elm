@@ -1,4 +1,4 @@
-module Traveller.HexAddress exposing (AfterChange, Delta, HexAddress, SectorHexAddress, addVal, between, betweenWithMax, codec, create, createFromStarSystem, hexAddressToString, hexLabel, sectorColumns, sectorHexAddressToString, sectorRows, shiftAddressBy, toKey, toSectorAddress, toSectorKey, toUniversalAddress, universalHexX, universalHexY, universalToSectorX, universalToSectorY)
+module Traveller.HexAddress exposing ( AfterChange , Delta , HexAddress , SectorHexAddress , addVal , between , betweenWithMax , codec , create , createFromStarSystem , hexAddressToString , hexLabel , sectorColumns , sectorHexAddressToString , sectorRows , shiftAddressBy , toKey , toSectorAddress , toSectorKey , toUniversalAddress , universalHexX , universalHexY , universalToSectorX , universalToSectorY)
 
 import Codec exposing (Codec)
 

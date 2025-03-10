@@ -315,6 +315,7 @@ type Msg
     | MapMouseDown ( Float, Float )
     | MapMouseUp
     | MapMouseMove ( Float, Float )
+    | MapMouseLeave
     | DownloadedRoute ( RequestEntry, String ) (Result Http.Error (List Route))
     | SetHexSize Int
     | ToggleHexmap
@@ -1260,6 +1261,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                 [ SvgAttrs.width <| widthString
                 , SvgAttrs.height <| heightString
                 , SvgAttrs.id "hexmap"
+                , SvgEvents.onMouseOut MapMouseLeave
                 , viewBox <|
                     toViewBox iHexSize upperLeftHex
                         ++ " "
@@ -2186,7 +2188,22 @@ viewStatusRow model =
         extras =
             case model.viewMode of
                 HexMap ->
-                    [ -- hex rect display
+                    [ -- hovered hex
+                      el
+                        [ uiDeepnightColorFontColour
+                        , Font.family [ Font.monospace ]
+                        , Font.size 14
+                        , Element.alignBottom
+                        , Element.width <| Element.minimum 10 Element.shrink
+                        ]
+                      <|
+                        case model.hoveringHex of
+                            Just hoveringHex ->
+                                text <| universalHexLabel model.sectors hoveringHex
+
+                            Nothing ->
+                                Element.none
+                    , -- hex rect display
                       el [ Element.alignBottom, Font.size 14, uiDeepnightColorFontColour, Element.centerX ] <|
                         text <|
                             (universalHexLabelMaybe model.sectors model.hexRect.upperLeftHex
@@ -2377,7 +2394,7 @@ view model =
 
                                     Nothing ->
                                         text "No solar system data found for system."
-                                , row [ Element.spacing 5, width fill]
+                                , row [ Element.spacing 5, width fill ]
                                     [ text <| universalHexLabel model.sectors viewingAddress
                                     , model.regions
                                         |> Dict.values
@@ -2388,7 +2405,7 @@ view model =
                                             (\region ->
                                                 if List.member viewingAddress region.hexes then
                                                     text region.name
-                                                        |> el [ Font.size 12, Font.color <| convertColor region.colour]
+                                                        |> el [ Font.size 12, Font.color <| convertColor region.colour ]
                                                         |> Just
 
                                                 else
@@ -3194,6 +3211,9 @@ update msg model =
 
                 NoDragging ->
                     ( model, Cmd.none )
+
+        MapMouseLeave ->
+            ( { model | hoveringHex = Nothing }, Cmd.none )
 
         TableColumnHovered columnDesc ->
             ( { model | sidebarHoverText = columnDesc }, Cmd.none )
