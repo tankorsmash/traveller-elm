@@ -56,6 +56,9 @@ type alias StarSystem =
     , terrestrialPlanetCount : Int
     , planetoidBeltCount : Int
     , allegiance : Maybe String
+    , nativeSophont : Bool
+    , extinctSophont : Bool
+    , techLevel : Maybe Int
     , stars : List StarType
     }
 
@@ -70,6 +73,9 @@ type alias FallibleStarSystem =
     , terrestrialPlanetCount : Int
     , planetoidBeltCount : Int
     , allegiance : Maybe String
+    , nativeSophont : Bool
+    , extinctSophont : Bool
+    , techLevel : Maybe Int
     , stars : List (Result Decode.Error StarType)
     }
 
@@ -90,6 +96,9 @@ starSystemCodec =
         |> Codec.field "terrestrial_planet_count" .terrestrialPlanetCount Codec.int
         |> Codec.field "planetoid_belt_count" .planetoidBeltCount Codec.int
         |> Codec.field "allegiance" .allegiance (Codec.nullable Codec.string)
+        |> Codec.field "native_sophont" .nativeSophont Codec.bool
+        |> Codec.field "extinct_sophont" .extinctSophont Codec.bool
+        |> Codec.field "tech_level" .techLevel (Codec.nullable Codec.int)
         |> Codec.field "stars" .stars (Codec.list starTypeCodec)
         |> Codec.buildObject
 
@@ -120,6 +129,9 @@ fallibleStarSystemDecoder =
         |> required "terrestrial_planet_count" Decode.int
         |> required "planetoid_belt_count" Decode.int
         |> required "allegiance" (Decode.nullable Decode.string)
+        |> required "native_sophont" Decode.bool
+        |> required "extinct_sophont" Decode.bool
+        |> required "tech_level" (Decode.nullable Decode.int)
         |> required "stars"
             (Decode.list
                 (Decode.map decodeOrCatchError Decode.value)

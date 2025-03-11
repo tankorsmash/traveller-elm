@@ -287,7 +287,7 @@ type alias Model =
     , regions : RegionDict
     , regionLabels : Dict.Dict String String
     , hexColours : Dict.Dict String Color
-    , referee : Maybe String
+    , referee : Bool
     }
 
 
@@ -450,7 +450,13 @@ init settings key hostConfig referee =
             , regions = Dict.empty
             , regionLabels = Dict.empty
             , hexColours = Dict.empty
-            , referee = referee
+            , referee =
+                case referee of
+                    Just _ ->
+                        True
+
+                    Nothing ->
+                        False
             }
     in
     ( model
@@ -866,12 +872,21 @@ renderHexWithStar starSystem hexColour hexAddress ( vox, voy ) size rawHexaPoint
 defaultHexBg =
     "#f5f5f5"
 
+
 selectedHexBg =
     "#a5f5a5"
 
 
 routeHexBg =
     "#FCD299"
+
+
+nativeSophontHexBg =
+    "#B0E0E6"
+
+
+extinctSophontHexBg =
+    "#EEE8AA"
 
 
 currentAddressHexBg =
@@ -1055,8 +1070,9 @@ viewHexes :
     -> ( RouteList, HexAddress )
     -> Float
     -> Maybe HexAddress
+    -> Bool
     -> Html Msg
-viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) hexSize maybeSelectedHex =
+viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) hexSize maybeSelectedHex referee =
     let
         svgHeight =
             screenVp.viewport.height - 112
@@ -1129,6 +1145,9 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
         |> List.map
             (\hexAddr ->
                 let
+                    hexKey =
+                        HexAddress.toKey hexAddr
+
                     hexSVGOrigin =
                         calcVisualOrigin hexSize
                             { row = hexAddr.y, col = hexAddr.x }
@@ -1141,7 +1160,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                             routeHexBg
 
                         else
-                            case Dict.get (HexAddress.toKey hexAddr) hexColours of
+                            case Dict.get hexKey hexColours of
                                 Just color ->
                                     Color.Convert.colorToHex <| color
 
@@ -1155,7 +1174,28 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                                                 defaultHexBg
 
                                         Nothing ->
-                                            defaultHexBg
+                                            if referee then
+                                                case Dict.get hexKey solarSystemDict of
+                                                    Just rss ->
+                                                        case rss of
+                                                            LoadedSolarSystem system ->
+                                                                if system.nativeSophont then
+                                                                    nativeSophontHexBg
+
+                                                                else if system.extinctSophont then
+                                                                    extinctSophontHexBg
+
+                                                                else
+                                                                    defaultHexBg
+
+                                                            _ ->
+                                                                defaultHexBg
+
+                                                    Nothing ->
+                                                        defaultHexBg
+
+                                            else
+                                                defaultHexBg
 
                     hexSvgsWithHexAddr =
                         ( hexAddr
@@ -2436,6 +2476,7 @@ view model =
                         ( model.route, model.currentAddress )
                         model.hexScale
                         model.selectedHex
+                        model.referee
                         |> Element.html
 
                 ( Just viewport, FullJourney ) ->
@@ -2741,12 +2782,11 @@ update msg model =
                                 if not hasFailed then
                                     let
                                         si =
-                                            case model.referee of
-                                                Just _ ->
-                                                    refereeSI
+                                            if model.referee then
+                                                refereeSI
 
-                                                Nothing ->
-                                                    fallibleSystem.surveyIndex
+                                            else
+                                                fallibleSystem.surveyIndex
 
                                         starSystem : StarSystem
                                         starSystem =
@@ -2759,6 +2799,9 @@ update msg model =
                                             , terrestrialPlanetCount = fallibleSystem.terrestrialPlanetCount
                                             , planetoidBeltCount = fallibleSystem.planetoidBeltCount
                                             , allegiance = fallibleSystem.allegiance
+                                            , nativeSophont = fallibleSystem.nativeSophont
+                                            , extinctSophont = fallibleSystem.extinctSophont
+                                            , techLevel = fallibleSystem.techLevel
                                             , stars =
                                                 -- WARN: relies on hasFailed to be false. if we don't do that check, we'll miss errors
                                                 List.map Result.toMaybe fallibleSystem.stars |> List.filterMap identity
@@ -2971,12 +3014,11 @@ update msg model =
         FetchedSolarSystem (Ok solarSystem) ->
             let
                 si =
-                    case model.referee of
-                        Just _ ->
-                            refereeSI
+                    if model.referee then
+                        refereeSI
 
-                        Nothing ->
-                            solarSystem.surveyIndex
+                    else
+                        solarSystem.surveyIndex
 
                 updatedSS =
                     { solarSystem
