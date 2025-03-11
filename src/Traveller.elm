@@ -2214,6 +2214,20 @@ viewStatusRow model =
                     [ -- hovered hex
                       el
                         [ uiDeepnightColorFontColour
+                        , Font.size 14
+                        , Element.spacing 5
+                        , Element.pointer
+                        , Events.onClick DownloadSolarSystems
+                        , Element.alignBottom
+                        , Element.htmlAttribute <| HtmlAttrs.title "Refresh map"
+                        , Element.mouseOver
+                            [ Font.color <| convertColor (Color.Manipulate.lighten 0.25 deepnightColor)
+                            ]
+                        ]
+                      <|
+                        renderFAIcon "fa-regular fa-refresh" 14
+                    , el
+                        [ uiDeepnightColorFontColour
                         , Font.family [ Font.monospace ]
                         , Font.size 14
                         , Element.alignBottom

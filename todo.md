@@ -28,7 +28,6 @@
 * [ ] Convert back to SVG viewbox and don't render relative to the upper left hex
 ** [X] Viewbox set to size of display, not fixed number of hexes
 * [X] safe jump distance should take the jump shadow into account
-* [ ] modify UWP display based on survey index
 * [ ] uncharted space link displays the full map of uncharted space
 * [X] Render regions
 * [X] Referee view
@@ -50,6 +49,7 @@
 ## Stretch Goals
 * [ ] plot player route
 * [ ] make sure nginx is gzipping
+* [ ] modify UWP display based on survey index
 
 ### Stretch Stretch Goals
 
