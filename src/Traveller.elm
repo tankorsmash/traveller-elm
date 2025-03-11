@@ -893,6 +893,15 @@ currentAddressHexBg =
     "#fe5a1d"
 
 
+allegianceColours : Dict.Dict String String
+allegianceColours =
+    Dict.fromList
+        [ ( "C", "#F0FFFF" )
+        , ( "GR", "#FFDAB9" )
+        , ( "AL", "#D2691E" )
+        ]
+
+
 defaultHexSize =
     40
 
@@ -1063,6 +1072,42 @@ regionLabel x y name =
         [ Svg.text name ]
 
 
+hexBackgroundColour : Bool -> String -> SolarSystemDict -> String
+hexBackgroundColour referee hexKey solarSystemDict =
+    if referee then
+        case Dict.get hexKey solarSystemDict of
+            Just rss ->
+                case rss of
+                    LoadedSolarSystem system ->
+                        case system.allegiance of
+                            Just allegiance ->
+                                case Dict.get allegiance allegianceColours of
+                                    Just color ->
+                                        color
+
+                                    Nothing ->
+                                        nativeSophontHexBg
+
+                            Nothing ->
+                                if system.nativeSophont then
+                                    nativeSophontHexBg
+
+                                else if system.extinctSophont then
+                                    extinctSophontHexBg
+
+                                else
+                                    defaultHexBg
+
+                    _ ->
+                        defaultHexBg
+
+            Nothing ->
+                defaultHexBg
+
+    else
+        defaultHexBg
+
+
 viewHexes :
     ( HexRect, List ( Float, Float ) )
     -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport }
@@ -1171,31 +1216,10 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                                                 selectedHexBg
 
                                             else
-                                                defaultHexBg
+                                                hexBackgroundColour referee hexKey solarSystemDict
 
                                         Nothing ->
-                                            if referee then
-                                                case Dict.get hexKey solarSystemDict of
-                                                    Just rss ->
-                                                        case rss of
-                                                            LoadedSolarSystem system ->
-                                                                if system.nativeSophont then
-                                                                    nativeSophontHexBg
-
-                                                                else if system.extinctSophont then
-                                                                    extinctSophontHexBg
-
-                                                                else
-                                                                    defaultHexBg
-
-                                                            _ ->
-                                                                defaultHexBg
-
-                                                    Nothing ->
-                                                        defaultHexBg
-
-                                            else
-                                                defaultHexBg
+                                            hexBackgroundColour referee hexKey solarSystemDict
 
                     hexSvgsWithHexAddr =
                         ( hexAddr
