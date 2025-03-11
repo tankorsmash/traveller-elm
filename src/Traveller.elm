@@ -2118,12 +2118,12 @@ viewFullJourney model viewport =
                             ( correctedX, correctedY ) =
                                 let
                                     ( officialX, officialY ) =
-                                        ( -21, 2 )
+                                        ( -21, -2 )
 
                                     ( oursX, oursY ) =
                                         ( 5, 1 )
                                 in
-                                ( officialX + oursX, officialY + oursY )
+                                ( officialX - oursX, officialY + oursY )
 
                             ( sectorX, sectorY ) =
                                 ( (hovX - offsetLeft) / (imageSizeWidth / sectorsAcross)
@@ -2147,7 +2147,7 @@ viewFullJourney model viewport =
                         <|
                             text <|
                                 "Sector: "
-                                    ++ String.fromInt (correctedX - floor sectorX)
+                                    ++ String.fromInt (correctedX + floor sectorX)
                                     ++ ", "
                                     ++ String.fromInt (correctedY - floor sectorY)
 
