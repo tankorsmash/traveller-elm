@@ -2323,11 +2323,18 @@ viewStatusRow model =
                     , -- hex rect display
                       el [ Element.alignBottom, Font.size 14, uiDeepnightColorFontColour, Element.centerX ] <|
                         text <|
-                            (universalHexLabelMaybe model.sectors model.hexRect.upperLeftHex
+                            let
+                                first =
+                                    shiftAddressBy { deltaX = 1, deltaY = 1 } model.hexRect.upperLeftHex
+
+                                last =
+                                    shiftAddressBy { deltaX = -3, deltaY = -1 } model.hexRect.lowerRightHex
+                            in
+                            (universalHexLabelMaybe model.sectors first
                                 |> Maybe.withDefault "???"
                             )
                                 ++ " – "
-                                ++ (universalHexLabelMaybe model.sectors model.hexRect.lowerRightHex
+                                ++ (universalHexLabelMaybe model.sectors last
                                         |> Maybe.withDefault "???"
                                    )
                     , -- player location display
@@ -2764,7 +2771,10 @@ updateJourney journeyMsg ({ journeyModel } as model) =
 
         --( setJourneyModel { journeyModel | dragMode = IsDragging originalPos }, Cmd.none )
         MouseDown originalPos ->
-            let _ = Debug.log "mouse down" 123 in
+            let
+                _ =
+                    Debug.log "mouse down" 123
+            in
             ( setJourneyModel { journeyModel | dragMode = IsDragging { start = originalPos, last = originalPos } }, Cmd.none )
 
         MouseLeave ->
@@ -2794,7 +2804,9 @@ updateJourney journeyMsg ({ journeyModel } as model) =
                             ( maxWidth * journeyModel.zoomScale
                             , maxHeight * journeyModel.zoomScale
                             )
-                        _ = Debug.log "mousemove" 123
+
+                        _ =
+                            Debug.log "mousemove" 123
 
                         newModel =
                             { journeyModel
