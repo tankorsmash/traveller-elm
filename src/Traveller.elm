@@ -329,7 +329,6 @@ type JourneyMsg
     | MouseDown ( Float, Float )
     | MouseMove ( Float, Float )
     | MouseUp ( Float, Float )
-    | MouseClick ( Float, Float )
     | MouseLeave
 
 
@@ -2766,15 +2765,7 @@ updateJourney journeyMsg ({ journeyModel } as model) =
             in
             ( setJourneyModel newJourneyModel, Cmd.none )
 
-        MouseClick coordinates ->
-            ( model, Cmd.none )
-
-        --( setJourneyModel { journeyModel | dragMode = IsDragging originalPos }, Cmd.none )
         MouseDown originalPos ->
-            let
-                _ =
-                    Debug.log "mouse down" 123
-            in
             ( setJourneyModel { journeyModel | dragMode = IsDragging { start = originalPos, last = originalPos } }, Cmd.none )
 
         MouseLeave ->
@@ -2804,9 +2795,6 @@ updateJourney journeyMsg ({ journeyModel } as model) =
                             ( maxWidth * journeyModel.zoomScale
                             , maxHeight * journeyModel.zoomScale
                             )
-
-                        _ =
-                            Debug.log "mousemove" 123
 
                         newModel =
                             { journeyModel
@@ -2843,7 +2831,7 @@ updateJourney journeyMsg ({ journeyModel } as model) =
                         _ =
                             Debug.log "mouse up" 123
 
-                        zoomToSector arg1 =
+                        hexViewToSector arg1 =
                             let
                                 ( maxWidth, maxHeight ) =
                                     let
@@ -2874,23 +2862,27 @@ updateJourney journeyMsg ({ journeyModel } as model) =
                                     , lowerRightHex = shiftAddressBy { deltaX = hh, deltaY = vh } hexAddress
                                     }
 
-                                _ =
-                                    Debug.log "zooming" 123
+                                newJourneyModel =
+                                    { journeyModel | dragMode = NoDragging }
 
                                 newModel =
-                                    { model | hexRect = newHexRect, dragMode = NoDragging, viewMode = HexMap }
+                                    { model
+                                        | hexRect = newHexRect
+                                        , dragMode = NoDragging
+                                        , viewMode = HexMap
+                                        , journeyModel = newJourneyModel
+                                    }
                             in
                             update DownloadSolarSystems newModel
                     in
-                    if Debug.log "dist" dist > 2 then
-                        -- do nothing
+                    if dist > 2 then
                         ( setJourneyModel { journeyModel | dragMode = NoDragging }, Cmd.none )
 
                     else
-                        zoomToSector ()
+                        hexViewToSector ()
 
                 NoDragging ->
-                    ( model, Debug.log "nodraggon" Cmd.none )
+                    ( model, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
