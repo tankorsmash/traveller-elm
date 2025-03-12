@@ -25,15 +25,13 @@
 * [X] Display location in sector co-ordinates, not absolute co-ordinates
 * [X] Remember position between sessions
 * [X] table'd sidebar (recursively render the columns, account for SVG's width, since its HTML and elm-ui isn't aware of that size)
-* [ ] Convert back to SVG viewbox and don't render relative to the upper left hex
 ** [X] Viewbox set to size of display, not fixed number of hexes
 * [X] safe jump distance should take the jump shadow into account
-* [ ] uncharted space link displays the full map of uncharted space
+* [x] uncharted space link displays the full map of uncharted space
 * [X] Render regions
 * [X] Referee view
-** [ ] Link to map url, player friendly 
 ** [X] API endpoint for regions
-* [ ] sector selector - centre map on the sector selected
+  * [X] sector selector - centre map on the sector selected
 * [ ] display name if known
 * [X] 3 Hex sizes
 * [X] scroll performance
@@ -41,12 +39,12 @@
 * [ ] render neutron star
 * [ ] prettier ui somehow
 * [X] sector borders
-* [ ] subsector borders
 
 ## 1.0
 * [ ] smart caching/requesting the api so we don't fetch too much duplicate data
 
 ## Stretch Goals
+* [ ] subsector borders
 * [ ] plot player route
 * [ ] make sure nginx is gzipping
 * [ ] modify UWP display based on survey index
