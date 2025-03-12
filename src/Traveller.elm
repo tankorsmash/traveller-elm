@@ -99,7 +99,7 @@ type alias HexMapViewport =
 
 
 type DragMode
-    = IsDragging ( Float, Float )
+    = IsDragging { start : ( Float, Float ), last : ( Float, Float ) }
     | NoDragging
 
 
@@ -328,7 +328,7 @@ type JourneyMsg
     = Zoom ZoomType
     | MouseDown ( Float, Float )
     | MouseMove ( Float, Float )
-    | MouseUp
+    | MouseUp ( Float, Float )
     | MouseClick ( Float, Float )
     | MouseLeave
 
@@ -684,6 +684,31 @@ downDecoder onDownMsg =
 
 clickDecoder : (( Float, Float ) -> msg) -> JsDecode.Decoder msg
 clickDecoder onDownMsg =
+    let
+        -- takes a raw JS mouse event and turns it into a parsed Elm mouse event
+        jsMouseEventDecoder =
+            Html.Events.Extra.Mouse.eventDecoder
+                |> JsDecode.andThen
+                    (\evt ->
+                        case evt.button of
+                            Html.Events.Extra.Mouse.MainButton ->
+                                JsDecode.succeed evt
+
+                            _ ->
+                                -- We fail decoding here, to signal to Elm that we don't want
+                                --   to process the event.
+                                -- So we'll never see the decoder failure, unlike our Codecs
+                                JsDecode.fail "Won't drag on non-main/left button"
+                    )
+    in
+    -- run the mouse event decoder
+    jsMouseEventDecoder
+        |> -- then if that succeeds, pass the event object into msgConstructor
+           JsDecode.map (\evt -> onDownMsg evt.offsetPos)
+
+
+mouseupDecoder : (( Float, Float ) -> msg) -> JsDecode.Decoder msg
+mouseupDecoder onDownMsg =
     let
         -- takes a raw JS mouse event and turns it into a parsed Elm mouse event
         jsMouseEventDecoder =
@@ -2175,9 +2200,8 @@ viewFullJourney model viewport =
         , Element.clip
         , Element.htmlAttribute <| Html.Events.on "mousemove" <| moveDecoder (JourneyMsg << MouseMove)
         , Element.htmlAttribute <| Html.Events.on "mousedown" <| downDecoder (JourneyMsg << MouseDown)
-        , Element.htmlAttribute <| Html.Events.on "click" <| clickDecoder (JourneyMsg << MouseClick)
+        , Element.htmlAttribute <| Html.Events.on "mouseup" <| mouseupDecoder (JourneyMsg << MouseUp)
         , Events.onMouseLeave (JourneyMsg MouseLeave)
-        , Events.onMouseUp (JourneyMsg MouseUp)
         , Background.color <| Element.rgb 1 0 1
         ]
     <|
@@ -2736,52 +2760,23 @@ updateJourney journeyMsg ({ journeyModel } as model) =
             ( setJourneyModel newJourneyModel, Cmd.none )
 
         MouseClick coordinates ->
-            let
-                ( maxWidth, maxHeight ) =
-                    let
-                        scaledWidth =
-                            model.viewport.viewport.width - sidebarWidth - 50
-                    in
-                    ( scaledWidth
-                    , scaledWidth * (fullJourneyImageHeight / fullJourneyImageWidth)
-                    )
-
-                imageSize =
-                    { width = maxWidth * journeyModel.zoomScale, height = maxHeight * journeyModel.zoomScale }
-
-                sector =
-                    mouseCoordsToSector (toXY coordinates) (toXY journeyModel.zoomOffset) imageSize
-
-                hexAddress =
-                    shiftAddressBy { deltaX = -2, deltaY = -2 } <| createFromStarSystem { x = 1, y = 1, sectorX = sector.x, sectorY = sector.y }
-
-                hh =
-                    horizontalHexes model.hexmapViewport model.hexScale + 2
-
-                vh =
-                    verticalHexes model.hexmapViewport model.hexScale + 3
-
-                newHexRect =
-                    { upperLeftHex = hexAddress
-                    , lowerRightHex = shiftAddressBy { deltaX = hh, deltaY = vh } hexAddress
-                    }
-
-                newModel =
-                    { model | hexRect = newHexRect, viewMode = HexMap }
-            in
-            update DownloadSolarSystems newModel
+            ( model, Cmd.none )
 
         --( setJourneyModel { journeyModel | dragMode = IsDragging originalPos }, Cmd.none )
         MouseDown originalPos ->
-            ( setJourneyModel { journeyModel | dragMode = IsDragging originalPos }, Cmd.none )
+            let _ = Debug.log "mouse down" 123 in
+            ( setJourneyModel { journeyModel | dragMode = IsDragging { start = originalPos, last = originalPos } }, Cmd.none )
 
         MouseLeave ->
             ( setJourneyModel { journeyModel | dragMode = NoDragging, hoverPoint = Nothing }, Cmd.none )
 
         MouseMove ( newX, newY ) ->
             case journeyModel.dragMode of
-                IsDragging ( originalX, originalY ) ->
+                IsDragging { start, last } ->
                     let
+                        ( originalX, originalY ) =
+                            last
+
                         ( xDelta, yDelta ) =
                             ( newX - originalX
                             , newY - originalY
@@ -2799,10 +2794,11 @@ updateJourney journeyMsg ({ journeyModel } as model) =
                             ( maxWidth * journeyModel.zoomScale
                             , maxHeight * journeyModel.zoomScale
                             )
+                        _ = Debug.log "mousemove" 123
 
                         newModel =
                             { journeyModel
-                                | dragMode = IsDragging ( newX, newY )
+                                | dragMode = IsDragging { start = start, last = ( newX, newY ) }
                                 , zoomOffset =
                                     ( clamp (maxWidth - curImgWidth) 0 (oldX + xDelta)
                                     , clamp (maxHeight - curImgHeight) 0 (oldY + yDelta)
@@ -2819,8 +2815,70 @@ updateJourney journeyMsg ({ journeyModel } as model) =
                 NoDragging ->
                     ( setJourneyModel { journeyModel | hoverPoint = Just ( newX, newY ) }, Cmd.none )
 
-        MouseUp ->
-            ( setJourneyModel { journeyModel | dragMode = NoDragging }, Cmd.none )
+        MouseUp coordinates ->
+            case journeyModel.dragMode of
+                IsDragging { start } ->
+                    let
+                        ( ox, oy ) =
+                            start
+
+                        ( cx, cy ) =
+                            coordinates
+
+                        dist =
+                            sqrt ((cx - ox) ^ 2 + (cy - oy) ^ 2)
+
+                        _ =
+                            Debug.log "mouse up" 123
+
+                        zoomToSector arg1 =
+                            let
+                                ( maxWidth, maxHeight ) =
+                                    let
+                                        scaledWidth =
+                                            model.viewport.viewport.width - sidebarWidth - 50
+                                    in
+                                    ( scaledWidth
+                                    , scaledWidth * (fullJourneyImageHeight / fullJourneyImageWidth)
+                                    )
+
+                                imageSize =
+                                    { width = maxWidth * journeyModel.zoomScale, height = maxHeight * journeyModel.zoomScale }
+
+                                sector =
+                                    mouseCoordsToSector (toXY coordinates) (toXY journeyModel.zoomOffset) imageSize
+
+                                hexAddress =
+                                    shiftAddressBy { deltaX = -2, deltaY = -2 } <| createFromStarSystem { x = 1, y = 1, sectorX = sector.x, sectorY = sector.y }
+
+                                hh =
+                                    horizontalHexes model.hexmapViewport model.hexScale + 2
+
+                                vh =
+                                    verticalHexes model.hexmapViewport model.hexScale + 3
+
+                                newHexRect =
+                                    { upperLeftHex = hexAddress
+                                    , lowerRightHex = shiftAddressBy { deltaX = hh, deltaY = vh } hexAddress
+                                    }
+
+                                _ =
+                                    Debug.log "zooming" 123
+
+                                newModel =
+                                    { model | hexRect = newHexRect, dragMode = NoDragging, viewMode = HexMap }
+                            in
+                            update DownloadSolarSystems newModel
+                    in
+                    if Debug.log "dist" dist > 2 then
+                        -- do nothing
+                        ( setJourneyModel { journeyModel | dragMode = NoDragging }, Cmd.none )
+
+                    else
+                        zoomToSector ()
+
+                NoDragging ->
+                    ( model, Debug.log "nodraggon" Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -3288,9 +3346,9 @@ update msg model =
             , Cmd.none
             )
 
-        MapMouseDown ( x, y ) ->
+        MapMouseDown coordinates ->
             ( { model
-                | dragMode = IsDragging ( x, y )
+                | dragMode = IsDragging { start = coordinates, last = coordinates }
               }
             , Cmd.none
             )
@@ -3310,8 +3368,11 @@ update msg model =
 
         MapMouseMove ( newX, newY ) ->
             case model.dragMode of
-                IsDragging ( originX, originY ) ->
+                IsDragging { start, last } ->
                     let
+                        ( originX, originY ) =
+                            last
+
                         xDelta =
                             truncate <| (originX - newX) / model.hexScale
 
@@ -3330,7 +3391,7 @@ update msg model =
 
                         newModel =
                             { model
-                                | dragMode = IsDragging ( newX, newY )
+                                | dragMode = IsDragging { start = start, last = ( newX, newY ) }
                                 , hexRect = newHexRect
                             }
                     in
