@@ -277,7 +277,7 @@ type alias Model =
     , selectedHex : Maybe HexAddress
     , selectedSystem : Maybe SolarSystem
     , sidebarHoverText : Maybe String
-    , viewport : Maybe Browser.Dom.Viewport
+    , viewport : Browser.Dom.Viewport
     , hexmapViewport : Maybe HexMapViewport
     , selectedStellarObject : Maybe StellarObject
     , hexRect : HexRect
@@ -365,8 +365,8 @@ defaultVerticalHexes =
     25
 
 
-init : Flags -> Browser.Navigation.Key -> HostConfig.HostConfig -> Maybe String -> ( Model, Cmd Msg )
-init settings key hostConfig referee =
+init : Browser.Dom.Viewport -> Flags -> Browser.Navigation.Key -> HostConfig.HostConfig -> Bool -> ( Model, Cmd Msg )
+init viewport settings key hostConfig referee =
     let
         -- requestHistory : RequestHistory
         ( initSystemDict, initRequestHistory ) =
@@ -439,7 +439,7 @@ init settings key hostConfig referee =
             , selectedHex = Nothing
             , selectedSystem = Nothing
             , sidebarHoverText = Nothing
-            , viewport = Nothing
+            , viewport = viewport
             , hexmapViewport = Nothing
             , key = key
             , selectedStellarObject = Nothing
@@ -451,13 +451,7 @@ init settings key hostConfig referee =
             , regions = Dict.empty
             , regionLabels = Dict.empty
             , hexColours = Dict.empty
-            , referee =
-                case referee of
-                    Just _ ->
-                        True
-
-                    Nothing ->
-                        False
+            , referee = referee
             }
     in
     ( model
@@ -466,8 +460,6 @@ init settings key hostConfig referee =
         , sendSectorRequest secReqEntry model.hostConfig
         , sendRegionRequest secReqEntry model.hostConfig -- Josh to fix later
         , sendRouteRequest routeReqEntry model.hostConfig
-        , Browser.Dom.getViewport
-            |> Task.perform GotViewport
         ]
     )
 
@@ -2549,11 +2541,11 @@ view model =
                 ]
 
         contentColumn =
-            case ( model.viewport, model.viewMode ) of
-                ( Just viewport, HexMap ) ->
+            case model.viewMode of
+                HexMap ->
                     let
                         defaultViewport =
-                            { screenVp = viewport, hexmapVp = Nothing }
+                            { screenVp = model.viewport, hexmapVp = Nothing }
 
                         viewPortConfig =
                             case model.hexmapViewport of
@@ -2581,11 +2573,8 @@ view model =
                         model.referee
                         |> Element.html
 
-                ( Just viewport, FullJourney ) ->
-                    viewFullJourney model.journeyModel viewport
-
-                ( Nothing, _ ) ->
-                    text "no browser viewport"
+                FullJourney ->
+                    viewFullJourney model.journeyModel model.viewport
     in
     row
         [ width fill
@@ -2748,18 +2737,10 @@ updateJourney journeyMsg ({ journeyModel } as model) =
 
         MouseClick coordinates ->
             let
-                viewport =
-                    case model.viewport of
-                        Just vp ->
-                            vp
-
-                        Nothing ->
-                            Debug.todo "Remove me"
-
                 ( maxWidth, maxHeight ) =
                     let
                         scaledWidth =
-                            viewport.viewport.width - sidebarWidth - 50
+                            model.viewport.viewport.width - sidebarWidth - 50
                     in
                     ( scaledWidth
                     , scaledWidth * (fullJourneyImageHeight / fullJourneyImageWidth)
@@ -2773,9 +2754,6 @@ updateJourney journeyMsg ({ journeyModel } as model) =
 
                 hexAddress =
                     shiftAddressBy { deltaX = -2, deltaY = -2 } <| createFromStarSystem { x = 1, y = 1, sectorX = sector.x, sectorY = sector.y }
-
-                extraPaddingHexes =
-                    2
 
                 hh =
                     horizontalHexes model.hexmapViewport model.hexScale + 2
@@ -2810,14 +2788,9 @@ updateJourney journeyMsg ({ journeyModel } as model) =
                             )
 
                         ( maxWidth, maxHeight ) =
-                            case model.viewport of
-                                Just viewport ->
-                                    ( viewport.viewport.width - sidebarWidth - 50
-                                    , viewport.viewport.height
-                                    )
-
-                                Nothing ->
-                                    ( 0, 0 )
+                            ( model.viewport.viewport.width - sidebarWidth - 50
+                            , model.viewport.viewport.height
+                            )
 
                         ( oldX, oldY ) =
                             journeyModel.zoomOffset
@@ -3246,7 +3219,7 @@ update msg model =
             ( { model | hoveringHex = Just hoveringHex }, Cmd.none )
 
         GotViewport viewport ->
-            ( { model | viewport = Just viewport }
+            ( { model | viewport = viewport }
             , Browser.Dom.getViewportOf "hexmap"
                 |> Task.attempt GotHexMapViewport
             )

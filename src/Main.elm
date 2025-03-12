@@ -1,6 +1,7 @@
 port module Main exposing (main)
 
 import Browser
+import Browser.Dom
 import Browser.Navigation as Nav
 import Dialog
 import Element
@@ -12,6 +13,7 @@ import Http exposing (Error(..))
 import Json.Encode
 import Maybe.Extra as Maybe
 import RemoteData exposing (RemoteData(..))
+import Task
 import Traveller
 import Url
 import Url.Parser exposing ((</>), Parser, map, oneOf, s, top)
@@ -24,7 +26,10 @@ type alias Model =
     , route : Maybe Route
     , dialogBody : Html Msg
     , isDarkMode : Bool
-    , travellerModel : Traveller.Model
+    , travellerModel : Maybe Traveller.Model
+    , flags : Flags
+    , referee : Bool
+    , hostConfig : HostConfig.HostConfig
     }
 
 
@@ -34,6 +39,7 @@ type Msg
     | UrlChanged Url.Url
     | ToggleErrorDialog
     | GotTravellerMsg Traveller.Msg
+    | GotViewport Browser.Dom.Viewport
 
 
 type Route
@@ -87,9 +93,6 @@ init flags url key =
                                 HostConfig.default
                    )
 
-        ( travellerModel, travellerCmds ) =
-            Traveller.init flags key hostConfig referee
-
         model : Model
         model =
             { key = key
@@ -97,17 +100,22 @@ init flags url key =
             , route = Url.Parser.parse routeParser url
             , isDarkMode = False
             , dialogBody = text "Error dialog"
-            , travellerModel = travellerModel
+            , flags = flags
+            , hostConfig = hostConfig
+            , travellerModel = Nothing
+            , referee =
+                case referee of
+                    Just _ ->
+                        True
+
+                    Nothing ->
+                        False
             }
     in
     ( model
     , Cmd.batch
-        [ -- we take a bunch of `Traveller.Cmds` from elsewhere and wrap them in the right
-          -- `Main.Msg`, since only the toplevel `update` function can pass them back up to Elm
-          --
-          -- So when we get the Cmd's response back, we can pass them back to the `Traveller.update`
-          -- when we handle the `GotTravellerMsg` msg
-          Cmd.map GotTravellerMsg travellerCmds
+        [ Browser.Dom.getViewport
+            |> Task.perform GotViewport
         ]
     )
 
@@ -126,8 +134,13 @@ main =
 
 subscriptions : Model -> Sub Msg
 subscriptions { travellerModel } =
-    Traveller.subscriptions travellerModel
-        |> Sub.map GotTravellerMsg
+    case travellerModel of
+        Just tm ->
+            Traveller.subscriptions tm
+                |> Sub.map GotTravellerMsg
+
+        Nothing ->
+            Sub.none |> Debug.log "Ignored subscription"
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -158,13 +171,45 @@ update msg model =
             ( model, toggleDialog "error-dialog" )
 
         GotTravellerMsg travellerMsg ->
-            let
-                ( newTravellerModel, newTravellerCmds ) =
-                    Traveller.update travellerMsg model.travellerModel
-            in
-            ( { model | travellerModel = newTravellerModel }
-            , Cmd.map GotTravellerMsg newTravellerCmds
-            )
+            case model.travellerModel of
+                Just tm ->
+                    let
+                        ( newTravellerModel, newTravellerCmds ) =
+                            Traveller.update travellerMsg tm
+                    in
+                    ( { model | travellerModel = Just newTravellerModel }
+                    , Cmd.map GotTravellerMsg newTravellerCmds
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        GotViewport viewport ->
+            case model.travellerModel of
+                Just tm ->
+                    let
+                        ( newTraveller, cmd ) =
+                            Traveller.update (Traveller.GotViewport viewport) tm
+                    in
+                    ( { model | travellerModel = Just newTraveller }, Cmd.map GotTravellerMsg cmd )
+
+                Nothing ->
+                    let
+                        ( newTraveller, cmd ) =
+                            Traveller.init viewport model.flags model.key model.hostConfig model.referee
+
+                        newModel =
+                            { model | travellerModel = Just newTraveller }
+                    in
+                    ( newModel, Cmd.map GotTravellerMsg cmd )
+
+
+
+--model.travellerModel
+--    ( { model | viewport = Just viewport }
+--    , Browser.Dom.getViewportOf "hexmap"
+--        |> Task.attempt GotHexMapViewport
+--    )
 
 
 {-| since elm-ui only expects one layout with a static stylesheet, we put this
@@ -203,10 +248,15 @@ view model =
                         [ a [ class "nav-link", href "/" ] [ text "Uncharted Space" ] ]
                     ]
                 ]
-            , Traveller.view model.travellerModel
-                |> Element.layoutWith { options = [ Element.noStaticStyleSheet ] }
-                    [ Element.centerX, Element.height Element.fill ]
-                |> Html.map GotTravellerMsg
+            , case model.travellerModel of
+                Just tm ->
+                    Traveller.view tm
+                        |> Element.layoutWith { options = [ Element.noStaticStyleSheet ] }
+                            [ Element.centerX, Element.height Element.fill ]
+                        |> Html.map GotTravellerMsg
+
+                Nothing ->
+                    Html.div [] [ Html.text "Loading" ]
             ]
         ]
     }
