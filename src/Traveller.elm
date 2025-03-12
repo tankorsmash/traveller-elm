@@ -46,7 +46,7 @@ import Svg.Events as SvgEvents
 import Svg.Keyed
 import Svg.Lazy
 import Task
-import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, shiftAddressBy, toSectorAddress, toUniversalAddress)
+import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, createFromStarSystem, shiftAddressBy, toSectorAddress, toUniversalAddress)
 import Traveller.Point exposing (StellarPoint)
 import Traveller.Region as Region exposing (Region, RegionDict)
 import Traveller.Route as Route exposing (Route, RouteList)
@@ -329,6 +329,7 @@ type JourneyMsg
     | MouseDown ( Float, Float )
     | MouseMove ( Float, Float )
     | MouseUp
+    | MouseClick ( Float, Float )
     | MouseLeave
 
 
@@ -666,6 +667,31 @@ renderPolygon points_ fill =
 -}
 downDecoder : (( Float, Float ) -> msg) -> JsDecode.Decoder msg
 downDecoder onDownMsg =
+    let
+        -- takes a raw JS mouse event and turns it into a parsed Elm mouse event
+        jsMouseEventDecoder =
+            Html.Events.Extra.Mouse.eventDecoder
+                |> JsDecode.andThen
+                    (\evt ->
+                        case evt.button of
+                            Html.Events.Extra.Mouse.MainButton ->
+                                JsDecode.succeed evt
+
+                            _ ->
+                                -- We fail decoding here, to signal to Elm that we don't want
+                                --   to process the event.
+                                -- So we'll never see the decoder failure, unlike our Codecs
+                                JsDecode.fail "Won't drag on non-main/left button"
+                    )
+    in
+    -- run the mouse event decoder
+    jsMouseEventDecoder
+        |> -- then if that succeeds, pass the event object into msgConstructor
+           JsDecode.map (\evt -> onDownMsg evt.offsetPos)
+
+
+clickDecoder : (( Float, Float ) -> msg) -> JsDecode.Decoder msg
+clickDecoder onDownMsg =
     let
         -- takes a raw JS mouse event and turns it into a parsed Elm mouse event
         jsMouseEventDecoder =
@@ -2093,6 +2119,43 @@ type alias HexRect =
     { upperLeftHex : HexAddress, lowerRightHex : HexAddress }
 
 
+type alias XY a =
+    { x : a, y : a }
+
+
+toXY : ( a, a ) -> XY a
+toXY ( left, right ) =
+    { x = left, y = right }
+
+
+type alias ImageSize =
+    { width : Float, height : Float }
+
+
+mouseCoordsToSector : XY Float -> XY Float -> ImageSize -> XY Int
+mouseCoordsToSector mousePos offset imageSize =
+    let
+        ( sectorsAcross, sectorsTall ) =
+            ( 17, 14 )
+
+        ( correctedX, correctedY ) =
+            let
+                ( officialX, officialY ) =
+                    ( -21, -2 )
+
+                ( oursX, oursY ) =
+                    ( 5, 1 )
+            in
+            ( officialX - oursX, officialY + oursY )
+
+        ( sectorX, sectorY ) =
+            ( (mousePos.x - offset.x) / (imageSize.width / sectorsAcross)
+            , (mousePos.y - offset.y) / (imageSize.height / sectorsTall)
+            )
+    in
+    { x = correctedX + floor sectorX, y = correctedY - floor sectorY }
+
+
 viewFullJourney : JourneyModel -> Browser.Dom.Viewport -> Element.Element Msg
 viewFullJourney model viewport =
     let
@@ -2120,6 +2183,7 @@ viewFullJourney model viewport =
         , Element.clip
         , Element.htmlAttribute <| Html.Events.on "mousemove" <| moveDecoder (JourneyMsg << MouseMove)
         , Element.htmlAttribute <| Html.Events.on "mousedown" <| downDecoder (JourneyMsg << MouseDown)
+        , Element.htmlAttribute <| Html.Events.on "click" <| clickDecoder (JourneyMsg << MouseClick)
         , Events.onMouseLeave (JourneyMsg MouseLeave)
         , Events.onMouseUp (JourneyMsg MouseUp)
         , Background.color <| Element.rgb 1 0 1
@@ -2682,6 +2746,54 @@ updateJourney journeyMsg ({ journeyModel } as model) =
             in
             ( setJourneyModel newJourneyModel, Cmd.none )
 
+        MouseClick coordinates ->
+            let
+                viewport =
+                    case model.viewport of
+                        Just vp ->
+                            vp
+
+                        Nothing ->
+                            Debug.todo "Remove me"
+
+                ( maxWidth, maxHeight ) =
+                    let
+                        scaledWidth =
+                            viewport.viewport.width - sidebarWidth - 50
+                    in
+                    ( scaledWidth
+                    , scaledWidth * (fullJourneyImageHeight / fullJourneyImageWidth)
+                    )
+
+                imageSize =
+                    { width = maxWidth * journeyModel.zoomScale, height = maxHeight * journeyModel.zoomScale }
+
+                sector =
+                    mouseCoordsToSector (toXY coordinates) (toXY journeyModel.zoomOffset) imageSize
+
+                hexAddress =
+                    shiftAddressBy { deltaX = -2, deltaY = -2 } <| createFromStarSystem { x = 1, y = 1, sectorX = sector.x, sectorY = sector.y }
+
+                extraPaddingHexes =
+                    2
+
+                hh =
+                    horizontalHexes model.hexmapViewport model.hexScale + 2
+
+                vh =
+                    verticalHexes model.hexmapViewport model.hexScale + 3
+
+                newHexRect =
+                    { upperLeftHex = hexAddress
+                    , lowerRightHex = shiftAddressBy { deltaX = hh, deltaY = vh } hexAddress
+                    }
+
+                newModel =
+                    { model | hexRect = newHexRect, viewMode = HexMap }
+            in
+            update DownloadSolarSystems newModel
+
+        --( setJourneyModel { journeyModel | dragMode = IsDragging originalPos }, Cmd.none )
         MouseDown originalPos ->
             ( setJourneyModel { journeyModel | dragMode = IsDragging originalPos }, Cmd.none )
 
