@@ -2846,18 +2846,26 @@ update msg model =
                         model.hexRect.upperLeftHex
 
                 newHexRect =
-                    { lowerRightHex = lr
-                    , upperLeftHex = model.hexRect.upperLeftHex
+                    { upperLeftHex = model.hexRect.upperLeftHex
+                    , lowerRightHex = lr
                     }
+
+                ( newModel, newCmds ) =
+                    let
+                        ( newModel_, newCmds_ ) =
+                            ( { model
+                                | hexScale = newSize
+                                , rawHexaPoints = rawHexagonPoints newSize
+                                , hexRect = newHexRect
+                                , viewMode = HexMap
+                              }
+                            , saveHexSize newSize
+                            )
+                    in
+                    update DownloadSolarSystems newModel_
+                        |> Tuple.mapSecond (\newestCmds -> Cmd.batch [ newCmds_, newestCmds ])
             in
-            ( { model
-                | hexScale = newSize
-                , rawHexaPoints = rawHexagonPoints newSize
-                , hexRect = newHexRect
-                , viewMode = HexMap
-              }
-            , saveHexSize newSize
-            )
+            ( newModel, newCmds )
 
         DownloadSolarSystems ->
             let
