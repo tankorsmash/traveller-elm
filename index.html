@@ -29,7 +29,6 @@
 
       const loc = JSON.parse(localStorage.getItem('upperLeftHex') ?? "null" );
       const hexSize = JSON.parse(localStorage.getItem('hexSize') ?? "40" );
-      const referee = JSON.parse(localStorage.getItem('hexSize') ?? "40" );
       const elm = Elm.Main.init({
         flags: {"upperLeft": loc, "hexSize": hexSize},
         node: document.getElementById("root"),
