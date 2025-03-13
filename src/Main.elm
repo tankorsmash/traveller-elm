@@ -8,16 +8,11 @@ import Element
 import HostConfig
 import Html exposing (Html, a, div, text)
 import Html.Attributes exposing (class, href)
-import Html.Events
-import Http exposing (Error(..))
 import Json.Encode
-import Maybe.Extra as Maybe
-import RemoteData exposing (RemoteData(..))
 import Task
 import Traveller
 import Url
-import Url.Parser exposing ((</>), Parser, map, oneOf, s, top)
-import Url.Parser.Query
+import Url.Parser exposing (Parser, map, oneOf, top)
 
 
 type alias Model =
@@ -74,9 +69,14 @@ type alias Flags =
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
-        referee : Maybe String
+        referee : Bool
         referee =
-            Url.Parser.parse (Url.Parser.query (Url.Parser.Query.string "referee")) url |> Maybe.join
+            case url.query of
+                Just queryString ->
+                    String.contains "referee" queryString
+
+                Nothing ->
+                    False
 
         hostConfig : HostConfig.HostConfig
         hostConfig =
@@ -103,13 +103,7 @@ init flags url key =
             , flags = flags
             , hostConfig = hostConfig
             , travellerModel = Nothing
-            , referee =
-                case referee of
-                    Just _ ->
-                        True
-
-                    Nothing ->
-                        False
+            , referee = referee
             }
     in
     ( model
