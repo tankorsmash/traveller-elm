@@ -2201,7 +2201,7 @@ viewFullJourney model viewport =
         , Element.htmlAttribute <| Html.Events.on "mousedown" <| downDecoder (JourneyMsg << MouseDown)
         , Element.htmlAttribute <| Html.Events.on "mouseup" <| mouseupDecoder (JourneyMsg << MouseUp)
         , Events.onMouseLeave (JourneyMsg MouseLeave)
-        , Background.color <| Element.rgb 1 0 1
+        , Background.color <| Element.rgb 1.0 0.498 0.0
         ]
     <|
         Element.image
@@ -2257,7 +2257,7 @@ viewFullJourney model viewport =
                 Nothing ->
                     noopAttribute
             ]
-            { src = "/public/uncharted-space.png", description = "Full Journey Map" }
+            { src = "public/uncharted-space.png", description = "Full Journey Map" }
 
 
 pointerEventsNone =
