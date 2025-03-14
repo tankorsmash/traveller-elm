@@ -233,15 +233,8 @@ view model =
     { title = "Revelation"
     , body =
         [ Dialog.view "error-dialog" ToggleErrorDialog model.dialogBody
-        , div []
+        , div [ Html.Attributes.style "padding" "8px 0px" ]
             [ elmUiHackLayout
-            , Html.nav [ class "navbar navbar-expand m-3" ]
-                [ a [ href "?", class "navbar-brand" ] [ text "Navigation" ]
-                , Html.ul [ class "navbar-nav" ]
-                    [ Html.li [ class "nav-item" ]
-                        [ a [ class "nav-link", href "/" ] [ text "Uncharted Space" ] ]
-                    ]
-                ]
             , case model.travellerModel of
                 Just tm ->
                     Traveller.view tm

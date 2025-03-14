@@ -86,6 +86,10 @@ sidebarWidth =
     400
 
 
+consoleTitleHeight =
+    46
+
+
 fullJourneyImageWidth =
     2176
 
@@ -1162,7 +1166,7 @@ viewHexes :
 viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) hexSize maybeSelectedHex referee =
     let
         svgHeight =
-            screenVp.viewport.height - 112
+            screenVp.viewport.height - consoleTitleHeight
 
         svgWidth =
             screenVp.viewport.width - 420
@@ -2476,7 +2480,7 @@ viewStatusRow model =
                         renderFAIcon "fa-regular fa-magnifying-glass-plus" 14
                     ]
     in
-    Element.wrappedRow [ Element.spacing 8, Element.width Element.fill, Element.paddingEach { zeroEach | bottom = 4 } ] <|
+    Element.wrappedRow [ Element.spacing 8, Element.width Element.fill, Element.paddingEach { zeroEach | bottom = 8 } ] <|
         (el [ Font.size 20, uiDeepnightColorFontColour ] <|
             text <|
                 "Deepnight Navigation Console"
