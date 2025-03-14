@@ -3413,17 +3413,34 @@ update msg model =
             )
 
         MapMouseUp ->
-            let
-                ( nextRequestEntry, ( newSolarSystemDict, newRequestHistory ) ) =
-                    prepNextRequest ( model.solarSystems, model.requestHistory ) model.hexRect
-            in
-            ( { model
-                | dragMode = NoDragging
-                , requestHistory = newRequestHistory
-                , solarSystems = newSolarSystemDict
-              }
-            , sendSolarSystemRequest nextRequestEntry model.hostConfig model.hexRect
-            )
+            case model.dragMode of
+                IsDragging { start, last } ->
+                    if start /= last then
+                        let
+                            ( nextRequestEntry, ( newSolarSystemDict, newRequestHistory ) ) =
+                                prepNextRequest ( model.solarSystems, model.requestHistory ) model.hexRect
+                        in
+                        ( { model
+                            | dragMode = NoDragging
+                            , requestHistory = newRequestHistory
+                            , solarSystems = newSolarSystemDict
+                          }
+                        , sendSolarSystemRequest nextRequestEntry model.hostConfig model.hexRect
+                        )
+
+                    else
+                        ( { model
+                            | dragMode = NoDragging
+                          }
+                        , Cmd.none
+                        )
+
+                _ ->
+                    ( { model
+                        | dragMode = NoDragging
+                      }
+                    , Cmd.none
+                    )
 
         MapMouseMove ( newX, newY ) ->
             case model.dragMode of
