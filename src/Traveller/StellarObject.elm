@@ -1,4 +1,4 @@
-module Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, codecStarData, codecStellarObject, extractStellarOrbit, getStarData, getInnerStarData, getSafeJumpTime, getStellarOrbit, isBrownDwarf)
+module Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, codecStarData, codecStellarObject, extractStellarOrbit, getInnerStarData, getSafeJumpTime, getStarData, getStellarOrbit, isBrownDwarf)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -89,7 +89,7 @@ type alias GasGiantData =
     { orbitPosition : StellarPoint
     , inclination : Float
     , eccentricity : Float
-    , effectiveHZCODeviation : Maybe Float
+    , effectiveHZCODeviation : Float
     , code : String
     , diameter : Float
     , mass : Maybe Float
@@ -328,7 +328,7 @@ codecGasGiantData =
         |> Codec.field "orbitPosition" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
-        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation (Codec.nullable Codec.float)
+        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
         |> Codec.field "code" .code Codec.string
         |> Codec.field "diameter" .diameter Codec.float
         |> Codec.field "mass" .mass (Codec.nullable Codec.float)

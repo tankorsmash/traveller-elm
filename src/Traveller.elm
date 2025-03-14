@@ -1352,7 +1352,7 @@ toViewBox hexScale { x, y } =
 
 orbitStyle : List (Element.Attribute msg)
 orbitStyle =
-    [ width <| Element.px 40
+    [ width <| Element.px 45
     , Element.alignRight
     ]
 
@@ -1416,6 +1416,42 @@ renderRawOrbit au =
     Element.el
         orbitStyle
         (monospaceText <| roundedAU)
+
+
+renderOrbit : Float -> Float -> Bool -> Element.Element msg
+renderOrbit au hzcoDeviation isReferee =
+    let
+        roundedAU =
+            if au < 1 then
+                Round.round 2 au
+
+            else if au < 100 then
+                Round.round 1 au
+
+            else
+                Round.round 0 au
+
+        zoneImage =
+            if isReferee then
+                if abs hzcoDeviation <= 0.2 then
+                    "🌐"
+
+                else if abs hzcoDeviation <= 1 then
+                    if hzcoDeviation > 0 then
+                        "🔥"
+
+                    else
+                        "❄"
+
+                else
+                    ""
+
+            else
+                ""
+    in
+    Element.el
+        orbitStyle
+        (monospaceText <| roundedAU ++ zoneImage)
 
 
 renderOrbitSequence : String -> Element.Element msg
@@ -1669,8 +1705,8 @@ calcDistance2F p1 p2 =
     distance
 
 
-renderGasGiant : Int -> GasGiantData -> JumpShadowCheckers -> Maybe StellarObject -> Element.Element Msg
-renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarObject =
+renderGasGiant : Int -> GasGiantData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
+renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarObject isReferee =
     let
         stellarObject =
             GasGiant gasGiantData
@@ -1678,6 +1714,9 @@ renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarOb
         maxShadow =
             List.maximum <|
                 List.filterMap (\checker -> checker stellarObject) jumpShadowCheckers
+
+        orbit =
+            renderOrbit gasGiantData.au gasGiantData.effectiveHZCODeviation isReferee
     in
     row
         [ Element.spacing 8
@@ -1685,7 +1724,7 @@ renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarOb
         , Font.size 14
         , Events.onClick <| FocusInSidebar stellarObject
         ]
-        [ renderRawOrbit gasGiantData.au
+        [ orbit
         , renderOrbitSequence gasGiantData.orbitSequence
         , renderSODescription gasGiantData.code
         , renderImage gasGiantData.code Nothing
@@ -1694,14 +1733,17 @@ renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarOb
         ]
 
 
-renderTerrestrialPlanet : Int -> TerrestrialData -> JumpShadowCheckers -> Maybe StellarObject -> Element.Element Msg
-renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject =
+renderTerrestrialPlanet : Int -> TerrestrialData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
+renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject isReferee =
     let
         planet =
             TerrestrialPlanet terrestrialData
 
         maxShadow =
             List.maximum <| List.filterMap (\checker -> checker planet) jumpShadowCheckers
+
+        orbit =
+            renderOrbit terrestrialData.au terrestrialData.effectiveHZCODeviation isReferee
     in
     row
         [ Element.spacing 8
@@ -1709,7 +1751,7 @@ renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selec
         , Font.size 14
         , Events.onClick <| FocusInSidebar planet
         ]
-        [ renderRawOrbit terrestrialData.au
+        [ orbit
         , renderOrbitSequence terrestrialData.orbitSequence
         , renderSODescription terrestrialData.uwp
         , renderImage terrestrialData.uwp terrestrialData.meanTemperature
@@ -1718,14 +1760,17 @@ renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selec
         ]
 
 
-renderPlanetoidBelt : Int -> PlanetoidBeltData -> JumpShadowCheckers -> Maybe StellarObject -> Element.Element Msg
-renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selectedStellarObject =
+renderPlanetoidBelt : Int -> PlanetoidBeltData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
+renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selectedStellarObject isReferee =
     let
         belt =
             PlanetoidBelt planetoidBeltData
 
         maxShadow =
             List.maximum <| List.filterMap (\checker -> checker belt) jumpShadowCheckers
+
+        orbit =
+            renderOrbit planetoidBeltData.au planetoidBeltData.effectiveHZCODeviation isReferee
     in
     row
         [ Element.spacing 8
@@ -1733,7 +1778,7 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selecte
         , Font.size 14
         , Events.onClick <| FocusInSidebar belt
         ]
-        [ renderRawOrbit planetoidBeltData.au
+        [ orbit
         , renderOrbitSequence planetoidBeltData.orbitSequence
         , renderSODescription planetoidBeltData.uwp
         , renderImage planetoidBeltData.uwp Nothing
@@ -1742,14 +1787,17 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selecte
         ]
 
 
-renderPlanetoid : Int -> PlanetoidData -> JumpShadowCheckers -> Maybe StellarObject -> Element.Element Msg
-renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellarObject =
+renderPlanetoid : Int -> PlanetoidData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
+renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellarObject isReferee =
     let
         planet =
             Planetoid planetoidData
 
         maxShadow =
             List.maximum <| List.filterMap (\checker -> checker planet) jumpShadowCheckers
+
+        orbit =
+            renderOrbit planetoidData.au planetoidData.effectiveHZCODeviation isReferee
     in
     row
         [ Element.spacing 8
@@ -1757,7 +1805,7 @@ renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellar
         , Font.size 14
         , Events.onClick <| FocusInSidebar planet
         ]
-        [ renderRawOrbit planetoidData.au
+        [ orbit
         , renderOrbitSequence planetoidData.orbitSequence
         , renderSODescription planetoidData.uwp
         , renderImage planetoidData.uwp planetoidData.meanTemperature
@@ -1766,8 +1814,8 @@ renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellar
         ]
 
 
-renderStellarObject : Int -> Int -> StellarObject -> JumpShadowCheckers -> Maybe StellarObject -> Element.Element Msg
-renderStellarObject surveyIndex newNestingLevel stellarObject jumpShadowCheckers selectedStellarObject =
+renderStellarObject : Int -> Int -> StellarObject -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
+renderStellarObject surveyIndex newNestingLevel stellarObject jumpShadowCheckers selectedStellarObject isReferee =
     row
         [ Element.spacing 8
         , Font.size 14
@@ -1775,24 +1823,25 @@ renderStellarObject surveyIndex newNestingLevel stellarObject jumpShadowCheckers
         ]
         [ case stellarObject of
             GasGiant gasGiantData ->
-                renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarObject
+                renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarObject isReferee
 
             TerrestrialPlanet terrestrialData ->
-                renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject
+                renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject isReferee
 
             PlanetoidBelt planetoidBeltData ->
-                renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selectedStellarObject
+                renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selectedStellarObject isReferee
 
             Planetoid planetoidData ->
-                renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellarObject
+                renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellarObject isReferee
 
             Star starDataConfig ->
-                el [ Element.width Element.fill, Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <| displayStarDetails surveyIndex starDataConfig newNestingLevel jumpShadowCheckers selectedStellarObject
+                el [ Element.width Element.fill, Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <|
+                    displayStarDetails surveyIndex starDataConfig newNestingLevel jumpShadowCheckers selectedStellarObject isReferee
         ]
 
 
-displayStarDetails : Int -> StarData -> Int -> JumpShadowCheckers -> Maybe StellarObject -> Element.Element Msg
-displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCheckers selectedStellarObject =
+displayStarDetails : Int -> StarData -> Int -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
+displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCheckers selectedStellarObject isReferee =
     let
         inJumpShadow obj =
             case starData.jumpShadow of
@@ -1860,7 +1909,7 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCh
         , starData.companion
             |> Maybe.map
                 (\compStarData ->
-                    displayStarDetails surveyIndex compStarData nextNestingLevel jumpShadowCheckers selectedStellarObject
+                    displayStarDetails surveyIndex compStarData nextNestingLevel jumpShadowCheckers selectedStellarObject isReferee
                 )
             |> Maybe.withDefault Element.none
         , column [ Element.paddingXY 10 0, Element.width Element.fill ] <|
@@ -1887,7 +1936,7 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCh
             [ starData.stellarObjects
                 |> List.filter inJumpShadow
                 |> List.filter isKnown
-                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject)
+                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject isReferee)
                 |> column []
             , -- jump shadow
               column [ Font.size 14, Font.shadow { blur = 1, color = jumpShadowTextColor, offset = ( 0.5, 0.5 ) }, Element.width Element.fill, Element.behindContent red ]
@@ -1901,7 +1950,7 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCh
             , starData.stellarObjects
                 |> List.filter (not << inJumpShadow)
                 |> List.filter isKnown
-                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject)
+                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject isReferee)
                 |> column []
             ]
         ]
@@ -1920,8 +1969,8 @@ type alias JumpShadowCheckers =
     List JumpShadowChecker
 
 
-viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Element Msg
-viewSystemDetailsSidebar solarSystem selectedStellarObject =
+viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Bool -> Element Msg
+viewSystemDetailsSidebar solarSystem selectedStellarObject isReferee =
     let
         jumpShadowCheckers : JumpShadowCheckers
         jumpShadowCheckers =
@@ -1950,6 +1999,7 @@ viewSystemDetailsSidebar solarSystem selectedStellarObject =
         0
         jumpShadowCheckers
         selectedStellarObject
+        isReferee
 
 
 colorToElementColor : Color.Color -> Element.Color
@@ -2547,6 +2597,7 @@ view model =
                             viewSystemDetailsSidebar
                                 solarSystem
                                 model.selectedStellarObject
+                                model.referee
 
                         Nothing ->
                             column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
