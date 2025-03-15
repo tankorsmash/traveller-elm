@@ -1436,19 +1436,15 @@ renderOrbit au hzcoDeviation isReferee =
                 Round.round 0 au
 
         zoneImage =
-            if isReferee then
-                if abs hzcoDeviation <= 0.2 then
-                    "🌐"
+            if abs hzcoDeviation <= 0.2 then
+                "🌐"
 
-                else if abs hzcoDeviation <= 1 then
-                    if hzcoDeviation > 0 then
-                        "🔥"
-
-                    else
-                        "❄"
+            else if abs hzcoDeviation <= 1 then
+                if hzcoDeviation > 0 then
+                    "🔥"
 
                 else
-                    ""
+                    "❄"
 
             else
                 ""
