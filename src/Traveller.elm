@@ -1422,8 +1422,8 @@ renderRawOrbit au =
         (monospaceText <| roundedAU)
 
 
-renderOrbit : Float -> Float -> Bool -> Element.Element msg
-renderOrbit au hzcoDeviation isReferee =
+renderOrbit : Float -> Float -> Maybe Float -> Bool -> Element.Element msg
+renderOrbit au hzcoDeviation maybeTemp isReferee =
     let
         roundedAU =
             if au < 1 then
@@ -1448,9 +1448,17 @@ renderOrbit au hzcoDeviation isReferee =
 
             else
                 ""
+
+        style =
+            case maybeTemp of
+                Just temp ->
+                    orbitStyle ++ [ Element.htmlAttribute <| HtmlAttrs.title <| Round.round 0 (temp - 237) ++ " ºC" ]
+
+                Nothing ->
+                    orbitStyle
     in
     Element.el
-        orbitStyle
+        style
         (monospaceText <| roundedAU ++ zoneImage)
 
 
@@ -1716,7 +1724,7 @@ renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarOb
                 List.filterMap (\checker -> checker stellarObject) jumpShadowCheckers
 
         orbit =
-            renderOrbit gasGiantData.au gasGiantData.effectiveHZCODeviation isReferee
+            renderOrbit gasGiantData.au gasGiantData.effectiveHZCODeviation Nothing isReferee
     in
     row
         [ Element.spacing 8
@@ -1743,7 +1751,7 @@ renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selec
             List.maximum <| List.filterMap (\checker -> checker planet) jumpShadowCheckers
 
         orbit =
-            renderOrbit terrestrialData.au terrestrialData.effectiveHZCODeviation isReferee
+            renderOrbit terrestrialData.au terrestrialData.effectiveHZCODeviation terrestrialData.meanTemperature isReferee
     in
     row
         [ Element.spacing 8
@@ -1770,7 +1778,7 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selecte
             List.maximum <| List.filterMap (\checker -> checker belt) jumpShadowCheckers
 
         orbit =
-            renderOrbit planetoidBeltData.au planetoidBeltData.effectiveHZCODeviation isReferee
+            renderOrbit planetoidBeltData.au planetoidBeltData.effectiveHZCODeviation Nothing isReferee
     in
     row
         [ Element.spacing 8
@@ -1797,7 +1805,7 @@ renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellar
             List.maximum <| List.filterMap (\checker -> checker planet) jumpShadowCheckers
 
         orbit =
-            renderOrbit planetoidData.au planetoidData.effectiveHZCODeviation isReferee
+            renderOrbit planetoidData.au planetoidData.effectiveHZCODeviation planetoidData.meanTemperature isReferee
     in
     row
         [ Element.spacing 8
