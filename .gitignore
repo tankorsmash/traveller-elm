@@ -10,3 +10,4 @@ node_modules
 
 # main.js is the default output of the Elm compiler, we shouldn't commit that
 main.js
+/deploy.ps1
