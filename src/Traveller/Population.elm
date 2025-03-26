@@ -1,4 +1,4 @@
-module Traveller.Population exposing (Population(..), StellarPopulation, codec, population)
+module Traveller.Population exposing (Population(..), StellarPopulation, codec, population, populationDescription)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -74,3 +74,46 @@ population =
         , Parser.succeed BHigh |. Parser.symbol "B"
         , Parser.succeed CVeryHigh |. Parser.symbol "C"
         ]
+
+
+populationDescription : Population -> String
+populationDescription code =
+    case code of
+        ZeroNone ->
+            "None"
+
+        OneLow ->
+            "Tens"
+
+        TwoLow ->
+            "Hundreds"
+
+        ThreeLow ->
+            "Thousands"
+
+        FourModerate ->
+            "Tens of Thousands"
+
+        FiveModerate ->
+            "Hundreds of Thousands"
+
+        SixModerate ->
+            "Millions"
+
+        SevenModerate ->
+            "Tens of Millions"
+
+        EightPreHigh ->
+            "Hundreds of Millions"
+
+        NineHigh ->
+            "Billions"
+
+        AHigh ->
+            "Tens of Billions"
+
+        BHigh ->
+            "Hundreds of Billions"
+
+        CVeryHigh ->
+            "Trillions"
