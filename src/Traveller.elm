@@ -37,6 +37,7 @@ import Html.Lazy
 import Http
 import Json.Decode as JsDecode
 import Maybe.Extra as Maybe
+import Parser
 import RemoteData exposing (RemoteData(..))
 import Result.Extra as Result
 import Round
@@ -46,8 +47,13 @@ import Svg.Events as SvgEvents
 import Svg.Keyed
 import Svg.Lazy
 import Task
+import Traveller.Atmosphere exposing (atmosphereDescription)
+import Traveller.Government as Government
 import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, createFromStarSystem, shiftAddressBy, toSectorAddress, toUniversalAddress)
+import Traveller.LawLevel as LawLevel
+import Traveller.Parser exposing (UWP, hydrosphereDescription, sizeDescription, starportDescription, uwp)
 import Traveller.Point exposing (StellarPoint)
+import Traveller.Population exposing (populationDescription)
 import Traveller.Region as Region exposing (Region, RegionDict)
 import Traveller.Route as Route exposing (Route, RouteList)
 import Traveller.Sector exposing (Sector, SectorDict, codec, sectorKey)
@@ -55,6 +61,7 @@ import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.SolarSystemStars exposing (FallibleStarSystem, StarSystem, StarType, StarTypeData, fallibleStarSystemDecoder, getStarTypeData, isBrownDwarfType)
 import Traveller.StarColour exposing (starColourRGB)
 import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, getInnerStarData, getStarData, getStellarOrbit, isBrownDwarf)
+import Traveller.TechLevel as TechLevel
 import Url.Builder
 
 
@@ -1741,6 +1748,56 @@ renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarOb
         ]
 
 
+uwpBreakdown : UWP -> List ( String, String )
+uwpBreakdown uwp =
+    [ ( "Starport", starportDescription uwp.starport )
+    , ( "Size", sizeDescription uwp.size )
+    , ( "Atmosphere", atmosphereDescription uwp.atmosphere )
+    , ( "Hydrosphere", hydrosphereDescription uwp.hydrosphere )
+    , ( "Population", populationDescription uwp.population )
+    , ( "Government", Government.description uwp.government )
+    , ( "Law level", LawLevel.description uwp.lawLevel )
+    , ( "Tech level", TechLevel.description uwp.techLevel )
+    ]
+
+
+uwpExplainer : String -> Element.Element Msg
+uwpExplainer uwpString =
+    let
+        parsedUWP =
+            Parser.run uwp uwpString
+    in
+    case parsedUWP of
+        Ok theUWP ->
+            column
+                [ Background.color <| colorToElementColor deepnightGray
+                , Element.moveLeft 120
+                , Element.width <| Element.px 300
+                , Element.padding 1
+                , Border.rounded 3
+                , Border.widthEach { zeroEach | top = 2 }
+                , Border.color <| colorToElementColor deepnightColor
+                , Border.glow (Element.rgba255 0 0 0 100) 6
+                , Font.color <| Element.rgb 1 1 1
+                , Font.shadow
+                    { offset = ( 1, 1 )
+                    , blur = 1
+                    , color = Element.rgb 0 0 0
+                    }
+                ]
+                [ Element.table [ Element.spacing 4 ]
+                    { columns =
+                        [ { header = Element.text "", width = Element.shrink, view = \u -> text <| Tuple.first u }
+                        , { header = Element.text "", width = Element.fill, view = \u -> Element.paragraph [] [ text <| Tuple.second u ] }
+                        ]
+                    , data = uwpBreakdown theUWP
+                    }
+                ]
+
+        _ ->
+            text ("Could not parse " ++ uwpString)
+
+
 renderTerrestrialPlanet : Int -> TerrestrialData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
 renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject isReferee =
     let
@@ -1752,6 +1809,9 @@ renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selec
 
         orbit =
             renderOrbit terrestrialData.au terrestrialData.effectiveHZCODeviation terrestrialData.meanTemperature isReferee
+
+        _ =
+            Parser.run uwp terrestrialData.uwp |> Debug.log "uwp"
     in
     row
         [ Element.spacing 8
@@ -1761,7 +1821,7 @@ renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selec
         ]
         [ orbit
         , renderOrbitSequence terrestrialData.orbitSequence
-        , renderSODescription terrestrialData.uwp
+        , renderSODescription terrestrialData.uwp |> Element.el [ Element.below <| uwpExplainer terrestrialData.uwp ]
         , renderImage terrestrialData.uwp terrestrialData.meanTemperature
         , renderJumpTime maxShadow terrestrialData.safeJumpTime
         , renderTravelTime planet selectedStellarObject
@@ -2031,7 +2091,21 @@ textColor =
 
 deepnightColor : Color.Color
 deepnightColor =
-    Color.rgb 1.0 0.498 0.0
+    Color.rgb255 223 127 51
+
+
+deepnightLightGray : Color.Color
+deepnightLightGray =
+    Color.rgb255 167 180 183
+
+
+deepnightGray : Color.Color
+deepnightGray =
+    Color.rgb255 121 137 144
+
+
+
+--Color.rgb 1.0 0.498 0.0
 
 
 fontDarkTextColor : Element.Color
