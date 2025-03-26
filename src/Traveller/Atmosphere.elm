@@ -1,4 +1,4 @@
-module Traveller.Atmosphere exposing (Atmosphere(..), StellarAtmosphere, atmosphere, codec)
+module Traveller.Atmosphere exposing (Atmosphere(..), StellarAtmosphere, atmosphere, atmosphereDescription, codec)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -51,7 +51,8 @@ type Atmosphere
     | DThirteenDenseHigh
     | EFourteenEllipsoid
     | FFifteenThinLow
-    | H_NonWikiAtmosphere
+    | GSixteen
+    | HSeventeen
 
 
 atmosphere : Parser Atmosphere
@@ -73,5 +74,64 @@ atmosphere =
         , Parser.succeed DThirteenDenseHigh |. Parser.symbol "D"
         , Parser.succeed EFourteenEllipsoid |. Parser.symbol "E"
         , Parser.succeed FFifteenThinLow |. Parser.symbol "F"
-        , Parser.succeed H_NonWikiAtmosphere |. Parser.symbol "H"
+        , Parser.succeed GSixteen |. Parser.symbol "G"
+        , Parser.succeed HSeventeen |. Parser.symbol "H"
         ]
+
+
+atmosphereDescription : Atmosphere -> String
+atmosphereDescription code =
+    case code of
+        ZeroVacuum ->
+            "Vacuum"
+
+        OneTrace ->
+            "Trace"
+
+        TwoVeryThinTainted ->
+            "Very Thin, Tainted"
+
+        ThreeVeryThin ->
+            "Very Thin"
+
+        FourThinTainted ->
+            "Thin, Tainted"
+
+        FiveThin ->
+            "Thin"
+
+        SixStandard ->
+            "Standard"
+
+        SevenStandardTainted ->
+            "Standard, Tainted"
+
+        EightDense ->
+            "Dense"
+
+        NineDenseTainted ->
+            "Dense, Tainted"
+
+        ATenExotic ->
+            "Exotic"
+
+        BElevenCorrosive ->
+            "Corrosive"
+
+        CTwelveInsidious ->
+            "Insidious"
+
+        DThirteenDenseHigh ->
+            "Dense, High"
+
+        EFourteenEllipsoid ->
+            "Ellipsoid"
+
+        FFifteenThinLow ->
+            "Thin, Low"
+
+        GSixteen ->
+            "Gas, Helium"
+
+        HSeventeen ->
+            "Gas, Hydrogen"
