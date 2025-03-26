@@ -1774,8 +1774,8 @@ uwpExplainer uwpString =
         Ok theUWP ->
             column
                 [ Background.color <| colorToElementColor deepnightGray
-                , Element.moveLeft 120
                 , Element.width <| Element.px 300
+                , Element.moveDown 20
                 , Element.padding 1
                 , Border.rounded 3
                 , Border.widthEach { zeroEach | top = 2 }
@@ -1813,35 +1813,23 @@ renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selec
         orbit =
             renderOrbit terrestrialData.au terrestrialData.effectiveHZCODeviation terrestrialData.meanTemperature isReferee
     in
-    Element.el [ Element.htmlAttribute <| HtmlAttrs.attribute "style" "z-index: 999" ] <|
-        row
-            [ Element.spacing 8
-            , Element.moveRight <| calcNestedOffset newNestingLevel
-            , Font.size 14
-            , Events.onClick <| FocusInSidebar planet
-            ]
-            [ orbit
-            , renderOrbitSequence terrestrialData.orbitSequence
-            , renderSODescription terrestrialData.uwp
-                |> Element.el
-                    [ Events.onMouseLeave <| HoveredPlanet Nothing
-                    , Events.onMouseEnter <| HoveredPlanet (Just terrestrialData)
-                    , Element.below <|
-                        case hoveredPlanet of
-                            Just hPlanet ->
-                                if hPlanet == terrestrialData then
-                                    uwpExplainer hPlanet.uwp
-
-                                else
-                                    Element.none
-
-                            Nothing ->
-                                Element.none
-                    ]
-            , renderImage terrestrialData.uwp terrestrialData.meanTemperature
-            , renderJumpTime maxShadow terrestrialData.safeJumpTime
-            , renderTravelTime planet selectedStellarObject
-            ]
+    row
+        [ Element.spacing 8
+        , Element.moveRight <| calcNestedOffset newNestingLevel
+        , Font.size 14
+        , Events.onClick <| FocusInSidebar planet
+        ]
+        [ orbit
+        , renderOrbitSequence terrestrialData.orbitSequence
+        , renderSODescription terrestrialData.uwp
+            |> Element.el
+                [ Events.onMouseLeave <| HoveredPlanet Nothing
+                , Events.onMouseEnter <| HoveredPlanet (Just terrestrialData)
+                ]
+        , renderImage terrestrialData.uwp terrestrialData.meanTemperature
+        , renderJumpTime maxShadow terrestrialData.safeJumpTime
+        , renderTravelTime planet selectedStellarObject
+        ]
 
 
 renderPlanetoidBelt : Int -> PlanetoidBeltData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
@@ -1910,7 +1898,21 @@ renderStellarObject surveyIndex newNestingLevel stellarObject jumpShadowCheckers
                 renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarObject isReferee
 
             TerrestrialPlanet terrestrialData ->
-                renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee
+                el
+                    [ Element.below <|
+                        case hoveredPlanet of
+                            Just hPlanet ->
+                                if hPlanet == terrestrialData then
+                                    uwpExplainer hPlanet.uwp
+
+                                else
+                                    Element.none
+
+                            Nothing ->
+                                Element.none
+                    ]
+                <|
+                    renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee
 
             PlanetoidBelt planetoidBeltData ->
                 renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selectedStellarObject isReferee
