@@ -3,10 +3,8 @@ module Traveller.Parser exposing
     , Base(..)
     , CulturalExtension(..)
     , EconomicExtension(..)
-    , Government(..)
     , Hydrosphere(..)
     , ImportanceExtension(..)
-    , LawLevel(..)
     , Nobility(..)
     , PBG
     , PlanetarySize(..)
@@ -16,25 +14,24 @@ module Traveller.Parser exposing
     , Starport(..)
     , StellarData(..)
     , SystemName
-    , TechLevel(..)
     , UWP
     , Zone(..)
     , allegiance
     , base
     , culturalExtension
     , economicExtension
-    , government
     , hydrosphere
+    , hydrosphereDescription
     , importanceExtension
-    , lawLevel
     , nobility
     , parseSingleDigit
     , pbg
     , planetarySize
     , remark
+    , sizeDescription
     , starport
+    , starportDescription
     , stellarData
-    , techLevel
     , uwp
     , zone
     )
@@ -43,7 +40,10 @@ import Parser exposing ((|.), (|=), Parser)
 import Parser.Extras as Parser
 import Traveller.Atmosphere exposing (Atmosphere, atmosphere)
 import Traveller.EHex exposing (EHex, eHex)
+import Traveller.Government as Government exposing (Government)
+import Traveller.LawLevel as LawLevel exposing (LawLevel)
 import Traveller.Population exposing (Population, population)
+import Traveller.TechLevel as TechLevel exposing (TechLevel)
 
 
 
@@ -125,10 +125,10 @@ uwp =
         |= atmosphere
         |= hydrosphere
         |= population
-        |= government
-        |= lawLevel
+        |= Government.parser
+        |= LawLevel.parser
         |. Parser.chompIf (\c -> c == '-')
-        |= techLevel
+        |= TechLevel.parser
 
 
 
@@ -238,23 +238,45 @@ base =
 
 
 type Starport
-    = ClassAExcellent
-    | ClassBGood
-    | ClassCRoutine
-    | ClassDPoor
-    | ClassEFrontier
-    | ClassXNoStarport
+    = ClassA
+    | ClassB
+    | ClassC
+    | ClassD
+    | ClassE
+    | ClassX
+
+
+starportDescription : Starport -> String
+starportDescription class =
+    case class of
+        ClassA ->
+            "Excellent quality installation. Refined fuel available. Annual maintenance overhaul available. Shipyard capable of both starship and non-starship construction present."
+
+        ClassB ->
+            "Good quality installation. Refined fuel available. Annual maintenance overhaul available. Shipyard capable of constructing non-starships present."
+
+        ClassC ->
+            "Routine quality installation. Only unrefined fuel available. Reasonable repair facilities are present."
+
+        ClassD ->
+            "Poor quality installation. Only unrefined fuel available. No repair or shipyard facilities present."
+
+        ClassE ->
+            "Frontier installation. Essentially a bare spot of bedrock with no fuel, facilities, or bases present."
+
+        ClassX ->
+            "No starport. Class X starports are generally indicative of an interdiction. No provision is made for any starship landings and such landings are probably prohibited."
 
 
 starport : Parser Starport
 starport =
     Parser.oneOf
-        [ Parser.succeed ClassAExcellent |. Parser.symbol "A"
-        , Parser.succeed ClassBGood |. Parser.symbol "B"
-        , Parser.succeed ClassCRoutine |. Parser.symbol "C"
-        , Parser.succeed ClassDPoor |. Parser.symbol "D"
-        , Parser.succeed ClassEFrontier |. Parser.symbol "E"
-        , Parser.succeed ClassXNoStarport |. Parser.symbol "X"
+        [ Parser.succeed ClassA |. Parser.symbol "A"
+        , Parser.succeed ClassB |. Parser.symbol "B"
+        , Parser.succeed ClassC |. Parser.symbol "C"
+        , Parser.succeed ClassD |. Parser.symbol "D"
+        , Parser.succeed ClassE |. Parser.symbol "E"
+        , Parser.succeed ClassX |. Parser.symbol "X"
         ]
 
 
@@ -320,8 +342,70 @@ type PlanetarySize
     | ATenHuge
     | BElevenHuge
     | CTwelveHuge
-    | SGGSmallGasGiant
-    | LGGLargeGasGiant
+    | DThirteenHuge
+    | EFourteenHuge
+    | FFifteenHuge
+
+
+sizeDescription : PlanetarySize -> String
+sizeDescription size =
+    case size of
+        RPlanetaryRing ->
+            "Planetary Ring (<0.01g)"
+
+        DDebris ->
+            "Debris Field (< 0.01g)"
+
+        ZeroAsteroidPlanetaryBelt ->
+            "Asteroid / Planetary Belt (< 0.01g)"
+
+        SVerySmall ->
+            "Very Small (400km, 0.02g - 0.03g)"
+
+        OneSmall ->
+            "Small (1,600km, 0.05g - 0.09g)"
+
+        TwoSmall ->
+            "Small (3,200km, 0.10g - 0.17g)"
+
+        ThreeSmall ->
+            "Small (4,800km, 0.24g - 0.34g)"
+
+        FourMedium ->
+            "Medium (6,400km, 0.32g - 0.46g)"
+
+        FiveMedium ->
+            "Medium (8,000km, 0.40g - 0.57g)"
+
+        SixMedium ->
+            "Medium (9,600km, 0.60g - 0.81g)"
+
+        SevenLarge ->
+            "Large (11,200km, 0.70g - 0.94g)"
+
+        EightLarge ->
+            "Large (12,800km, 0.80g - 1.08g)"
+
+        NineLarge ->
+            "Large (14,400km, 1.03g - 1.33g)"
+
+        ATenHuge ->
+            "Huge (16,000km, 1.14g - 1.48g)"
+
+        BElevenHuge ->
+            "Huge (17,600km, 1.49g - 1.89g)"
+
+        CTwelveHuge ->
+            "Huge (19,200km, 1.9g - 2.0g)"
+
+        DThirteenHuge ->
+            "Huge (20,000km, 2.01g - 2.5g)"
+
+        EFourteenHuge ->
+            "Huge (21,600km, 2.6g - 3.0g)"
+
+        FFifteenHuge ->
+            "Huge (23,200km, 3.1g - 3.5g)"
 
 
 {-| Parse a planetary size. the referree sheet only has single digit stuff, but just in case.
@@ -345,8 +429,9 @@ planetarySize =
         , Parser.succeed ATenHuge |. Parser.symbol "A"
         , Parser.succeed BElevenHuge |. Parser.symbol "B"
         , Parser.succeed CTwelveHuge |. Parser.symbol "C"
-        , Parser.succeed SGGSmallGasGiant |. Parser.symbol "SGG"
-        , Parser.succeed LGGLargeGasGiant |. Parser.symbol "LGG"
+        , Parser.succeed DThirteenHuge |. Parser.symbol "D"
+        , Parser.succeed EFourteenHuge |. Parser.symbol "E"
+        , Parser.succeed FFifteenHuge |. Parser.symbol "F"
         ]
 
 
@@ -407,6 +492,43 @@ type Hydrosphere
     | AWaterWorld
 
 
+hydrosphereDescription : Hydrosphere -> String
+hydrosphereDescription code =
+    case code of
+        ZeroDesertWorld ->
+            "0 – 5%"
+
+        OneDryWorld ->
+            "6 - 15%"
+
+        TwoDryWorld ->
+            "16 - 25%"
+
+        ThreeWetWorld ->
+            "26 - 35%"
+
+        FourWetWorld ->
+            "36 - 45%"
+
+        FiveAverageWetWorld ->
+            "46 - 55%"
+
+        SixWetWorld ->
+            "56 - 65%"
+
+        SevenWetWorld ->
+            "66 - 75%"
+
+        EightVeryWetWorld ->
+            "76 - 85%"
+
+        NineVeryWetWorld ->
+            "86 - 95%"
+
+        AWaterWorld ->
+            "96 - 100%"
+
+
 hydrosphere : Parser Hydrosphere
 hydrosphere =
     Parser.oneOf
@@ -421,262 +543,6 @@ hydrosphere =
         , Parser.succeed EightVeryWetWorld |. Parser.symbol "8"
         , Parser.succeed NineVeryWetWorld |. Parser.symbol "9"
         , Parser.succeed AWaterWorld |. Parser.symbol "A"
-        ]
-
-
-
-{- Government codes
-
-   General Government Codes & Descriptions
-   Worlds inhabited by Humaniti or non-Human Sophonts similar to Humaniti are generally classified with the following codes:
-
-   General Government Codes & Descriptions
-   Symbol    Code    Name    Description    Power Source / Sructure
-   Gov-Code-0 Fan-Andy-Bigwood 13-Nov-2019.png    0    No Government Structure    In many cases, tribal, clan or family bonds predominate    Democracy / Anarchy or Confederation
-   Gov-Code-1 Fan-Andy-Bigwood 13-Nov-2019.png    1    Company/Corporation    Government by a company managerial elite, citizens are company employees.    Oligarchy / Unitary State
-   Gov-Code-2 Fan-Andy-Bigwood 13-Nov-2019.png    2    Participating Democracy    Government by advice and consent of the citizen.    Democracy / Confederation or Federation
-   Gov-Code-3 Fan-Andy-Bigwood 13-Nov-2019.png    3    Self-perpetuating Oligarchy    Government by a restricted minority, with little or no input from the masses.    Oligarchy / Unitary State
-   Gov-Code-4 Fan-Andy-Bigwood 13-Nov-2019.png    4    Representative Democracy    Government by elected representatives.    Democracy / Federation or Unitary State
-   Gov-Code-5 Fan-Andy-Bigwood 13-Nov-2019.png    5    Feudal Technocracy    Government by specific individuals for those who agree to be ruled. Relationships are based on the performance of technical activities which are mutually-beneficial.    Oligarchy / Federation or Unitary State
-   Gov-Code-6 Fan-Andy-Bigwood 13-Nov-2019.png    6    Captive Government/Colony    Government by a leadership answerable to an outside group, a colony or conquered area.    Autocracy / Federation
-   Gov-Code-7 Fan-Andy-Bigwood 13-Nov-2019.png    7    Balkanization    No central ruling authority exists. Rival governments compete for control.    Anarchy / Confederation
-   Gov-Code-8 Fan-Andy-Bigwood 13-Nov-2019.png    8    Civil Service Bureaucracy    Government by agencies employing individuals selected for their expertise.    Oligarchy / Unitary State
-   Gov-Code-9 Fan-Andy-Bigwood 13-Nov-2019.png    9    Impersonal Bureaucracy    Government by agencies which are insulated from the governed.    Oligarchy / Unitary State
-   Gov-Code-A Fan-Andy-Bigwood 13-Nov-2019.png    A (10)    Charismatic Dictator    Government by a single leader enjoying the confidence of the citizens.    Autocracy / Unitary State
-   Gov-Code-B Fan-Andy-Bigwood 13-Nov-2019.png    B (11)    Non-Charismatic Leader    A previous charismatic dictator has been replaced by a leader through normal channels.    Autocracy / Unitary State
-   Gov-Code-C Fan-Andy-Bigwood 13-Nov-2019.png    C (12)    Charismatic Oligarchy    Government by a select group, organization, or class enjoying overwhelming confidence of the citizenry.    Oligarchy / Unitary State
-   Gov-Code-D Fan-Andy-Bigwood 13-Nov-2019.png    D (13)    Religious Dictatorship    Government by a religious minority which has little regard for the needs of the citizenry.    Autocracy / Unitary State
-   Gov-Code-E Fan-Andy-Bigwood 13-Nov-2019.png    E (14)    Religious Autocracy    Government by a single religious leader having absolute power over the citizenry.    Autocracy / Unitary State
-   Gov-Code-F Fan-Andy-Bigwood 13-Nov-2019.png    F (15)    Totalitarian Oligarchy    Government by an all-powerful minority which maintains absolute control through widespread coercion and oppression.    Oligarchy / Unitary State
-
--}
-
-
-type Government
-    = ZeroNoGovernmentStructure
-    | OneCompanyCorporation
-    | TwoParticipatingDemocracy
-    | ThreeSelfPerpetuatingOligarchy
-    | FourRepresentativeDemocracy
-    | FiveFeudalTechnocracy
-    | SixCaptiveGovernmentColony
-    | SevenBalkanization
-    | EightCivilServiceBureaucracy
-    | NineImpersonalBureaucracy
-    | ACharismaticDictator
-    | BNonCharismaticLeader
-    | CCharismaticOligarchy
-    | DReligiousDictatorship
-    | EReligiousAutocracy
-    | FTotalitarianOligarchy
-
-
-government : Parser Government
-government =
-    Parser.oneOf
-        [ Parser.succeed ZeroNoGovernmentStructure |. Parser.symbol "0"
-        , Parser.succeed OneCompanyCorporation |. Parser.symbol "1"
-        , Parser.succeed TwoParticipatingDemocracy |. Parser.symbol "2"
-        , Parser.succeed ThreeSelfPerpetuatingOligarchy |. Parser.symbol "3"
-        , Parser.succeed FourRepresentativeDemocracy |. Parser.symbol "4"
-        , Parser.succeed FiveFeudalTechnocracy |. Parser.symbol "5"
-        , Parser.succeed SixCaptiveGovernmentColony |. Parser.symbol "6"
-        , Parser.succeed SevenBalkanization |. Parser.symbol "7"
-        , Parser.succeed EightCivilServiceBureaucracy |. Parser.symbol "8"
-        , Parser.succeed NineImpersonalBureaucracy |. Parser.symbol "9"
-        , Parser.succeed ACharismaticDictator |. Parser.symbol "A"
-        , Parser.succeed BNonCharismaticLeader |. Parser.symbol "B"
-        , Parser.succeed CCharismaticOligarchy |. Parser.symbol "C"
-        , Parser.succeed DReligiousDictatorship |. Parser.symbol "D"
-        , Parser.succeed EReligiousAutocracy |. Parser.symbol "E"
-        , Parser.succeed FTotalitarianOligarchy |. Parser.symbol "F"
-        ]
-
-
-
-{- Law Level Codes
-   UWP Code Table
-   UWP Law Level Codes
-   Code    Description    Prohibited Weapons/Controls (including those of earlier codes)
-   0 (Zero)    No Law    No Prohibitions
-   1    Low Law    Body Pistols, Explosives, Nuclear Weapons, Poison Gas,
-   2    Low Law    Portable Energy Weapons
-   3    Low Law    Machine Guns, Automatic Weapons, Flamethrowers, military weapons
-   4    Moderate Law    Light Assault Weapons, Submachine guns, All Energy weapons.
-   5    Moderate Law    Personal Concealable Firearms, EMP weapons, Radiation weapons, Non-automatic fire Gauss weapons
-   6    Moderate Law    All firearms except Shotguns
-   7    Moderate Law    Shotguns
-   8    High Law    Blade Weapons Controlled, open display of weapons
-   9    High Law    weapons outside home
-   A (10)    Extreme Law    Weapon possession
-   B (11)    Extreme Law    Rigid control of civilian movement
-   C (12)    Extreme Law    Unrestricted invasion of privacy
-   D (13)    Extreme Law    Paramilitary law enforcement
-   E (14)    Extreme Law    Full-fledged police state
-   F (15)    Extreme Law    All facets of daily life rigidly controlled
-   G (16)    Extreme Law    Severe punishment for petty infractions
-   H (17)    Extreme Law    Legalized oppressive practices
-   J (18)    Extreme Law    Routinely oppressive and restrictive
--}
-
-
-type LawLevel
-    = ZeroNoLaw
-    | OneLowLaw
-    | TwoLowLaw
-    | ThreeLowLaw
-    | FourModerateLaw
-    | FiveModerateLaw
-    | SixModerateLaw
-    | SevenModerateLaw
-    | EightHighLaw
-    | NineHighLaw
-    | AExtremeLaw
-    | BExtremeLaw
-    | CExtremeLaw
-    | DExtremeLaw
-    | EExtremeLaw
-    | FExtremeLaw
-    | GExtremeLaw
-    | HExtremeLaw
-    | JExtremeLaw
-
-
-lawLevel : Parser LawLevel
-lawLevel =
-    Parser.oneOf
-        [ Parser.succeed ZeroNoLaw |. Parser.symbol "0"
-        , Parser.succeed OneLowLaw |. Parser.symbol "1"
-        , Parser.succeed TwoLowLaw |. Parser.symbol "2"
-        , Parser.succeed ThreeLowLaw |. Parser.symbol "3"
-        , Parser.succeed FourModerateLaw |. Parser.symbol "4"
-        , Parser.succeed FiveModerateLaw |. Parser.symbol "5"
-        , Parser.succeed SixModerateLaw |. Parser.symbol "6"
-        , Parser.succeed SevenModerateLaw |. Parser.symbol "7"
-        , Parser.succeed EightHighLaw |. Parser.symbol "8"
-        , Parser.succeed NineHighLaw |. Parser.symbol "9"
-        , Parser.succeed AExtremeLaw |. Parser.symbol "A"
-        , Parser.succeed BExtremeLaw |. Parser.symbol "B"
-        , Parser.succeed CExtremeLaw |. Parser.symbol "C"
-        , Parser.succeed DExtremeLaw |. Parser.symbol "D"
-        , Parser.succeed EExtremeLaw |. Parser.symbol "E"
-        , Parser.succeed FExtremeLaw |. Parser.symbol "F"
-        , Parser.succeed GExtremeLaw |. Parser.symbol "G"
-        , Parser.succeed HExtremeLaw |. Parser.symbol "H"
-        , Parser.succeed JExtremeLaw |. Parser.symbol "J"
-        ]
-
-
-
-{- Tech Level
-   Technology Levels
-   TL    Era or key development
-   0    Neolithic Age
-   1    Metal Age
-   2    Age of Sail
-   3    Industrial Age
-   4    Mechanized Age
-   5    Broadcast Age
-   6    Atomic Age
-   7    Space Age
-   8    Information Age
-   9    Gravitics Age; First Jump Drives
-   10    Basic Fusion Age
-   11    Fusion Plus Age
-   12    Positronics Age
-   13    Cloning Age
-   14    Geneering Age
-   15    Anagathics Age
-   16    Artificial Persons Age
-   17    Personality Transfer Age
-   18    Exotics Age
-   19    Antimatter Age
-   20    Skip Drive Age
-   21    Stasis Age
-   22    Planet-scrubber Age
-   23    Psychohistory Age
-   24    Rosette Age
-   25    Psionic Engineering Age
-   26    Star Energy Age
-   27    Ringworld Age
-   28    Reality Engineering Age
-   29    Dyson Sphere Age
-   30    Remote Technology Age
-   31    Pocket Universe Age
-
--}
-
-
-type TechLevel
-    = ZeroNeolithicAge
-    | OneMetalAge
-    | TwoAgeOfSail
-    | ThreeIndustrialAge
-    | FourMechanizedAge
-    | FiveBroadcastAge
-    | SixAtomicAge
-    | SevenSpaceAge
-    | EightInformationAge
-    | NineGraviticsAge
-    | TenBasicFusionAge
-    | ElevenFusionPlusAge
-    | TwelvePositronicsAge
-    | ThirteenCloningAge
-    | FourteenGeneeringAge
-    | FifteenAnagathicsAge
-    | SixteenArtificialPersonsAge
-    | SeventeenPersonalityTransferAge
-    | EighteenExoticsAge
-    | NineteenAntimatterAge
-    | TwentySkipDriveAge
-    | TwentyOneStasisAge
-    | TwentyTwoPlanetScrubberAge
-    | TwentyThreePsychohistoryAge
-    | TwentyFourRosetteAge
-    | TwentyFivePsionicEngineeringAge
-    | TwentySixStarEnergyAge
-    | TwentySevenRingworldAge
-    | TwentyEightRealityEngineeringAge
-    | TwentyNineDysonSphereAge
-    | ThirtyRemoteTechnologyAge
-    | ThirtyOnePocketUniverseAge
-
-
-techLevel : Parser TechLevel
-techLevel =
-    Parser.oneOf
-        [ Parser.succeed ZeroNeolithicAge |. Parser.symbol "0"
-        , Parser.succeed OneMetalAge |. Parser.symbol "1"
-        , Parser.succeed TwoAgeOfSail |. Parser.symbol "2"
-        , Parser.succeed ThreeIndustrialAge |. Parser.symbol "3"
-        , Parser.succeed FourMechanizedAge |. Parser.symbol "4"
-        , Parser.succeed FiveBroadcastAge |. Parser.symbol "5"
-        , Parser.succeed SixAtomicAge |. Parser.symbol "6"
-        , Parser.succeed SevenSpaceAge |. Parser.symbol "7"
-        , Parser.succeed EightInformationAge |. Parser.symbol "8"
-        , Parser.succeed NineGraviticsAge |. Parser.symbol "9"
-        , Parser.succeed TenBasicFusionAge |. Parser.symbol "10"
-        , Parser.succeed ElevenFusionPlusAge |. Parser.symbol "11"
-        , Parser.succeed TwelvePositronicsAge |. Parser.symbol "12"
-        , Parser.succeed ThirteenCloningAge |. Parser.symbol "13"
-        , Parser.succeed FourteenGeneeringAge |. Parser.symbol "14"
-        , Parser.succeed FifteenAnagathicsAge |. Parser.symbol "15"
-        , Parser.succeed SixteenArtificialPersonsAge |. Parser.symbol "16"
-        , Parser.succeed SeventeenPersonalityTransferAge |. Parser.symbol "17"
-        , Parser.succeed EighteenExoticsAge |. Parser.symbol "18"
-        , Parser.succeed NineteenAntimatterAge |. Parser.symbol "19"
-        , Parser.succeed TwentySkipDriveAge |. Parser.symbol "20"
-        , Parser.succeed TwentyOneStasisAge |. Parser.symbol "21"
-        , Parser.succeed TwentyTwoPlanetScrubberAge |. Parser.symbol "22"
-        , Parser.succeed TwentyThreePsychohistoryAge |. Parser.symbol "23"
-        , Parser.succeed TwentyFourRosetteAge |. Parser.symbol "24"
-        , Parser.succeed TwentyFivePsionicEngineeringAge |. Parser.symbol "25"
-        , Parser.succeed TwentySixStarEnergyAge |. Parser.symbol "26"
-        , Parser.succeed TwentySevenRingworldAge |. Parser.symbol "27"
-        , Parser.succeed TwentyEightRealityEngineeringAge |. Parser.symbol "28"
-        , Parser.succeed TwentyNineDysonSphereAge |. Parser.symbol "29"
-        , Parser.succeed ThirtyRemoteTechnologyAge |. Parser.symbol "30"
-        , Parser.succeed ThirtyOnePocketUniverseAge |. Parser.symbol "31"
         ]
 
 
