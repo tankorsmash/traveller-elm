@@ -299,6 +299,7 @@ type alias Model =
     , regionLabels : Dict.Dict String String
     , hexColours : Dict.Dict String Color
     , referee : Bool
+    , hoveredPlanet : Maybe TerrestrialData
     }
 
 
@@ -322,6 +323,7 @@ type Msg
     | GotHexMapViewport (Result Browser.Dom.Error Browser.Dom.Viewport)
     | GotResize Int Int
     | FocusInSidebar StellarObject
+    | HoveredPlanet (Maybe TerrestrialData)
     | TableColumnHovered (Maybe String)
     | MapMouseDown ( Float, Float )
     | MapMouseUp
@@ -462,6 +464,7 @@ init viewport settings key hostConfig referee =
             , regionLabels = Dict.empty
             , hexColours = Dict.empty
             , referee = referee
+            , hoveredPlanet = Nothing
             }
     in
     ( model
@@ -1798,8 +1801,8 @@ uwpExplainer uwpString =
             text ("Could not parse " ++ uwpString)
 
 
-renderTerrestrialPlanet : Int -> TerrestrialData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
-renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject isReferee =
+renderTerrestrialPlanet : Int -> TerrestrialData -> JumpShadowCheckers -> Maybe StellarObject -> Maybe TerrestrialData -> Bool -> Element.Element Msg
+renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee =
     let
         planet =
             TerrestrialPlanet terrestrialData
@@ -1809,23 +1812,36 @@ renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selec
 
         orbit =
             renderOrbit terrestrialData.au terrestrialData.effectiveHZCODeviation terrestrialData.meanTemperature isReferee
-
-        _ =
-            Parser.run uwp terrestrialData.uwp |> Debug.log "uwp"
     in
-    row
-        [ Element.spacing 8
-        , Element.moveRight <| calcNestedOffset newNestingLevel
-        , Font.size 14
-        , Events.onClick <| FocusInSidebar planet
-        ]
-        [ orbit
-        , renderOrbitSequence terrestrialData.orbitSequence
-        , renderSODescription terrestrialData.uwp |> Element.el [ Element.below <| uwpExplainer terrestrialData.uwp ]
-        , renderImage terrestrialData.uwp terrestrialData.meanTemperature
-        , renderJumpTime maxShadow terrestrialData.safeJumpTime
-        , renderTravelTime planet selectedStellarObject
-        ]
+    Element.el [ Element.htmlAttribute <| HtmlAttrs.attribute "style" "z-index: 999" ] <|
+        row
+            [ Element.spacing 8
+            , Element.moveRight <| calcNestedOffset newNestingLevel
+            , Font.size 14
+            , Events.onClick <| FocusInSidebar planet
+            ]
+            [ orbit
+            , renderOrbitSequence terrestrialData.orbitSequence
+            , renderSODescription terrestrialData.uwp
+                |> Element.el
+                    [ Events.onMouseLeave <| HoveredPlanet Nothing
+                    , Events.onMouseEnter <| HoveredPlanet (Just terrestrialData)
+                    , Element.below <|
+                        case hoveredPlanet of
+                            Just hPlanet ->
+                                if hPlanet == terrestrialData then
+                                    uwpExplainer hPlanet.uwp
+
+                                else
+                                    Element.none
+
+                            Nothing ->
+                                Element.none
+                    ]
+            , renderImage terrestrialData.uwp terrestrialData.meanTemperature
+            , renderJumpTime maxShadow terrestrialData.safeJumpTime
+            , renderTravelTime planet selectedStellarObject
+            ]
 
 
 renderPlanetoidBelt : Int -> PlanetoidBeltData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
@@ -1882,8 +1898,8 @@ renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellar
         ]
 
 
-renderStellarObject : Int -> Int -> StellarObject -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
-renderStellarObject surveyIndex newNestingLevel stellarObject jumpShadowCheckers selectedStellarObject isReferee =
+renderStellarObject : Int -> Int -> StellarObject -> JumpShadowCheckers -> Maybe StellarObject -> Maybe TerrestrialData -> Bool -> Element.Element Msg
+renderStellarObject surveyIndex newNestingLevel stellarObject jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee =
     row
         [ Element.spacing 8
         , Font.size 14
@@ -1894,7 +1910,7 @@ renderStellarObject surveyIndex newNestingLevel stellarObject jumpShadowCheckers
                 renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarObject isReferee
 
             TerrestrialPlanet terrestrialData ->
-                renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject isReferee
+                renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee
 
             PlanetoidBelt planetoidBeltData ->
                 renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selectedStellarObject isReferee
@@ -1904,12 +1920,12 @@ renderStellarObject surveyIndex newNestingLevel stellarObject jumpShadowCheckers
 
             Star starDataConfig ->
                 el [ Element.width Element.fill, Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <|
-                    displayStarDetails surveyIndex starDataConfig newNestingLevel jumpShadowCheckers selectedStellarObject isReferee
+                    displayStarDetails surveyIndex starDataConfig newNestingLevel jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee
         ]
 
 
-displayStarDetails : Int -> StarData -> Int -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
-displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCheckers selectedStellarObject isReferee =
+displayStarDetails : Int -> StarData -> Int -> JumpShadowCheckers -> Maybe StellarObject -> Maybe TerrestrialData -> Bool -> Element.Element Msg
+displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee =
     let
         inJumpShadow obj =
             case starData.jumpShadow of
@@ -1977,7 +1993,7 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCh
         , starData.companion
             |> Maybe.map
                 (\compStarData ->
-                    displayStarDetails surveyIndex compStarData nextNestingLevel jumpShadowCheckers selectedStellarObject isReferee
+                    displayStarDetails surveyIndex compStarData nextNestingLevel jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee
                 )
             |> Maybe.withDefault Element.none
         , column [ Element.paddingXY 10 0, Element.width Element.fill ] <|
@@ -2004,10 +2020,9 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCh
             [ starData.stellarObjects
                 |> List.filter inJumpShadow
                 |> List.filter isKnown
-                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject isReferee)
+                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee)
                 |> column []
-            , -- jump shadow
-              column [ Font.size 14, Font.shadow { blur = 1, color = jumpShadowTextColor, offset = ( 0.5, 0.5 ) }, Element.width Element.fill, Element.behindContent red ]
+            , column [ Font.size 14, Font.shadow { blur = 1, color = jumpShadowTextColor, offset = ( 0.5, 0.5 ) }, Element.width Element.fill, Element.behindContent red ]
                 [ case starData.jumpShadow of
                     Just jumpShadow ->
                         Element.el [ Element.centerX ] <| text <| Round.round 2 jumpShadow
@@ -2018,7 +2033,7 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCh
             , starData.stellarObjects
                 |> List.filter (not << inJumpShadow)
                 |> List.filter isKnown
-                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject isReferee)
+                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee)
                 |> column []
             ]
         ]
@@ -2037,8 +2052,8 @@ type alias JumpShadowCheckers =
     List JumpShadowChecker
 
 
-viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Bool -> Element Msg
-viewSystemDetailsSidebar solarSystem selectedStellarObject isReferee =
+viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Maybe TerrestrialData -> Bool -> Element Msg
+viewSystemDetailsSidebar solarSystem selectedStellarObject hoveredPlanet isReferee =
     let
         jumpShadowCheckers : JumpShadowCheckers
         jumpShadowCheckers =
@@ -2067,6 +2082,7 @@ viewSystemDetailsSidebar solarSystem selectedStellarObject isReferee =
         0
         jumpShadowCheckers
         selectedStellarObject
+        hoveredPlanet
         isReferee
 
 
@@ -2679,6 +2695,7 @@ view model =
                             viewSystemDetailsSidebar
                                 solarSystem
                                 model.selectedStellarObject
+                                model.hoveredPlanet
                                 model.referee
 
                         Nothing ->
@@ -3480,6 +3497,11 @@ update msg model =
 
         FocusInSidebar stellarObject ->
             ( { model | selectedStellarObject = Just stellarObject }
+            , Cmd.none
+            )
+
+        HoveredPlanet maybePlanet ->
+            ( { model | hoveredPlanet = maybePlanet }
             , Cmd.none
             )
 
