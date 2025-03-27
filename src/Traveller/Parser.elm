@@ -11,7 +11,6 @@ module Traveller.Parser exposing
     , Remark(..)
     , SpectralClassification(..)
     , SpectralType(..)
-    , Starport(..)
     , StellarData(..)
     , SystemName
     , UWP
@@ -29,8 +28,6 @@ module Traveller.Parser exposing
     , planetarySize
     , remark
     , sizeDescription
-    , starport
-    , starportDescription
     , stellarData
     , uwp
     , zone
@@ -43,6 +40,7 @@ import Traveller.EHex exposing (EHex, eHex)
 import Traveller.Government as Government exposing (Government)
 import Traveller.LawLevel as LawLevel exposing (LawLevel)
 import Traveller.Population exposing (Population, population)
+import Traveller.Starport as Starport exposing (Starport)
 import Traveller.TechLevel as TechLevel exposing (TechLevel)
 
 
@@ -120,7 +118,7 @@ type alias UWP =
 uwp : Parser UWP
 uwp =
     Parser.succeed UWP
-        |= starport
+        |= Starport.parser
         |= planetarySize
         |= atmosphere
         |= hydrosphere
@@ -215,68 +213,6 @@ base =
         , Parser.succeed ZhodaniRelayStation |. Parser.symbol "X"
         , Parser.succeed ZhodaniDepot |. Parser.symbol "Y"
         , Parser.succeed ZhodaniNavalMilitaryBase |. Parser.symbol "Z"
-        ]
-
-
-
-{-
-
-   Starport Classifications
-   Class A
-   Excellent quality installation. Refined fuel available. Annual maintenance overhaul available. Shipyard capable of both starship and non-starship construction present.
-   Class B
-   Good quality installation. Refined fuel available. Annual maintenance overhaul available. Shipyard capable of constructing non-starships present.
-   Class C
-   Routine quality installation. Only unrefined fuel available. Reasonable repair facilities are present.
-   Class D
-   Poor quality installation. Only unrefined fuel available. No repair or shipyard facilities present.
-   Class E
-   Frontier installation. Essentially a bare spot of bedrock with no fuel, facilities, or bases present.
-   Class X
-   No starport. Class X starports are generally indicative of an interdiction. No provision is made for any starship landings and such landings are probably prohibited.
--}
-
-
-type Starport
-    = ClassA
-    | ClassB
-    | ClassC
-    | ClassD
-    | ClassE
-    | ClassX
-
-
-starportDescription : Starport -> String
-starportDescription class =
-    case class of
-        ClassA ->
-            "Excellent quality installation. Refined fuel available. Annual maintenance overhaul available. Shipyard capable of both starship and non-starship construction present."
-
-        ClassB ->
-            "Good quality installation. Refined fuel available. Annual maintenance overhaul available. Shipyard capable of constructing non-starships present."
-
-        ClassC ->
-            "Routine quality installation. Only unrefined fuel available. Reasonable repair facilities are present."
-
-        ClassD ->
-            "Poor quality installation. Only unrefined fuel available. No repair or shipyard facilities present."
-
-        ClassE ->
-            "Frontier installation. Essentially a bare spot of bedrock with no fuel, facilities, or bases present."
-
-        ClassX ->
-            "No starport. Class X starports are generally indicative of an interdiction. No provision is made for any starship landings and such landings are probably prohibited."
-
-
-starport : Parser Starport
-starport =
-    Parser.oneOf
-        [ Parser.succeed ClassA |. Parser.symbol "A"
-        , Parser.succeed ClassB |. Parser.symbol "B"
-        , Parser.succeed ClassC |. Parser.symbol "C"
-        , Parser.succeed ClassD |. Parser.symbol "D"
-        , Parser.succeed ClassE |. Parser.symbol "E"
-        , Parser.succeed ClassX |. Parser.symbol "X"
         ]
 
 

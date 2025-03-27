@@ -51,7 +51,7 @@ import Traveller.Atmosphere exposing (atmosphereDescription)
 import Traveller.Government as Government
 import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, createFromStarSystem, shiftAddressBy, toSectorAddress, toUniversalAddress)
 import Traveller.LawLevel as LawLevel
-import Traveller.Parser exposing (UWP, hydrosphereDescription, sizeDescription, starportDescription, uwp)
+import Traveller.Parser exposing (UWP, hydrosphereDescription, sizeDescription, uwp)
 import Traveller.Point exposing (StellarPoint)
 import Traveller.Population exposing (populationDescription)
 import Traveller.Region as Region exposing (Region, RegionDict)
@@ -60,6 +60,7 @@ import Traveller.Sector exposing (Sector, SectorDict, codec, sectorKey)
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.SolarSystemStars exposing (FallibleStarSystem, StarSystem, StarType, StarTypeData, fallibleStarSystemDecoder, getStarTypeData, isBrownDwarfType)
 import Traveller.StarColour exposing (starColourRGB)
+import Traveller.Starport as Starport
 import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, getInnerStarData, getStarData, getStellarOrbit, isBrownDwarf)
 import Traveller.TechLevel as TechLevel
 import Url.Builder
@@ -1753,7 +1754,7 @@ renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarOb
 
 uwpBreakdown : UWP -> List ( String, String )
 uwpBreakdown uwp =
-    [ ( "Starport", starportDescription uwp.starport )
+    [ ( "Starport", Starport.description uwp.starport )
     , ( "Size", sizeDescription uwp.size )
     , ( "Atmosphere", atmosphereDescription uwp.atmosphere )
     , ( "Hydrosphere", hydrosphereDescription uwp.hydrosphere )
