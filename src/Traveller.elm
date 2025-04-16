@@ -2328,8 +2328,8 @@ mouseCoordsToSector mousePos offset imageSize =
     { x = correctedX + floor sectorX, y = correctedY - floor sectorY }
 
 
-viewFullJourney : JourneyModel -> Browser.Dom.Viewport -> Element.Element Msg
-viewFullJourney model viewport =
+viewFullJourney : JourneyModel -> Browser.Dom.Viewport -> RouteList -> Element.Element Msg
+viewFullJourney model viewport route =
     let
         ( maxWidth, maxHeight ) =
             let
@@ -2347,6 +2347,74 @@ viewFullJourney model viewport =
 
         ( offsetLeft, offsetTop ) =
             model.zoomOffset
+
+        routeSquares =
+            route |> List.map (.address >> sq)
+
+        sq : HexAddress -> Element msg
+        sq addr =
+            let
+                ( sectorsAcross, sectorsTall ) =
+                    ( 17, 14 )
+
+                ( hexesAcross, hexesTall ) =
+                    ( sectorsAcross * 32, sectorsTall * 40 )
+
+                ( correctedX, correctedY ) =
+                    let
+                        ( officialX, officialY ) =
+                            ( -21, -2 )
+                    in
+                    ( officialX - oursX, officialY + oursY )
+
+                ss : SectorHexAddress
+                ss =
+                    { sectorX = correctedX, sectorY = correctedY, x = 1, y = 1 }
+
+                uh : HexAddress
+                uh =
+                    toUniversalAddress ss
+
+                adj : HexAddress
+                adj =
+                    { x = addr.x - uh.x, y = addr.y - uh.y }
+
+                ( oursX, oursY ) =
+                    ( 5, 1 )
+
+                sec : SectorHexAddress
+                sec =
+                    toSectorAddress addr
+
+                ( hovX, hovY ) =
+                    -- ( sec.sectorX + oursX |> toFloat |> (*) 32
+                    -- , sec.sectorY + oursY |> toFloat |> (*) 40
+                    ( adj.x  |> toFloat
+                    , adj.y  |> toFloat
+                    )
+
+                fooW =
+                    imageSizeWidth / hexesAcross
+
+                fooH =
+                    imageSizeHeight / hexesTall
+
+                ( xOff, yOff ) =
+                    -- ( (hovX - offsetLeft) / fooW
+                    -- , (hovY - offsetTop) / fooH
+                    ( (adj.x |> toFloat |> (+) offsetLeft  ) / fooW
+                    , (adj.y|> toFloat) / fooH
+                    )
+            in
+            el
+                [ Element.moveRight xOff
+                , Element.moveUp yOff
+                , width <| Element.px 2
+                , height <| Element.px 2
+                , Background.color <| colorToElementColor deepnightColor
+                ]
+            <|
+                text " "
     in
     el
         [ Element.alignTop
@@ -2361,13 +2429,13 @@ viewFullJourney model viewport =
         ]
     <|
         Element.image
-            [ width <| Element.px <| floor <| imageSizeWidth
-            , height <| Element.px <| floor <| imageSizeHeight
-            , Element.moveRight <| offsetLeft
-            , Element.moveDown <| offsetTop
-            , pointerEventsNone
-            , userSelectNone
-            , case model.hoverPoint of
+            ([ width <| Element.px <| floor <| imageSizeWidth
+             , height <| Element.px <| floor <| imageSizeHeight
+             , Element.moveRight <| offsetLeft
+             , Element.moveDown <| offsetTop
+             , pointerEventsNone
+             , userSelectNone
+             , case model.hoverPoint of
                 Just ( hovX, hovY ) ->
                     Element.inFront <|
                         let
@@ -2384,16 +2452,20 @@ viewFullJourney model viewport =
                                 in
                                 ( officialX - oursX, officialY + oursY )
 
+                            fooW =
+                                imageSizeWidth / sectorsAcross
+
+                            fooH =
+                                imageSizeHeight / sectorsTall
+
                             ( sectorX, sectorY ) =
-                                ( (hovX - offsetLeft) / (imageSizeWidth / sectorsAcross)
-                                , (hovY - offsetTop) / (imageSizeHeight / sectorsTall)
+                                ( (hovX - offsetLeft) / fooW |> floor
+                                , (hovY - offsetTop) / fooH |> floor
                                 )
 
                             ( xoff, yoff ) =
-                                ( (toFloat <| floor sectorX)
-                                    * (imageSizeWidth / sectorsAcross)
-                                , (toFloat <| floor sectorY)
-                                    * (imageSizeHeight / sectorsTall)
+                                ( (toFloat <| sectorX) * fooW
+                                , (toFloat <| sectorY) * fooH
                                 )
                         in
                         Element.el
@@ -2406,13 +2478,15 @@ viewFullJourney model viewport =
                         <|
                             text <|
                                 "Sector: "
-                                    ++ String.fromInt (correctedX + floor sectorX)
+                                    ++ String.fromInt (correctedX + sectorX)
                                     ++ ", "
-                                    ++ String.fromInt (correctedY - floor sectorY)
+                                    ++ String.fromInt (correctedY - sectorY)
 
                 Nothing ->
                     noopAttribute
-            ]
+             ]
+                ++ (routeSquares |> List.map Element.inFront)
+            )
             { src = "public/uncharted-space.png", description = "Full Journey Map" }
 
 
@@ -2762,7 +2836,7 @@ view model =
                         |> Element.html
 
                 FullJourney ->
-                    viewFullJourney model.journeyModel model.viewport
+                    viewFullJourney model.journeyModel model.viewport model.route
     in
     row
         [ width fill
