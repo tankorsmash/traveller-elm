@@ -300,7 +300,7 @@ type alias Model =
     , regionLabels : Dict.Dict String String
     , hexColours : Dict.Dict String Color
     , referee : Bool
-    , hoveredPlanet : Maybe TerrestrialData
+    , hoveredStellarObject : Maybe String
     }
 
 
@@ -324,7 +324,7 @@ type Msg
     | GotHexMapViewport (Result Browser.Dom.Error Browser.Dom.Viewport)
     | GotResize Int Int
     | FocusInSidebar StellarObject
-    | HoveredPlanet (Maybe TerrestrialData)
+    | HoveredStellarObject (Maybe String)
     | TableColumnHovered (Maybe String)
     | MapMouseDown ( Float, Float )
     | MapMouseUp
@@ -465,7 +465,7 @@ init viewport settings key hostConfig referee =
             , regionLabels = Dict.empty
             , hexColours = Dict.empty
             , referee = referee
-            , hoveredPlanet = Nothing
+            , hoveredStellarObject = Nothing
             }
     in
     ( model
@@ -1480,11 +1480,15 @@ renderOrbitSequence sequence =
         (monospaceText <| sequence)
 
 
-renderSODescription : String -> Element.Element msg
-renderSODescription description =
+renderSODescription : String -> String -> Element.Element Msg
+renderSODescription description orbitSequence =
     Element.el
         descriptionStyle
         (monospaceText <| description)
+        |> Element.el
+            [ Events.onMouseLeave <| HoveredStellarObject Nothing
+            , Events.onMouseEnter <| HoveredStellarObject (Just orbitSequence)
+            ]
 
 
 iconSizing : List (Element.Attribute msg)
@@ -1745,7 +1749,7 @@ renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarOb
         ]
         [ orbit
         , renderOrbitSequence gasGiantData.orbitSequence
-        , renderSODescription gasGiantData.code
+        , renderSODescription gasGiantData.code gasGiantData.orbitSequence
         , renderImage gasGiantData.code Nothing
         , renderJumpTime maxShadow gasGiantData.safeJumpTime
         , renderTravelTime stellarObject selectedStellarObject
@@ -1802,8 +1806,8 @@ uwpExplainer uwpString =
             text ("Could not parse " ++ uwpString)
 
 
-renderTerrestrialPlanet : Int -> TerrestrialData -> JumpShadowCheckers -> Maybe StellarObject -> Maybe TerrestrialData -> Bool -> Element.Element Msg
-renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee =
+renderTerrestrialPlanet : Int -> TerrestrialData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
+renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject isReferee =
     let
         planet =
             TerrestrialPlanet terrestrialData
@@ -1822,11 +1826,7 @@ renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selec
         ]
         [ orbit
         , renderOrbitSequence terrestrialData.orbitSequence
-        , renderSODescription terrestrialData.uwp
-            |> Element.el
-                [ Events.onMouseLeave <| HoveredPlanet Nothing
-                , Events.onMouseEnter <| HoveredPlanet (Just terrestrialData)
-                ]
+        , renderSODescription terrestrialData.uwp terrestrialData.orbitSequence
         , renderImage terrestrialData.uwp terrestrialData.meanTemperature
         , renderJumpTime maxShadow terrestrialData.safeJumpTime
         , renderTravelTime planet selectedStellarObject
@@ -1853,7 +1853,7 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selecte
         ]
         [ orbit
         , renderOrbitSequence planetoidBeltData.orbitSequence
-        , renderSODescription planetoidBeltData.uwp
+        , renderSODescription planetoidBeltData.uwp planetoidBeltData.orbitSequence
         , renderImage planetoidBeltData.uwp Nothing
         , renderJumpTime maxShadow planetoidBeltData.safeJumpTime
         , renderTravelTime belt selectedStellarObject
@@ -1880,15 +1880,31 @@ renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellar
         ]
         [ orbit
         , renderOrbitSequence planetoidData.orbitSequence
-        , renderSODescription planetoidData.uwp
+        , renderSODescription planetoidData.uwp planetoidData.orbitSequence
         , renderImage planetoidData.uwp planetoidData.meanTemperature
         , renderJumpTime maxShadow planetoidData.safeJumpTime
         , renderTravelTime planet selectedStellarObject
         ]
 
 
-renderStellarObject : Int -> Int -> StellarObject -> JumpShadowCheckers -> Maybe StellarObject -> Maybe TerrestrialData -> Bool -> Element.Element Msg
-renderStellarObject surveyIndex newNestingLevel stellarObject jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee =
+renderStellarObject : Int -> Int -> StellarObject -> JumpShadowCheckers -> Maybe StellarObject -> Maybe String -> Bool -> Element.Element Msg
+renderStellarObject surveyIndex newNestingLevel stellarObject jumpShadowCheckers selectedStellarObject hoveredStellarObject isReferee =
+    let
+        uwpHover orbitSequence uwp =
+            el
+                [ Element.below <|
+                    case hoveredStellarObject of
+                        Just hPlanet ->
+                            if hPlanet == orbitSequence then
+                                uwpExplainer uwp
+
+                            else
+                                Element.none
+
+                        Nothing ->
+                            Element.none
+                ]
+    in
     row
         [ Element.spacing 8
         , Font.size 14
@@ -1899,36 +1915,25 @@ renderStellarObject surveyIndex newNestingLevel stellarObject jumpShadowCheckers
                 renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarObject isReferee
 
             TerrestrialPlanet terrestrialData ->
-                el
-                    [ Element.below <|
-                        case hoveredPlanet of
-                            Just hPlanet ->
-                                if hPlanet == terrestrialData then
-                                    uwpExplainer hPlanet.uwp
-
-                                else
-                                    Element.none
-
-                            Nothing ->
-                                Element.none
-                    ]
-                <|
-                    renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee
+                uwpHover terrestrialData.orbitSequence terrestrialData.uwp <|
+                    renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject isReferee
 
             PlanetoidBelt planetoidBeltData ->
-                renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selectedStellarObject isReferee
+                uwpHover planetoidBeltData.orbitSequence planetoidBeltData.uwp <|
+                    renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selectedStellarObject isReferee
 
             Planetoid planetoidData ->
-                renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellarObject isReferee
+                uwpHover planetoidData.orbitSequence planetoidData.uwp <|
+                    renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellarObject isReferee
 
             Star starDataConfig ->
                 el [ Element.width Element.fill, Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <|
-                    displayStarDetails surveyIndex starDataConfig newNestingLevel jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee
+                    displayStarDetails surveyIndex starDataConfig newNestingLevel jumpShadowCheckers selectedStellarObject hoveredStellarObject isReferee
         ]
 
 
-displayStarDetails : Int -> StarData -> Int -> JumpShadowCheckers -> Maybe StellarObject -> Maybe TerrestrialData -> Bool -> Element.Element Msg
-displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee =
+displayStarDetails : Int -> StarData -> Int -> JumpShadowCheckers -> Maybe StellarObject -> Maybe String -> Bool -> Element.Element Msg
+displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCheckers selectedStellarObject hoveredStellarObject isReferee =
     let
         inJumpShadow obj =
             case starData.jumpShadow of
@@ -1996,7 +2001,7 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCh
         , starData.companion
             |> Maybe.map
                 (\compStarData ->
-                    displayStarDetails surveyIndex compStarData nextNestingLevel jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee
+                    displayStarDetails surveyIndex compStarData nextNestingLevel jumpShadowCheckers selectedStellarObject hoveredStellarObject isReferee
                 )
             |> Maybe.withDefault Element.none
         , column [ Element.paddingXY 10 0, Element.width Element.fill ] <|
@@ -2023,7 +2028,7 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCh
             [ starData.stellarObjects
                 |> List.filter inJumpShadow
                 |> List.filter isKnown
-                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee)
+                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject hoveredStellarObject isReferee)
                 |> column []
             , column [ Font.size 14, Font.shadow { blur = 1, color = jumpShadowTextColor, offset = ( 0.5, 0.5 ) }, Element.width Element.fill, Element.behindContent red ]
                 [ case starData.jumpShadow of
@@ -2036,7 +2041,7 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCh
             , starData.stellarObjects
                 |> List.filter (not << inJumpShadow)
                 |> List.filter isKnown
-                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject hoveredPlanet isReferee)
+                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject hoveredStellarObject isReferee)
                 |> column []
             ]
         ]
@@ -2055,8 +2060,8 @@ type alias JumpShadowCheckers =
     List JumpShadowChecker
 
 
-viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Maybe TerrestrialData -> Bool -> Element Msg
-viewSystemDetailsSidebar solarSystem selectedStellarObject hoveredPlanet isReferee =
+viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Maybe String -> Bool -> Element Msg
+viewSystemDetailsSidebar solarSystem selectedStellarObject hoveredStellarObject isReferee =
     let
         jumpShadowCheckers : JumpShadowCheckers
         jumpShadowCheckers =
@@ -2085,7 +2090,7 @@ viewSystemDetailsSidebar solarSystem selectedStellarObject hoveredPlanet isRefer
         0
         jumpShadowCheckers
         selectedStellarObject
-        hoveredPlanet
+        hoveredStellarObject
         isReferee
 
 
@@ -2698,7 +2703,7 @@ view model =
                             viewSystemDetailsSidebar
                                 solarSystem
                                 model.selectedStellarObject
-                                model.hoveredPlanet
+                                model.hoveredStellarObject
                                 model.referee
 
                         Nothing ->
@@ -3503,8 +3508,8 @@ update msg model =
             , Cmd.none
             )
 
-        HoveredPlanet maybePlanet ->
-            ( { model | hoveredPlanet = maybePlanet }
+        HoveredStellarObject maybeOrbitSequence ->
+            ( { model | hoveredStellarObject = maybeOrbitSequence }
             , Cmd.none
             )
 
