@@ -36,6 +36,7 @@ import Html.Events.Extra.Mouse
 import Html.Lazy
 import Http
 import Json.Decode as JsDecode
+import List.Extra as List
 import Maybe.Extra as Maybe
 import Parser
 import RemoteData exposing (RemoteData(..))
@@ -91,7 +92,7 @@ planetoidSI =
 
 
 sidebarWidth =
-    400
+    200
 
 
 consoleTitleHeight =
@@ -262,6 +263,7 @@ prepNextRequest ( oldSolarSystemDict, requestHistory ) { upperLeftHex, lowerRigh
 type ViewMode
     = HexMap
     | FullJourney
+    | SystemView
 
 
 type alias JourneyModel =
@@ -439,7 +441,7 @@ init viewport settings key hostConfig referee =
         model : Model
         model =
             { hexScale = settings.hexSize
-            , viewMode = HexMap
+            , viewMode = SystemView
             , journeyModel = journeyModel
             , rawHexaPoints = rawHexagonPoints <| settings.hexSize
             , solarSystems = solarSystemDict
@@ -2581,6 +2583,9 @@ viewStatusRow model =
                       <|
                         renderFAIcon "fa-regular fa-magnifying-glass-plus" 14
                     ]
+
+                SystemView ->
+                    []
     in
     Element.wrappedRow [ Element.spacing 8, Element.width Element.fill, Element.paddingEach { zeroEach | bottom = 8 } ] <|
         (el [ Font.size 20, uiDeepnightColorFontColour ] <|
@@ -2763,6 +2768,101 @@ view model =
 
                 FullJourney ->
                     viewFullJourney model.journeyModel model.viewport
+
+                SystemView ->
+                    let
+                        moon sz name =
+                            column
+                                [ width fill
+                                , centerX
+                                , centerY
+                                ]
+                                [ row [ centerX, Element.spacing 10 ]
+                                    [ el
+                                        [ width <| Element.px sz
+                                        , height <| Element.px sz
+                                        , Border.rounded 100
+                                        , Border.width 2
+                                        , Background.color <| Element.rgb 0 0 0.25
+                                        , centerX
+                                        , Element.onRight <|
+                                            el
+                                                [ Font.size 12
+                                                , Element.moveRight 15
+                                                , Font.color <| Element.rgb 1 1 1
+                                                ]
+                                            <|
+                                                text name
+                                        ]
+                                      <|
+                                        Element.none
+                                    ]
+                                ]
+
+                        planet sz name =
+                            column [ width fill, height fill, centerX, centerY ]
+                                [ row [ centerX, width fill ]
+                                    [ el
+                                        [ width <| Element.px sz
+                                        , height <| Element.px sz
+                                        , Border.rounded 100
+                                        , Border.width 2
+                                        , Background.color <| convertColor deepnightColor
+                                        , centerX
+                                        , Element.inFront <|
+                                            el
+                                                [ centerX
+                                                , centerY
+                                                , Font.size 12
+                                                , Font.color <| Element.rgb 1 1 1
+                                                ]
+                                            <|
+                                                text name
+                                        , Element.onRight <|
+                                            if name == "Mars" then
+                                                el
+                                                    [ centerX
+                                                    , centerY
+                                                    , Font.size 12
+                                                    , Element.moveRight 10
+                                                    , Font.color <| Element.rgb 1 1 1
+                                                    , Font.underline
+                                                    ]
+                                                <|
+                                                    text "Martian Navy"
+
+                                            else
+                                                Element.none
+                                        ]
+                                      <|
+                                        Element.none
+                                    ]
+                                ]
+
+                        planetColumn plnt moons =
+                            let
+                                numMoonsHalf =
+                                    List.length moons |> toFloat |> (\n -> n / 2.0)
+
+                                ( topMoons, botMoons ) =
+                                    List.splitAt (numMoonsHalf |> floor) moons
+                            in
+                            column
+                                [ width fill
+                                , height <| Element.minimum 40 Element.shrink
+                                ]
+                            <|
+                                (topMoons ++ [ plnt ] ++ botMoons)
+                    in
+                    el [ height <| Element.px 200, width fill ] <|
+                        row [ width fill, height fill ]
+                            [ planetColumn (planet (32 * 2) "Earth") [ moon 13 "IO", moon 11 "Luna", moon 16 "Foa" ]
+                            , planetColumn (planet 32 "Venus") [ moon 7 "Vera" ]
+                            , planetColumn (planet 48 "Mars") []
+                            , planetColumn (planet 32 "Sarm") [ moon 11 "Marsha" ]
+                            , planetColumn (planet (32 * 3) "Jupiter") [ moon 20 "Jay", moon 12 "Pay", moon 20 "Jak", moon 12 "Pat" ]
+                            , planetColumn (planet 32 "Pluto") [ moon 20 "Jay", moon 12 "Pat" ]
+                            ]
     in
     row
         [ width fill
@@ -2773,9 +2873,9 @@ view model =
         ]
         [ el [ Element.height fill, Element.width <| Element.px sidebarWidth, Element.alignTop, Element.alignLeft ] <|
             sidebarColumn
-        , column []
+        , column [ width fill ]
             [ viewStatusRow model
-            , el [ Element.alignTop ] <| contentColumn
+            , el [ Element.alignTop, width fill ] <| contentColumn
             ]
         , Element.html <| errorDialog model.newSolarSystemErrors
         ]
