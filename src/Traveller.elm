@@ -301,7 +301,7 @@ type alias Model =
     , hexColours : Dict.Dict String Color
     , referee : Bool
     , hoveredStellarObject : Maybe String
-    , toBeAnalyzed : Maybe StellarObject
+    , objectToBeAnalyzed : Maybe StellarObject
     }
 
 
@@ -360,7 +360,7 @@ keyDecoder model =
 
 toKey : Model -> String -> Msg
 toKey model string =
-    case ( model.toBeAnalyzed, string ) of
+    case ( model.objectToBeAnalyzed, string ) of
         ( Just _, "Escape" ) ->
             CloseObjectAnalysis
 
@@ -485,7 +485,7 @@ init viewport settings key hostConfig referee =
             , hexColours = Dict.empty
             , referee = referee
             , hoveredStellarObject = Nothing
-            , toBeAnalyzed = Nothing
+            , objectToBeAnalyzed = Nothing
             }
     in
     ( model
@@ -2789,7 +2789,7 @@ view model =
         , Font.size 20
         , Font.color <| fontTextColor
         , Element.paddingXY 15 0
-        , case model.toBeAnalyzed of
+        , case model.objectToBeAnalyzed of
             Just stellarObject ->
                 Element.inFront <| viewObjectAnalysisDetail stellarObject
 
@@ -3882,12 +3882,12 @@ update msg model =
             updateJourney journeyMsg model
 
         ViewObjectAnalysisDetail stellarObject ->
-            ( { model | toBeAnalyzed = Just stellarObject }
+            ( { model | objectToBeAnalyzed = Just stellarObject }
             , Cmd.none
             )
 
         CloseObjectAnalysis ->
-            ( { model | toBeAnalyzed = Nothing }
+            ( { model | objectToBeAnalyzed = Nothing }
             , Cmd.none
             )
 
