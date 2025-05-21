@@ -2801,6 +2801,9 @@ viewObjectAnalysisDetail model =
         numberDisplay lbl val =
             textDisplay lbl <| String.fromInt val
 
+        groupAttrs =
+            [ Element.paddingXY 5 0, width fill ]
+
         textDisplay lbl val =
             row
                 [ width fill
@@ -2811,9 +2814,7 @@ viewObjectAnalysisDetail model =
                 ]
 
         textDisplayNarrow lbl val =
-            row [ width fill
-                , Element.paddingEach <| { zeroEach | top = 5 }
-            ]
+            row [ width fill ]
                 [ el
                     ([ width <| Element.px 90
                      , Element.paddingEach <| { zeroEach | top = 5 }
@@ -2826,41 +2827,56 @@ viewObjectAnalysisDetail model =
                     [ el ([ Element.alignTop, Element.spacing 0, Element.padding 0 ] ++ valueAttrs) <| text val
                     ]
                 ]
+
+        textDisplayMedium lbl val =
+            row [ width fill ]
+                [ el
+                    ([ width <| Element.px 110
+                     , Element.paddingEach <| { zeroEach | top = 5 }
+                     ]
+                        ++ headerAttrs
+                    )
+                  <|
+                    text lbl
+                , Element.paragraph [ Element.spacing 0 ]
+                    [ el ([ Element.alignTop, Element.spacing 0, Element.padding 0 ] ++ valueAttrs) <| text val
+                    ]
+                ]
     in
     column [ width fill ]
-        [ column [ width fill ]
+        [ column []
             [ text <| "Physical"
-            , row [ Element.spacing 10 ]
+            , row (Element.spacing 40 :: groupAttrs)
                 [ column [ Element.alignTop ]
-                    [ textDisplay "AU" "123.0"
-                    , textDisplay "Period (yrs)" "0.28"
-                    , textDisplay "Inclination" "3°"
-                    , textDisplay "Eccentricity" "0.089"
+                    [ textDisplayNarrow "AU" "123.0"
+                    , textDisplayNarrow "Period (yrs)" "0.28"
+                    , textDisplayNarrow "Inclination" "3°"
+                    , textDisplayNarrow "Eccentricity" "0.089"
                     ]
                 , column [ Element.alignTop ]
-                    [ textDisplay "Mass (earths)" "1.45"
-                    , textDisplay "Density (earth)" "0.497"
-                    , textDisplay "Gravity (G)" "0.56"
-                    , textDisplay "Diameter (km)" "16056"
+                    [ textDisplayMedium "Mass (earths)" "1.45"
+                    , textDisplayMedium "Density (earth)" "0.497"
+                    , textDisplayMedium "Gravity (G)" "0.56"
+                    , textDisplayMedium "Diameter (km)" "16056"
                     ]
                 , column [ Element.alignTop ]
-                    [ textDisplay "Mean Temperature" "386.85°C"
-                    , textDisplay "Albedo" "0.43"
-                    , textDisplay "Axial Tilt" "7.86°"
-                    , textDisplay "Greenhouse" "1.44"
+                    [ textDisplayNarrow "Temperature" "386.85°C"
+                    , textDisplayNarrow "Albedo" "0.43"
+                    , textDisplayNarrow "Axial Tilt" "7.86°"
+                    , textDisplayNarrow "Greenhouse" "1.44"
                     ]
                 ]
             ]
-        , column [ width fill ]
+        , column [ width fill, Element.paddingXY 0 10 ]
             [ text <| "Atmosphere"
-            , column [ width fill ]
+            , column groupAttrs
                 [ textDisplay "Type" "Exotic, Thin"
                 , if True then
                     textDisplay "Hazard Code" "Biologic"
 
                   else
                     Element.none
-                , textDisplay "BAR" "1.6 for example"
+                , textDisplay "BAR" "1.6"
                 , row [ width fill ]
                     [ el
                         [ uiDeepnightColorFontColour
@@ -2880,16 +2896,16 @@ viewObjectAnalysisDetail model =
                     ]
                 ]
             ]
-        , column []
-            [ text <| "Hydrographics (35)"
-            , column []
+        , column [ Element.paddingXY 0 10 ]
+            [ text <| "Hydrographics"
+            , column groupAttrs
                 [ textDisplay "Percentage" "10%"
                 , textDisplay "Surface Distribution" "Scattered"
                 ]
             ]
-        , column []
-            [ text <| "Life (1123)"
-            , column []
+        , column [ Element.paddingXY 0 10 ]
+            [ text <| "Life"
+            , column groupAttrs
                 [ numberDisplay "Biomass" 1
                 , textDisplay "Biocomplexity" "Primitive single-cell organisms"
                 , numberDisplay "Biodiversity" 2
