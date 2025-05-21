@@ -2802,15 +2802,29 @@ viewObjectAnalysisDetail model =
             textDisplay lbl <| String.fromInt val
 
         textDisplay lbl val =
-            row [ width fill ]
+            row
+                [ width fill
+                , Element.paddingEach <| { zeroEach | top = 5 }
+                ]
                 [ el ((width <| Element.px 150) :: headerAttrs) <| text lbl
                 , el valueAttrs <| text val
                 ]
 
         textDisplayNarrow lbl val =
-            row [ width fill ]
-                [ el ((width <| Element.px 90) :: headerAttrs) <| text lbl
-                , Element.paragraph [] [ el valueAttrs <| text val ]
+            row [ width fill
+                , Element.paddingEach <| { zeroEach | top = 5 }
+            ]
+                [ el
+                    ([ width <| Element.px 90
+                     , Element.paddingEach <| { zeroEach | top = 5 }
+                     ]
+                        ++ headerAttrs
+                    )
+                  <|
+                    text lbl
+                , Element.paragraph [ Element.spacing 0 ]
+                    [ el ([ Element.alignTop, Element.spacing 0, Element.padding 0 ] ++ valueAttrs) <| text val
+                    ]
                 ]
     in
     column [ width fill ]
@@ -2848,7 +2862,16 @@ viewObjectAnalysisDetail model =
                     Element.none
                 , textDisplay "BAR" "1.6 for example"
                 , row [ width fill ]
-                    [ el [ uiDeepnightColorFontColour, Font.bold, Font.size 14, Element.alignTop, width <| Element.px 150 ] <| text "Taint"
+                    [ el
+                        [ uiDeepnightColorFontColour
+                        , Font.bold
+                        , Font.size 14
+                        , Element.alignTop
+                        , width <| Element.px 150
+                        , Element.paddingEach <| { zeroEach | top = 5 }
+                        ]
+                      <|
+                        text "Taint"
                     , column [ width fill ]
                         [ textDisplayNarrow "Subtype" "Low Oxygen"
                         , textDisplayNarrow "Severity" "Trivial irritant. After 1D weeks acclimation, this taint is inconsequential"
