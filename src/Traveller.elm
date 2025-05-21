@@ -325,8 +325,6 @@ type Msg
     | GotHexMapViewport (Result Browser.Dom.Error Browser.Dom.Viewport)
     | GotResize Int Int
     | FocusInSidebar StellarObject
-    | HoveredStellarObject (Maybe String)
-    | TableColumnHovered (Maybe String)
     | MapMouseDown ( Float, Float )
     | MapMouseUp
     | MapMouseMove ( Float, Float )
@@ -1520,10 +1518,6 @@ renderSODescription onClick description orbitSequence =
                 renderIconRaw "fa-solid fa-scanner-touchscreen"
             ]
         )
-        |> Element.el
-            [ Events.onMouseLeave <| HoveredStellarObject Nothing
-            , Events.onMouseEnter <| HoveredStellarObject (Just orbitSequence)
-            ]
 
 
 iconSizing : List (Element.Attribute msg)
@@ -1933,24 +1927,8 @@ renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellar
         ]
 
 
-renderStellarObject : Int -> Int -> StellarObject -> JumpShadowCheckers -> Maybe StellarObject -> Maybe String -> Bool -> Element.Element Msg
-renderStellarObject surveyIndex newNestingLevel stellarObject jumpShadowCheckers selectedStellarObject hoveredStellarObject isReferee =
-    let
-        uwpHover orbitSequence uwp =
-            el
-                [ Element.below <|
-                    case hoveredStellarObject of
-                        Just hPlanet ->
-                            if hPlanet == orbitSequence then
-                                uwpExplainer uwp
-
-                            else
-                                Element.none
-
-                        Nothing ->
-                            Element.none
-                ]
-    in
+renderStellarObject : Int -> Int -> StellarObject -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
+renderStellarObject surveyIndex newNestingLevel stellarObject jumpShadowCheckers selectedStellarObject isReferee =
     row
         [ Element.spacing 8
         , Font.size 14
@@ -1961,25 +1939,22 @@ renderStellarObject surveyIndex newNestingLevel stellarObject jumpShadowCheckers
                 renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarObject isReferee
 
             TerrestrialPlanet terrestrialData ->
-                uwpHover terrestrialData.orbitSequence terrestrialData.uwp <|
-                    renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject isReferee
+                renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject isReferee
 
             PlanetoidBelt planetoidBeltData ->
-                uwpHover planetoidBeltData.orbitSequence planetoidBeltData.uwp <|
-                    renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selectedStellarObject isReferee
+                renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selectedStellarObject isReferee
 
             Planetoid planetoidData ->
-                uwpHover planetoidData.orbitSequence planetoidData.uwp <|
-                    renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellarObject isReferee
+                renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellarObject isReferee
 
             Star starDataConfig ->
                 el [ Element.width Element.fill, Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <|
-                    displayStarDetails surveyIndex starDataConfig newNestingLevel jumpShadowCheckers selectedStellarObject hoveredStellarObject isReferee
+                    displayStarDetails surveyIndex starDataConfig newNestingLevel jumpShadowCheckers selectedStellarObject isReferee
         ]
 
 
-displayStarDetails : Int -> StarData -> Int -> JumpShadowCheckers -> Maybe StellarObject -> Maybe String -> Bool -> Element.Element Msg
-displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCheckers selectedStellarObject hoveredStellarObject isReferee =
+displayStarDetails : Int -> StarData -> Int -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
+displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCheckers selectedStellarObject isReferee =
     let
         inJumpShadow obj =
             case starData.jumpShadow of
@@ -2047,7 +2022,7 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCh
         , starData.companion
             |> Maybe.map
                 (\compStarData ->
-                    displayStarDetails surveyIndex compStarData nextNestingLevel jumpShadowCheckers selectedStellarObject hoveredStellarObject isReferee
+                    displayStarDetails surveyIndex compStarData nextNestingLevel jumpShadowCheckers selectedStellarObject isReferee
                 )
             |> Maybe.withDefault Element.none
         , column [ Element.paddingXY 10 0, Element.width Element.fill ] <|
@@ -2074,7 +2049,7 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCh
             [ starData.stellarObjects
                 |> List.filter inJumpShadow
                 |> List.filter isKnown
-                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject hoveredStellarObject isReferee)
+                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject isReferee)
                 |> column []
             , column [ Font.size 14, Font.shadow { blur = 1, color = jumpShadowTextColor, offset = ( 0.5, 0.5 ) }, Element.width Element.fill, Element.behindContent red ]
                 [ case starData.jumpShadow of
@@ -2087,7 +2062,7 @@ displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCh
             , starData.stellarObjects
                 |> List.filter (not << inJumpShadow)
                 |> List.filter isKnown
-                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject hoveredStellarObject isReferee)
+                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject isReferee)
                 |> column []
             ]
         ]
@@ -2106,8 +2081,8 @@ type alias JumpShadowCheckers =
     List JumpShadowChecker
 
 
-viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Maybe String -> Bool -> Element Msg
-viewSystemDetailsSidebar solarSystem selectedStellarObject hoveredStellarObject isReferee =
+viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Bool -> Element Msg
+viewSystemDetailsSidebar solarSystem selectedStellarObject isReferee =
     let
         jumpShadowCheckers : JumpShadowCheckers
         jumpShadowCheckers =
@@ -2136,7 +2111,6 @@ viewSystemDetailsSidebar solarSystem selectedStellarObject hoveredStellarObject 
         0
         jumpShadowCheckers
         selectedStellarObject
-        hoveredStellarObject
         isReferee
 
 
@@ -2749,7 +2723,6 @@ view model =
                             viewSystemDetailsSidebar
                                 solarSystem
                                 model.selectedStellarObject
-                                model.hoveredStellarObject
                                 model.referee
 
                         Nothing ->
@@ -3723,11 +3696,6 @@ update msg model =
             , Cmd.none
             )
 
-        HoveredStellarObject maybeOrbitSequence ->
-            ( { model | hoveredStellarObject = maybeOrbitSequence }
-            , Cmd.none
-            )
-
         MapMouseDown coordinates ->
             ( { model
                 | dragMode = IsDragging { start = coordinates, last = coordinates }
@@ -3807,9 +3775,6 @@ update msg model =
 
         MapMouseLeave ->
             ( { model | hoveringHex = Nothing }, Cmd.none )
-
-        TableColumnHovered columnDesc ->
-            ( { model | sidebarHoverText = columnDesc }, Cmd.none )
 
         ClearAllErrors ->
             ( { model | newSolarSystemErrors = [], oldSolarSystemErrors = model.newSolarSystemErrors ++ model.oldSolarSystemErrors }, Cmd.none )
