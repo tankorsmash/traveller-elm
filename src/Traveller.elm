@@ -2771,13 +2771,110 @@ view model =
         , Font.color <| fontTextColor
         , Element.paddingXY 15 0
         ]
-        [ el [ Element.height fill, Element.width <| Element.px sidebarWidth, Element.alignTop, Element.alignLeft ] <|
-            sidebarColumn
-        , column []
+        [ -- [ el [ Element.height fill, Element.width <| Element.px sidebarWidth, Element.alignTop, Element.alignLeft ] <|
+          --     sidebarColumn
+          column [ width fill ]
             [ viewStatusRow model
-            , el [ Element.alignTop ] <| contentColumn
+
+            -- , el [ Element.alignTop ] <| contentColumn
+            , viewObjectAnalysisDetail model
             ]
         , Element.html <| errorDialog model.newSolarSystemErrors
+        ]
+
+
+viewObjectAnalysisDetail : Model -> Element.Element Msg
+viewObjectAnalysisDetail model =
+    let
+        headerAttrs =
+            [ uiDeepnightColorFontColour
+            , Font.size 14
+            , Font.bold
+            , Element.alignTop
+            ]
+
+        valueAttrs =
+            [ Font.size 14
+            , Element.alignTop
+            ]
+
+        numberDisplay lbl val =
+            textDisplay lbl <| String.fromInt val
+
+        textDisplay lbl val =
+            row [ width fill ]
+                [ el ((width <| Element.px 150) :: headerAttrs) <| text lbl
+                , el valueAttrs <| text val
+                ]
+
+        textDisplayNarrow lbl val =
+            row [ width fill ]
+                [ el ((width <| Element.px 90) :: headerAttrs) <| text lbl
+                , Element.paragraph [] [ el valueAttrs <| text val ]
+                ]
+    in
+    column [ width fill ]
+        [ column [ width fill ]
+            [ text <| "Physical"
+            , row [ Element.spacing 10 ]
+                [ column [ Element.alignTop ]
+                    [ textDisplay "AU" "123.0"
+                    , textDisplay "Period (yrs)" "0.28"
+                    , textDisplay "Inclination" "3°"
+                    , textDisplay "Eccentricity" "0.089"
+                    ]
+                , column [ Element.alignTop ]
+                    [ textDisplay "Mass (earths)" "1.45"
+                    , textDisplay "Density (earth)" "0.497"
+                    , textDisplay "Gravity (G)" "0.56"
+                    , textDisplay "Diameter (km)" "16056"
+                    ]
+                , column [ Element.alignTop ]
+                    [ textDisplay "Mean Temperature" "386.85°C"
+                    , textDisplay "Albedo" "0.43"
+                    , textDisplay "Axial Tilt" "7.86°"
+                    , textDisplay "Greenhouse" "1.44"
+                    ]
+                ]
+            ]
+        , column [ width fill ]
+            [ text <| "Atmosphere"
+            , column [ width fill ]
+                [ textDisplay "Type" "Exotic, Thin"
+                , if True then
+                    textDisplay "Hazard Code" "Biologic"
+
+                  else
+                    Element.none
+                , textDisplay "BAR" "1.6 for example"
+                , row [ width fill ]
+                    [ el [ uiDeepnightColorFontColour, Font.bold, Font.size 14, Element.alignTop, width <| Element.px 150 ] <| text "Taint"
+                    , column [ width fill ]
+                        [ textDisplayNarrow "Subtype" "Low Oxygen"
+                        , textDisplayNarrow "Severity" "Trivial irritant. After 1D weeks acclimation, this taint is inconsequential"
+                        , textDisplayNarrow "Persistence" "Occasional and brief: Occurs periodically or on a 2D roll of 12 per day and lasts 1D hours"
+                        ]
+                    ]
+                ]
+            ]
+        , column []
+            [ text <| "Hydrographics (35)"
+            , column []
+                [ textDisplay "Percentage" "10%"
+                , textDisplay "Surface Distribution" "Scattered"
+                ]
+            ]
+        , column []
+            [ text <| "Life (1123)"
+            , column []
+                [ numberDisplay "Biomass" 1
+                , textDisplay "Biocomplexity" "Primitive single-cell organisms"
+                , numberDisplay "Biodiversity" 2
+                , numberDisplay "Compatibilty" 3
+                , textDisplay "Habitability" "Actively hostile world: not survivable without specialised equipment"
+                , textDisplay "Sophonts" "None"
+                ]
+            ]
         ]
 
 
