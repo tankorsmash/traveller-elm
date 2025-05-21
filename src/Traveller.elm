@@ -2808,66 +2808,72 @@ view model =
         ]
 
 
+headerAttrs =
+    [ uiDeepnightColorFontColour
+    , Font.size 14
+    , Font.bold
+    , Element.alignTop
+    ]
+
+
+valueAttrs =
+    [ Font.size 14
+    , Element.alignTop
+    ]
+
+
+numberDisplay lbl val =
+    textDisplay lbl <| String.fromInt val
+
+
+groupAttrs =
+    [ Element.paddingXY 5 0, width fill ]
+
+
+textDisplay lbl val =
+    row
+        [ width fill
+        , Element.paddingEach <| { zeroEach | top = 5 }
+        ]
+        [ el ((width <| Element.px 150) :: headerAttrs) <| text lbl
+        , el valueAttrs <| text val
+        ]
+
+
+textDisplayNarrow lbl val =
+    row [ width fill ]
+        [ el
+            ([ width <| Element.px 90
+             , Element.paddingEach <| { zeroEach | top = 5 }
+             ]
+                ++ headerAttrs
+            )
+          <|
+            text lbl
+        , Element.paragraph [ Element.spacing 0 ]
+            [ el ([ Element.alignTop, Element.spacing 0, Element.padding 0 ] ++ valueAttrs) <| text val
+            ]
+        ]
+
+
+textDisplayMedium lbl val =
+    row [ width fill ]
+        [ el
+            ([ width <| Element.px 110
+             , Element.paddingEach <| { zeroEach | top = 5 }
+             ]
+                ++ headerAttrs
+            )
+          <|
+            text lbl
+        , Element.paragraph [ Element.spacing 0 ]
+            [ el ([ Element.alignTop, Element.spacing 0, Element.padding 0 ] ++ valueAttrs) <| text val
+            ]
+        ]
+
+
 viewObjectAnalysisDetail : StellarObject -> Element.Element Msg
 viewObjectAnalysisDetail stellarObject =
-    let
-        headerAttrs =
-            [ uiDeepnightColorFontColour
-            , Font.size 14
-            , Font.bold
-            , Element.alignTop
-            ]
-
-        valueAttrs =
-            [ Font.size 14
-            , Element.alignTop
-            ]
-
-        numberDisplay lbl val =
-            textDisplay lbl <| String.fromInt val
-
-        groupAttrs =
-            [ Element.paddingXY 5 0, width fill ]
-
-        textDisplay lbl val =
-            row
-                [ width fill
-                , Element.paddingEach <| { zeroEach | top = 5 }
-                ]
-                [ el ((width <| Element.px 150) :: headerAttrs) <| text lbl
-                , el valueAttrs <| text val
-                ]
-
-        textDisplayNarrow lbl val =
-            row [ width fill ]
-                [ el
-                    ([ width <| Element.px 90
-                     , Element.paddingEach <| { zeroEach | top = 5 }
-                     ]
-                        ++ headerAttrs
-                    )
-                  <|
-                    text lbl
-                , Element.paragraph [ Element.spacing 0 ]
-                    [ el ([ Element.alignTop, Element.spacing 0, Element.padding 0 ] ++ valueAttrs) <| text val
-                    ]
-                ]
-
-        textDisplayMedium lbl val =
-            row [ width fill ]
-                [ el
-                    ([ width <| Element.px 110
-                     , Element.paddingEach <| { zeroEach | top = 5 }
-                     ]
-                        ++ headerAttrs
-                    )
-                  <|
-                    text lbl
-                , Element.paragraph [ Element.spacing 0 ]
-                    [ el ([ Element.alignTop, Element.spacing 0, Element.padding 0 ] ++ valueAttrs) <| text val
-                    ]
-                ]
-    in
     column
         [ height fill
         , centerX
@@ -2897,7 +2903,28 @@ viewObjectAnalysisDetail stellarObject =
               <|
                 text "X"
             ]
-        , column []
+        , case stellarObject of
+            GasGiant gasGiantData ->
+                Debug.todo "Gas giant"
+
+            TerrestrialPlanet sharedPData ->
+                viewPlanetoidAnalysisDetail sharedPData
+
+            PlanetoidBelt planetoidBeltData ->
+                Debug.todo "planetoid belt"
+
+            Planetoid sharedPData ->
+                viewPlanetoidAnalysisDetail sharedPData
+
+            Star (StarDataWrap starDataConfig) ->
+                Debug.todo "star"
+        ]
+
+
+viewPlanetoidAnalysisDetail : SharedPData -> Element.Element Msg
+viewPlanetoidAnalysisDetail pdata =
+    column []
+        [ column []
             [ text <| "Physical"
             , row (Element.spacing 40 :: groupAttrs)
                 [ column [ Element.alignTop ]
@@ -3571,12 +3598,15 @@ update msg model =
             , Cmd.none
             )
 
+        FetchedSolarSystem (Err (Http.BadBody err)) ->
+            ( { model | newSolarSystemErrors = model.newSolarSystemErrors ++ [ ( Http.BadBody err, "foo" ) ] }, Cmd.none )
+
         FetchedSolarSystem (Err err) ->
             let
                 _ =
-                    Debug.log "BAD BODY SolarSystem did not work" err
+                    Debug.log "404" err
             in
-            ( { model | newSolarSystemErrors = model.newSolarSystemErrors ++ [ ( err, "foo" ) ] }, Cmd.none )
+            ( model, Cmd.none )
 
         DownloadedSolarSystems ( requestEntry, url ) (Err err) ->
             let
