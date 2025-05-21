@@ -1,4 +1,4 @@
-module Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, codecStarData, codecStellarObject, extractStellarOrbit, getInnerStarData, getProfileString, getSafeJumpTime, getStarData, getStellarOrbit, isBrownDwarf)
+module Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, SharedPData, StarData(..), StellarObject(..), codecStarData, codecStellarObject, getInnerStarData, getProfileString, getStarData, getStellarOrbit, isBrownDwarf)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -7,12 +7,12 @@ import Traveller.Point as Point exposing (StellarPoint)
 import Traveller.StarColour exposing (StarColour, codecStarColour)
 
 
-type alias TerrestrialData =
+type alias SharedPData =
     { orbitPosition : StellarPoint
     , inclination : Float
     , eccentricity : Float
     , effectiveHZCODeviation : Float
-    , size : Int
+    , size : String
     , orbit : Float
     , period : Float
     , composition : String
@@ -254,9 +254,9 @@ getInnerStarData (StarDataWrap starDataConfig) =
 
 type StellarObject
     = GasGiant GasGiantData
-    | TerrestrialPlanet TerrestrialData
+    | TerrestrialPlanet SharedPData
     | PlanetoidBelt PlanetoidBeltData
-    | Planetoid PlanetoidData
+    | Planetoid SharedPData
     | Star StarData
 
 
@@ -286,7 +286,7 @@ getGasGiantData stellarObject =
 
 {-| Returns the TerrestrialData if the StellarObject is a TerrestrialPlanet, otherwise Nothing
 -}
-getTerrestrialData : StellarObject -> Maybe TerrestrialData
+getTerrestrialData : StellarObject -> Maybe SharedPData
 getTerrestrialData stellarObject =
     case stellarObject of
         TerrestrialPlanet terrestrialData ->
@@ -310,7 +310,7 @@ getPlanetoidBeltData stellarObject =
 
 {-| Returns the PlanetoidData if the StellarObject is a Planetoid, otherwise Nothing
 -}
-getPlanetoidData : StellarObject -> Maybe PlanetoidData
+getPlanetoidData : StellarObject -> Maybe SharedPData
 getPlanetoidData stellarObject =
     case stellarObject of
         Planetoid planetoidData ->
@@ -367,14 +367,20 @@ codecGasGiantData =
         |> Codec.buildObject
 
 
-codecTerrestrialData : Codec TerrestrialData
-codecTerrestrialData =
-    Codec.object TerrestrialData
+codecSharedPData : Codec SharedPData
+codecSharedPData =
+    Codec.object SharedPData
         |> Codec.field "orbitPosition" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
         |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
-        |> Codec.field "size" .size Codec.int
+        |> Codec.field "size"
+            .size
+            (Codec.oneOf Codec.string
+                [ -- force int to string
+                  Codec.int |> Codec.andThen (String.fromInt >> Codec.succeed) (String.toInt >> Maybe.withDefault 999999)
+                ]
+            )
         |> Codec.field "orbit" .orbit Codec.float
         |> Codec.field "period" .period Codec.float
         |> Codec.field "composition" .composition Codec.string
@@ -407,59 +413,13 @@ codecTerrestrialData =
         |> Codec.buildObject
 
 
-codecPlanetoidData : Codec PlanetoidData
-codecPlanetoidData =
-    Codec.object PlanetoidData
-        |> Codec.field "orbitPosition" .orbitPosition Point.codec
-        |> Codec.field "inclination" .inclination Codec.float
-        |> Codec.field "eccentricity" .eccentricity Codec.float
-        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
-        |> Codec.field "size"
-            .size
-            (Codec.oneOf Codec.string
-                [ Codec.int
-                    |> Codec.map String.fromInt (String.toInt >> Maybe.withDefault 99)
-                ]
-            )
-        |> Codec.field "orbit" .orbit Codec.float
-        |> Codec.field "period" .period (Codec.nullable Codec.float)
-        |> Codec.field "composition" .composition Codec.string
-        |> Codec.field "retrograde" .retrograde Codec.bool
-        |> Codec.field "trojanOffset" .trojanOffset (Codec.nullable Codec.float)
-        |> Codec.field "axialTilt" .axialTilt Codec.float
-        |> Codec.field "moons" .moons (Codec.list (Codec.lazy (\_ -> Moon.codec)))
-        |> Codec.field "biomassRating" .biomassRating Codec.int
-        |> Codec.field "biocomplexityCode" .biocomplexityCode Codec.int
-        |> Codec.field "biodiversityRating" .biodiversityRating Codec.int
-        |> Codec.field "compatibilityRating" .compatibilityRating Codec.int
-        |> Codec.field "resourceRating" .resourceRating Codec.int
-        |> Codec.field "nativeSophont" .nativeSophont Codec.bool
-        |> Codec.field "extinctSophont" .extinctSophont Codec.bool
-        |> Codec.field "hasRing" .hasRing Codec.bool
-        |> Codec.field "albedo" .albedo Codec.float
-        |> Codec.optionalField "density" .density Codec.float
-        |> Codec.optionalField "greenhouse" .greenhouse Codec.float
-        |> Codec.field "meanTemperature" .meanTemperature (Codec.nullable Codec.float)
-        |> Codec.field "orbitSequence" .orbitSequence Codec.string
-        |> Codec.field "uwp" .uwp Codec.string
-        |> Codec.field "diameter" .diameter Codec.float
-        |> Codec.field "gravity" .gravity (Codec.nullable Codec.float)
-        |> Codec.field "mass" .mass (Codec.nullable Codec.float)
-        |> Codec.field "escapeVelocity" .escapeVelocity (Codec.nullable Codec.float)
-        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
-        |> Codec.field "orbitType" .orbitType Codec.int
-        -- |> Codec.optionalField "code" .code Codec.string
-        |> Codec.field "au" .au Codec.float
-        |> Codec.buildObject
-
-
 decodeStellarObject : JsDecode.Decoder StellarObject
 decodeStellarObject =
     JsDecode.oneOf
         [ JsDecode.map GasGiant (Codec.decoder codecGasGiantData)
-        , JsDecode.map TerrestrialPlanet (Codec.decoder codecTerrestrialData)
+        , JsDecode.map TerrestrialPlanet (Codec.decoder codecSharedPData)
         , JsDecode.map PlanetoidBelt (Codec.decoder codecPlanetoidBeltData)
-        , JsDecode.map Planetoid (Codec.decoder codecPlanetoidData)
+        , JsDecode.map Planetoid (Codec.decoder codecSharedPData)
         , JsDecode.map Star (Codec.decoder codecStarData)
         ]
 
@@ -500,13 +460,13 @@ encodeStellarObject stellarObject =
             Codec.encodeToValue codecGasGiantData data
 
         TerrestrialPlanet data ->
-            Codec.encodeToValue codecTerrestrialData data
+            Codec.encodeToValue codecSharedPData data
 
         PlanetoidBelt data ->
             Codec.encodeToValue codecPlanetoidBeltData data
 
         Planetoid data ->
-            Codec.encodeToValue codecPlanetoidData data
+            Codec.encodeToValue codecSharedPData data
 
         Star data ->
             Codec.encodeToValue codecStarData data

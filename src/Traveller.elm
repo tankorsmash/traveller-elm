@@ -61,7 +61,7 @@ import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.SolarSystemStars exposing (FallibleStarSystem, StarSystem, StarType, StarTypeData, fallibleStarSystemDecoder, getStarTypeData, isBrownDwarfType)
 import Traveller.StarColour exposing (starColourRGB)
 import Traveller.Starport as Starport
-import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, getInnerStarData, getProfileString, getStarData, getStellarOrbit, isBrownDwarf)
+import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, SharedPData, StarData(..), StellarObject(..), getInnerStarData, getProfileString, getStarData, getStellarOrbit, isBrownDwarf)
 import Traveller.TechLevel as TechLevel
 import Url.Builder
 
@@ -1846,7 +1846,7 @@ uwpExplainer uwpString =
             text ("Could not parse " ++ uwpString)
 
 
-renderTerrestrialPlanet : Int -> TerrestrialData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
+renderTerrestrialPlanet : Int -> SharedPData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
 renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject isReferee =
     let
         planet =
@@ -1900,7 +1900,7 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selecte
         ]
 
 
-renderPlanetoid : Int -> PlanetoidData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
+renderPlanetoid : Int -> SharedPData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
 renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellarObject isReferee =
     let
         planet =
@@ -2876,6 +2876,7 @@ viewObjectAnalysisDetail stellarObject =
         , width <| Element.px 700
         , Element.padding 4
         , Border.rounded 3
+        , Border.shadow { offset = ( 1, 1 ), size = 2, blur = 4, color = Element.rgba 0.1 0.1 0.1 (1 / 8) }
         ]
         [ row [ width fill ]
             [ el [ Font.size 24, Element.paddingEach { zeroEach | bottom = 15 } ] <|
@@ -3570,8 +3571,12 @@ update msg model =
             , Cmd.none
             )
 
-        FetchedSolarSystem (Err _) ->
-            ( model, Cmd.none )
+        FetchedSolarSystem (Err err) ->
+            let
+                _ =
+                    Debug.log "BAD BODY SolarSystem did not work" err
+            in
+            ( { model | newSolarSystemErrors = model.newSolarSystemErrors ++ [ ( err, "foo" ) ] }, Cmd.none )
 
         DownloadedSolarSystems ( requestEntry, url ) (Err err) ->
             let
