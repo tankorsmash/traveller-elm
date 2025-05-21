@@ -2824,6 +2824,10 @@ numberDisplay lbl val =
     textDisplay lbl <| String.fromInt val
 
 
+floatDisplay lbl val =
+    textDisplay lbl <| String.fromFloat val
+
+
 groupAttrs =
     [ Element.paddingXY 5 0, width fill ]
 
@@ -2834,7 +2838,7 @@ textDisplay lbl val =
         , Element.paddingEach <| { zeroEach | top = 5 }
         ]
         [ el ((width <| Element.px 150) :: headerAttrs) <| text lbl
-        , el valueAttrs <| text val
+        , el valueAttrs <| monospaceText val
         ]
 
 
@@ -2849,7 +2853,7 @@ textDisplayNarrow lbl val =
           <|
             text lbl
         , Element.paragraph [ Element.spacing 0 ]
-            [ el ([ Element.alignTop, Element.spacing 0, Element.padding 0 ] ++ valueAttrs) <| text val
+            [ el ([ Element.alignTop, Element.spacing 0, Element.padding 0 ] ++ valueAttrs) <| monospaceText val
             ]
         ]
 
@@ -2865,7 +2869,7 @@ textDisplayMedium lbl val =
           <|
             text lbl
         , Element.paragraph [ Element.spacing 0 ]
-            [ el ([ Element.alignTop, Element.spacing 0, Element.padding 0 ] ++ valueAttrs) <| text val
+            [ el ([ Element.alignTop, Element.spacing 0, Element.padding 0 ] ++ valueAttrs) <| monospaceText val
             ]
         ]
 
@@ -2877,7 +2881,7 @@ viewObjectAnalysisDetail stellarObject =
         , centerX
         , centerY
         , Background.color <| Element.rgba 0.3 0.3 0.3 0.95
-        , width <| Element.px 700
+        , width <| Element.px 750
         , Element.padding 4
         , Border.rounded 3
         , Border.shadow { offset = ( 1, 1 ), size = 2, blur = 4, color = Element.rgba 0.1 0.1 0.1 (1 / 8) }
@@ -2921,27 +2925,38 @@ viewObjectAnalysisDetail stellarObject =
 
 viewPlanetoidAnalysisDetail : SharedPData -> Element.Element Msg
 viewPlanetoidAnalysisDetail pdata =
+    let
+        rnd digits =
+            Round.round digits
+
+        rndm digits def =
+            Maybe.withDefault def
+                >> Round.round digits
+
+        fromKelvin k =
+            rnd 0 <| Maybe.withDefault 0 k - 273.15
+    in
     column []
         [ column []
             [ text <| "Physical"
             , row (Element.spacing 40 :: groupAttrs)
                 [ column [ Element.alignTop ]
-                    [ textDisplayNarrow "AU" "123.0"
-                    , textDisplayNarrow "Period (yrs)" "0.28"
-                    , textDisplayNarrow "Inclination" "3°"
-                    , textDisplayNarrow "Eccentricity" "0.089"
+                    [ textDisplayNarrow "AU" (rnd 2 pdata.au)
+                    , textDisplayNarrow "Period (yrs)" (rnd 2 pdata.period)
+                    , textDisplayNarrow "Inclination" <| rnd 0 pdata.inclination ++ "°"
+                    , textDisplayNarrow "Eccentricity" (rnd 2 pdata.eccentricity)
                     ]
                 , column [ Element.alignTop ]
-                    [ textDisplayMedium "Mass (earths)" "1.45"
-                    , textDisplayMedium "Density (earth)" "0.497"
-                    , textDisplayMedium "Gravity (G)" "0.56"
-                    , textDisplayMedium "Diameter (km)" "16056"
+                    [ textDisplayMedium "Mass (earths)" <| rndm 2 0 pdata.mass
+                    , textDisplayMedium "Density (earth)" (rndm 2 0 pdata.density)
+                    , textDisplayMedium "Gravity (G)" (rndm 2 0 pdata.gravity)
+                    , textDisplayMedium "Diameter (km)" <| rnd 0 pdata.diameter
                     ]
                 , column [ Element.alignTop ]
-                    [ textDisplayNarrow "Temperature" "386.85°C"
-                    , textDisplayNarrow "Albedo" "0.43"
-                    , textDisplayNarrow "Axial Tilt" "7.86°"
-                    , textDisplayNarrow "Greenhouse" "1.44"
+                    [ textDisplayNarrow "Temperature" <| fromKelvin pdata.meanTemperature ++ "°C"
+                    , textDisplayNarrow "Albedo" (rnd 2 pdata.albedo)
+                    , textDisplayNarrow "Axial Tilt" <| rnd 2 pdata.axialTilt ++ "°"
+                    , textDisplayNarrow "Greenhouse" (rndm 2 0 pdata.greenhouse)
                     ]
                 ]
             ]
