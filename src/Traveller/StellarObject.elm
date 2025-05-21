@@ -1,4 +1,4 @@
-module Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, codecStarData, codecStellarObject, extractStellarOrbit, getInnerStarData, getSafeJumpTime, getStarData, getStellarOrbit, isBrownDwarf)
+module Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, codecStarData, codecStellarObject, extractStellarOrbit, getInnerStarData, getProfileString, getSafeJumpTime, getStarData, getStellarOrbit, isBrownDwarf)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -176,6 +176,28 @@ type alias StellarOrbit =
     , au : Float
     , orbitSequence : String
     }
+
+
+getProfileString : StellarObject -> String
+getProfileString stellarObject =
+    case stellarObject of
+        GasGiant gasGiantData ->
+            gasGiantData.code
+
+        TerrestrialPlanet terrestrialData ->
+            terrestrialData.uwp
+
+        PlanetoidBelt planetoidBeltData ->
+            planetoidBeltData.uwp
+
+        Planetoid planetoidData ->
+            planetoidData.uwp
+
+        Star (StarDataWrap starDataConfig) ->
+            starDataConfig.stellarType
+                ++ (starDataConfig.subtype |> Maybe.map String.fromInt |> Maybe.withDefault "")
+                ++ " "
+                ++ starDataConfig.stellarClass
 
 
 extractStellarOrbit orbit =

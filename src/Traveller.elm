@@ -61,7 +61,7 @@ import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.SolarSystemStars exposing (FallibleStarSystem, StarSystem, StarType, StarTypeData, fallibleStarSystemDecoder, getStarTypeData, isBrownDwarfType)
 import Traveller.StarColour exposing (starColourRGB)
 import Traveller.Starport as Starport
-import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, getInnerStarData, getStarData, getStellarOrbit, isBrownDwarf)
+import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, StarData(..), StellarObject(..), TerrestrialData, getInnerStarData, getProfileString, getStarData, getStellarOrbit, isBrownDwarf)
 import Traveller.TechLevel as TechLevel
 import Url.Builder
 
@@ -301,6 +301,7 @@ type alias Model =
     , hexColours : Dict.Dict String Color
     , referee : Bool
     , hoveredStellarObject : Maybe String
+    , toBeAnalyzed : Maybe StellarObject
     }
 
 
@@ -336,6 +337,8 @@ type Msg
     | JumpToShip
     | ZoomToHex HexAddress Bool
     | JourneyMsg JourneyMsg
+    | ViewObjectAnalysisDetail StellarObject
+    | CloseObjectAnalysis
 
 
 type JourneyMsg
@@ -466,6 +469,7 @@ init viewport settings key hostConfig referee =
             , hexColours = Dict.empty
             , referee = referee
             , hoveredStellarObject = Nothing
+            , toBeAnalyzed = Nothing
             }
     in
     ( model
@@ -1374,7 +1378,7 @@ orbitStyle =
 
 descriptionStyle : List (Element.Attribute msg)
 descriptionStyle =
-    [ width <| Element.px 74
+    [ width <| Element.px 84
     ]
 
 
@@ -1480,11 +1484,24 @@ renderOrbitSequence sequence =
         (monospaceText <| sequence)
 
 
-renderSODescription : String -> String -> Element.Element Msg
-renderSODescription description orbitSequence =
+renderSODescription : Msg -> String -> String -> Element.Element Msg
+renderSODescription onClick description orbitSequence =
     Element.el
         descriptionStyle
-        (monospaceText <| description)
+        (row []
+            [ monospaceText <| description
+            , el
+                [ Font.size 10
+                , height fill
+                , Element.paddingEach { zeroEach | left = 4, top = 2 }
+                , Element.pointer
+                , Element.mouseOver [ Font.color <| Element.rgb 1 1 1 ]
+                , Events.onClick <| onClick
+                ]
+              <|
+                renderIconRaw "fa-solid fa-scanner-touchscreen"
+            ]
+        )
         |> Element.el
             [ Events.onMouseLeave <| HoveredStellarObject Nothing
             , Events.onMouseEnter <| HoveredStellarObject (Just orbitSequence)
@@ -1519,6 +1536,17 @@ renderIcon icon =
         |> Icon.view
         |> Element.html
         |> Element.el (Element.paddingEach iconSpacing :: iconSizing)
+
+
+renderIconRaw : String -> Element.Element Msg
+renderIconRaw icon =
+    let
+        iconSpacing =
+            { zeroEach | right = 4 }
+    in
+    Html.i [ HtmlAttrs.class icon ] []
+        |> Element.html
+        |> Element.el [ Element.paddingEach iconSpacing, height <| Element.px 10, width <| Element.px 10 ]
 
 
 renderJumpTime : Maybe Float -> String -> Element.Element Msg
@@ -1749,7 +1777,7 @@ renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarOb
         ]
         [ orbit
         , renderOrbitSequence gasGiantData.orbitSequence
-        , renderSODescription gasGiantData.code gasGiantData.orbitSequence
+        , renderSODescription (ViewObjectAnalysisDetail stellarObject) gasGiantData.code gasGiantData.orbitSequence
         , renderImage gasGiantData.code Nothing
         , renderJumpTime maxShadow gasGiantData.safeJumpTime
         , renderTravelTime stellarObject selectedStellarObject
@@ -1826,7 +1854,7 @@ renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selec
         ]
         [ orbit
         , renderOrbitSequence terrestrialData.orbitSequence
-        , renderSODescription terrestrialData.uwp terrestrialData.orbitSequence
+        , renderSODescription (ViewObjectAnalysisDetail planet) terrestrialData.uwp terrestrialData.orbitSequence
         , renderImage terrestrialData.uwp terrestrialData.meanTemperature
         , renderJumpTime maxShadow terrestrialData.safeJumpTime
         , renderTravelTime planet selectedStellarObject
@@ -1853,7 +1881,7 @@ renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selecte
         ]
         [ orbit
         , renderOrbitSequence planetoidBeltData.orbitSequence
-        , renderSODescription planetoidBeltData.uwp planetoidBeltData.orbitSequence
+        , renderSODescription (ViewObjectAnalysisDetail belt) planetoidBeltData.uwp planetoidBeltData.orbitSequence
         , renderImage planetoidBeltData.uwp Nothing
         , renderJumpTime maxShadow planetoidBeltData.safeJumpTime
         , renderTravelTime belt selectedStellarObject
@@ -1880,7 +1908,7 @@ renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellar
         ]
         [ orbit
         , renderOrbitSequence planetoidData.orbitSequence
-        , renderSODescription planetoidData.uwp planetoidData.orbitSequence
+        , renderSODescription (ViewObjectAnalysisDetail planet) planetoidData.uwp planetoidData.orbitSequence
         , renderImage planetoidData.uwp planetoidData.meanTemperature
         , renderJumpTime maxShadow planetoidData.safeJumpTime
         , renderTravelTime planet selectedStellarObject
@@ -2770,21 +2798,27 @@ view model =
         , Font.size 20
         , Font.color <| fontTextColor
         , Element.paddingXY 15 0
-        ]
-        [ -- [ el [ Element.height fill, Element.width <| Element.px sidebarWidth, Element.alignTop, Element.alignLeft ] <|
-          --     sidebarColumn
-          column [ width fill ]
-            [ viewStatusRow model
+        , case model.toBeAnalyzed of
+            Just stellarObject ->
+                Element.inFront <| viewObjectAnalysisDetail stellarObject
 
-            -- , el [ Element.alignTop ] <| contentColumn
-            , viewObjectAnalysisDetail model
+            Nothing ->
+                Element.htmlAttribute <| HtmlAttrs.class ""
+        ]
+        [ el [ Element.height fill, Element.width <| Element.px sidebarWidth, Element.alignTop, Element.alignLeft ] <|
+            sidebarColumn
+        , column [ width fill ]
+            [ viewStatusRow model
+            , el [ Element.alignTop ] <| contentColumn
+
+            -- , viewObjectAnalysisDetail model
             ]
         , Element.html <| errorDialog model.newSolarSystemErrors
         ]
 
 
-viewObjectAnalysisDetail : Model -> Element.Element Msg
-viewObjectAnalysisDetail model =
+viewObjectAnalysisDetail : StellarObject -> Element.Element Msg
+viewObjectAnalysisDetail stellarObject =
     let
         headerAttrs =
             [ uiDeepnightColorFontColour
@@ -2843,8 +2877,35 @@ viewObjectAnalysisDetail model =
                     ]
                 ]
     in
-    column [ width fill ]
-        [ column []
+    column
+        [ height fill
+        , centerX
+        , centerY
+        , Background.color <| Element.rgba 0.3 0.3 0.3 0.95
+        , width <| Element.px 700
+        , Element.padding 4
+        , Border.rounded 3
+        ]
+        [ row [ width fill]
+            [ el [ Font.size 24, Element.paddingEach { zeroEach | bottom = 15 } ] <|
+                text <|
+                    (getStellarOrbit stellarObject |> .orbitSequence)
+                        ++ " ["
+                        ++ getProfileString stellarObject
+                        ++ "]"
+            , el
+                [ Element.paddingEach { top = 0, left = 10, right = 10, bottom = 10 }
+                , Element.pointer
+                , Element.mouseOver [ Font.color <| Element.rgb 0.8 0.8 0.8 ]
+                , Font.size 16
+                , Element.alignRight
+                , Element.alignTop
+                , Events.onClick (CloseObjectAnalysis )
+                ]
+              <|
+                text "X"
+            ]
+        , column []
             [ text <| "Physical"
             , row (Element.spacing 40 :: groupAttrs)
                 [ column [ Element.alignTop ]
@@ -3801,6 +3862,17 @@ update msg model =
 
         JourneyMsg journeyMsg ->
             updateJourney journeyMsg model
+
+        ViewObjectAnalysisDetail stellarObject ->
+            ( { model | toBeAnalyzed = Just stellarObject }
+            , Cmd.none
+            )
+
+        CloseObjectAnalysis ->
+            ( { model | toBeAnalyzed = Nothing}
+            , Cmd.none
+            )
+
 
 
 stripDataFromRemoteData : RemoteData err data -> RemoteData err ()
