@@ -300,7 +300,6 @@ type alias Model =
     , regionLabels : Dict.Dict String String
     , hexColours : Dict.Dict String Color
     , referee : Bool
-    , hoveredStellarObject : Maybe String
     , objectToBeAnalyzed : Maybe StellarObject
     }
 
@@ -484,7 +483,6 @@ init viewport settings key hostConfig referee =
             , regionLabels = Dict.empty
             , hexColours = Dict.empty
             , referee = referee
-            , hoveredStellarObject = Nothing
             , objectToBeAnalyzed = Nothing
             }
     in
