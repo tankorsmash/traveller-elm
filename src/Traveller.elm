@@ -355,9 +355,27 @@ type alias VisualHexOrigin =
     ( Int, Int )
 
 
+keyDecoder : Model -> JsDecode.Decoder Msg
+keyDecoder model =
+    JsDecode.map (toKey model) (JsDecode.field "key" JsDecode.string)
+
+
+toKey : Model -> String -> Msg
+toKey model string =
+    case ( model.toBeAnalyzed, string ) of
+        ( Just _, "Escape" ) ->
+            CloseObjectAnalysis
+
+        _ ->
+            NoOpMsg
+
+
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Browser.Events.onResize GotResize
+subscriptions model =
+    Sub.batch
+        [ Browser.Events.onResize GotResize
+        , Browser.Events.onKeyDown (keyDecoder model)
+        ]
 
 
 type alias Flags =
@@ -2886,7 +2904,7 @@ viewObjectAnalysisDetail stellarObject =
         , Element.padding 4
         , Border.rounded 3
         ]
-        [ row [ width fill]
+        [ row [ width fill ]
             [ el [ Font.size 24, Element.paddingEach { zeroEach | bottom = 15 } ] <|
                 text <|
                     (getStellarOrbit stellarObject |> .orbitSequence)
@@ -2900,7 +2918,7 @@ viewObjectAnalysisDetail stellarObject =
                 , Font.size 16
                 , Element.alignRight
                 , Element.alignTop
-                , Events.onClick (CloseObjectAnalysis )
+                , Events.onClick CloseObjectAnalysis
                 ]
               <|
                 text "X"
@@ -3869,10 +3887,9 @@ update msg model =
             )
 
         CloseObjectAnalysis ->
-            ( { model | toBeAnalyzed = Nothing}
+            ( { model | toBeAnalyzed = Nothing }
             , Cmd.none
             )
-
 
 
 stripDataFromRemoteData : RemoteData err data -> RemoteData err ()
