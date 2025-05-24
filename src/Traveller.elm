@@ -300,7 +300,7 @@ type alias Model =
     , regionLabels : Dict.Dict String String
     , hexColours : Dict.Dict String Color
     , referee : Bool
-    , objectToBeAnalyzed : Maybe StellarObject
+    , objectToBeAnalyzed : Maybe { stellarObject : StellarObject, data : AnalysisDetail }
     }
 
 
@@ -2788,8 +2788,8 @@ view model =
         , Font.color <| fontTextColor
         , Element.paddingXY 15 0
         , case model.objectToBeAnalyzed of
-            Just stellarObject ->
-                Element.inFront <| viewObjectAnalysisDetail stellarObject
+            Just analysisDetail ->
+                Element.inFront <| viewObjectAnalysisDetail analysisDetail.data
 
             Nothing ->
                 Element.htmlAttribute <| HtmlAttrs.class ""
@@ -2799,8 +2799,6 @@ view model =
         , column [ width fill ]
             [ viewStatusRow model
             , el [ Element.alignTop ] <| contentColumn
-
-            -- , viewObjectAnalysisDetail model
             ]
         , Element.html <| errorDialog model.newSolarSystemErrors
         ]
@@ -2874,8 +2872,26 @@ textDisplayMedium lbl val =
         ]
 
 
-viewObjectAnalysisDetail : StellarObject -> Element.Element Msg
-viewObjectAnalysisDetail stellarObject =
+viewObjectAnalysisDetail : AnalysisDetail -> Element.Element Msg
+viewObjectAnalysisDetail data =
+    let
+        ( header, content ) =
+            case data of
+                AnalyisDetailTerrestialPlanet detailHeader sharedPData ->
+                    ( detailHeader.header, viewPlanetoidAnalysisDetail sharedPData )
+
+                AnalyisDetailPlanetoid detailHeader sharedPData ->
+                    ( detailHeader.header, viewPlanetoidAnalysisDetail sharedPData )
+
+                AnalyisDetailGasGiant ->
+                    ( "TODO: Gas Giant", text "Gas Giant not yet implemented" )
+
+                AnalyisDetailPlanetoidBelt ->
+                    ( "PTODO: lanetoid Belt", text "Planetoid Belt not yet implemented" )
+
+                AnalyisDetailStar ->
+                    ( "TODO: Star", text "Star not yet implemented" )
+    in
     column
         [ height fill
         , centerX
@@ -2889,10 +2905,7 @@ viewObjectAnalysisDetail stellarObject =
         [ row [ width fill ]
             [ el [ Font.size 24, Element.paddingEach { zeroEach | bottom = 15 } ] <|
                 text <|
-                    (getStellarOrbit stellarObject |> .orbitSequence)
-                        ++ " ["
-                        ++ getProfileString stellarObject
-                        ++ "]"
+                    header
             , el
                 [ Element.paddingEach { top = 0, left = 10, right = 10, bottom = 10 }
                 , Element.pointer
@@ -2905,71 +2918,99 @@ viewObjectAnalysisDetail stellarObject =
               <|
                 text "X"
             ]
-        , case stellarObject of
-            GasGiant gasGiantData ->
-                Debug.todo "Gas giant"
-
-            TerrestrialPlanet sharedPData ->
-                viewPlanetoidAnalysisDetail sharedPData
-
-            PlanetoidBelt planetoidBeltData ->
-                Debug.todo "planetoid belt"
-
-            Planetoid sharedPData ->
-                viewPlanetoidAnalysisDetail sharedPData
-
-            Star (StarDataWrap starDataConfig) ->
-                Debug.todo "star"
+        , content
         ]
 
 
-viewPlanetoidAnalysisDetail : SharedPData -> Element.Element Msg
-viewPlanetoidAnalysisDetail pdata =
-    let
-        rnd digits =
-            Round.round digits
+type alias AnalysisDetailHeader =
+    { header : String
+    }
 
-        rndm digits def =
-            Maybe.withDefault def
-                >> Round.round digits
 
-        fromKelvin k =
-            rnd 0 <| Maybe.withDefault 0 k - 273.15
-    in
+type AnalysisDetail
+    = AnalyisDetailTerrestialPlanet AnalysisDetailHeader AnalyisDetailPlanetoidData
+    | AnalyisDetailPlanetoid AnalysisDetailHeader AnalyisDetailPlanetoidData
+    | AnalyisDetailGasGiant
+    | AnalyisDetailPlanetoidBelt
+    | AnalyisDetailStar
+
+
+type alias AnalyisDetailPlanetoidData =
+    { physical :
+        { au : String
+        , period : String
+        , inclination : String
+        , eccentricity : String
+        , mass : String
+        , density : String
+        , gravity : String
+        , diameter : String
+        , meanTemperature : String
+        , albedo : String
+        , axialTilt : String
+        , greenhouse : String
+        }
+    , atmosphere :
+        { type_ : String
+        , hazardCode : String
+        , bar : String
+        , taint :
+            { subtype : String
+            , severity : String
+            , persistence : String
+            }
+        }
+    , hydrographics :
+        { percentage : String
+        , surfaceDistribution : String
+        }
+    , life :
+        { biomass : String
+        , biocomplexity : String
+        , biodiversity : String
+        , compatibility : String
+        , habitability : String
+        , sophonts : String
+        }
+    }
+
+
+viewPlanetoidAnalysisDetail : AnalyisDetailPlanetoidData -> Element.Element Msg
+viewPlanetoidAnalysisDetail data =
     column []
         [ column []
             [ text <| "Physical"
             , row (Element.spacing 40 :: groupAttrs)
                 [ column [ Element.alignTop ]
-                    [ textDisplayNarrow "AU" (rnd 2 pdata.au)
-                    , textDisplayNarrow "Period (yrs)" (rnd 2 pdata.period)
-                    , textDisplayNarrow "Inclination" <| rnd 0 pdata.inclination ++ "°"
-                    , textDisplayNarrow "Eccentricity" (rnd 2 pdata.eccentricity)
+                    [ textDisplayNarrow "AU" data.physical.au
+                    , textDisplayNarrow "Period (yrs)" data.physical.period
+                    , textDisplayNarrow "Inclination" data.physical.inclination
+                    , textDisplayNarrow "Eccentricity" data.physical.eccentricity
                     ]
                 , column [ Element.alignTop ]
-                    [ textDisplayMedium "Mass (earths)" <| rndm 2 0 pdata.mass
-                    , textDisplayMedium "Density (earth)" (rndm 2 0 pdata.density)
-                    , textDisplayMedium "Gravity (G)" (rndm 2 0 pdata.gravity)
-                    , textDisplayMedium "Diameter (km)" <| rnd 0 pdata.diameter
+                    [ textDisplayMedium "Mass (earths)" data.physical.mass
+                    , textDisplayMedium "Density (earth)" data.physical.density
+                    , textDisplayMedium "Gravity (G)" data.physical.gravity
+                    , textDisplayMedium "Diameter (km)" data.physical.diameter
                     ]
                 , column [ Element.alignTop ]
-                    [ textDisplayNarrow "Temperature" <| fromKelvin pdata.meanTemperature ++ "°C"
-                    , textDisplayNarrow "Albedo" (rnd 2 pdata.albedo)
-                    , textDisplayNarrow "Axial Tilt" <| rnd 2 pdata.axialTilt ++ "°"
-                    , textDisplayNarrow "Greenhouse" (rndm 2 0 pdata.greenhouse)
+                    [ textDisplayNarrow "Temperature" data.physical.meanTemperature
+                    , textDisplayNarrow "Albedo" data.physical.albedo
+                    , textDisplayNarrow "Axial Tilt" data.physical.axialTilt
+                    , textDisplayNarrow "Greenhouse" data.physical.greenhouse
                     ]
                 ]
             ]
         , column [ width fill, Element.paddingXY 0 10 ]
             [ text <| "Atmosphere"
             , column groupAttrs
-                [ textDisplay "Type" "Exotic, Thin"
+                [ textDisplay "Type" data.atmosphere.type_
                 , if True then
-                    textDisplay "Hazard Code" "Biologic"
+                    textDisplay "Hazard Code" data.atmosphere.hazardCode
 
                   else
                     Element.none
-                , textDisplay "BAR" "1.6"
+                , textDisplay "BAR" data.atmosphere.bar
                 , row [ width fill ]
                     [ el
                         [ uiDeepnightColorFontColour
@@ -2982,9 +3023,9 @@ viewPlanetoidAnalysisDetail pdata =
                       <|
                         text "Taint"
                     , column [ width fill ]
-                        [ textDisplayNarrow "Subtype" "Low Oxygen"
-                        , textDisplayNarrow "Severity" "Trivial irritant. After 1D weeks acclimation, this taint is inconsequential"
-                        , textDisplayNarrow "Persistence" "Occasional and brief: Occurs periodically or on a 2D roll of 12 per day and lasts 1D hours"
+                        [ textDisplayNarrow "Subtype" data.atmosphere.taint.subtype
+                        , textDisplayNarrow "Severity" data.atmosphere.taint.severity
+                        , textDisplayNarrow "Persistence" data.atmosphere.taint.persistence
                         ]
                     ]
                 ]
@@ -2992,19 +3033,19 @@ viewPlanetoidAnalysisDetail pdata =
         , column [ Element.paddingXY 0 10 ]
             [ text <| "Hydrographics"
             , column groupAttrs
-                [ textDisplay "Percentage" "10%"
-                , textDisplay "Surface Distribution" "Scattered"
+                [ textDisplay "Percentage" data.hydrographics.percentage
+                , textDisplay "Surface Distribution" data.hydrographics.surfaceDistribution
                 ]
             ]
         , column [ Element.paddingXY 0 10 ]
             [ text <| "Life"
             , column groupAttrs
-                [ numberDisplay "Biomass" 1
-                , textDisplay "Biocomplexity" "Primitive single-cell organisms"
-                , numberDisplay "Biodiversity" 2
-                , numberDisplay "Compatibilty" 3
-                , textDisplay "Habitability" "Actively hostile world: not survivable without specialised equipment"
-                , textDisplay "Sophonts" "None"
+                [ textDisplay "Biomass" data.life.biomass
+                , textDisplay "Biocomplexity" data.life.biocomplexity
+                , textDisplay "Biodiversity" data.life.biodiversity
+                , textDisplay "Compatibilty" data.life.compatibility
+                , textDisplay "Habitability" data.life.habitability
+                , textDisplay "Sophonts" data.life.sophonts
                 ]
             ]
         ]
@@ -3895,7 +3936,120 @@ update msg model =
             updateJourney journeyMsg model
 
         ViewObjectAnalysisDetail stellarObject ->
-            ( { model | objectToBeAnalyzed = Just stellarObject }
+            let
+                rnd digits =
+                    Round.round digits
+
+                rndm digits def =
+                    Maybe.withDefault def
+                        >> Round.round digits
+
+                fromKelvin k =
+                    rnd 0 <| Maybe.withDefault 0 k - 273.15
+
+                analysisDetail : AnalysisDetail
+                analysisDetail =
+                    let
+                        header : AnalysisDetailHeader
+                        header =
+                            { header =
+                                (getStellarOrbit stellarObject |> .orbitSequence)
+                                    ++ " ["
+                                    ++ getProfileString stellarObject
+                                    ++ "]"
+                            }
+                    in
+                    case stellarObject of
+                        GasGiant gasGiantData ->
+                            AnalyisDetailGasGiant 
+
+                        TerrestrialPlanet pdata ->
+                            AnalyisDetailPlanetoid header <|
+                                { physical =
+                                    { au = rnd 2 pdata.au
+                                    , period = rnd 2 pdata.period
+                                    , inclination = rnd 0 pdata.inclination ++ "°"
+                                    , eccentricity = rnd 2 pdata.eccentricity
+                                    , mass = rndm 2 0 pdata.mass
+                                    , density = rndm 2 0 pdata.density
+                                    , gravity = rndm 2 0 pdata.gravity
+                                    , diameter = rnd 0 pdata.diameter
+                                    , meanTemperature = fromKelvin pdata.meanTemperature
+                                    , albedo = rnd 2 pdata.albedo
+                                    , axialTilt = rnd 2 pdata.axialTilt ++ "°"
+                                    , greenhouse = rndm 2 0 pdata.greenhouse
+                                    }
+                                , atmosphere =
+                                    { type_ = "Exotic, Thin"
+                                    , hazardCode = "Biologic"
+                                    , bar = "1.6"
+                                    , taint =
+                                        { subtype = "Low Oxygen"
+                                        , severity = "Trivial irritant. After 1D weeks acclimation, this taint is inconsequential"
+                                        , persistence = "Occasional and brief: Occurs periodically or on a 2D roll of 12 per day and lasts 1D hours"
+                                        }
+                                    }
+                                , hydrographics =
+                                    { percentage = "10%"
+                                    , surfaceDistribution = "Scattered"
+                                    }
+                                , life =
+                                    { biomass = "1"
+                                    , biocomplexity = "Primitive single-cell organisms"
+                                    , biodiversity = "2"
+                                    , compatibility = "3"
+                                    , habitability = "Actively hostile world: not survivable without specialised equipment"
+                                    , sophonts = "None"
+                                    }
+                                }
+
+                        PlanetoidBelt planetoidBeltData ->
+                            AnalyisDetailPlanetoidBelt
+
+                        Planetoid pdata ->
+                            AnalyisDetailPlanetoid header <|
+                                { physical =
+                                    { au = rnd 2 pdata.au
+                                    , period = rnd 2 pdata.period
+                                    , inclination = rnd 0 pdata.inclination ++ "°"
+                                    , eccentricity = rnd 2 pdata.eccentricity
+                                    , mass = rndm 2 0 pdata.mass
+                                    , density = rndm 2 0 pdata.density
+                                    , gravity = rndm 2 0 pdata.gravity
+                                    , diameter = rnd 0 pdata.diameter
+                                    , meanTemperature = fromKelvin pdata.meanTemperature
+                                    , albedo = rnd 2 pdata.albedo
+                                    , axialTilt = rnd 2 pdata.axialTilt ++ "°"
+                                    , greenhouse = rndm 2 0 pdata.greenhouse
+                                    }
+                                , atmosphere =
+                                    { type_ = "Exotic, Thin"
+                                    , hazardCode = "Biologic"
+                                    , bar = "1.6"
+                                    , taint =
+                                        { subtype = "Low Oxygen"
+                                        , severity = "Trivial irritant. After 1D weeks acclimation, this taint is inconsequential"
+                                        , persistence = "Occasional and brief: Occurs periodically or on a 2D roll of 12 per day and lasts 1D hours"
+                                        }
+                                    }
+                                , hydrographics =
+                                    { percentage = "10%"
+                                    , surfaceDistribution = "Scattered"
+                                    }
+                                , life =
+                                    { biomass = "1"
+                                    , biocomplexity = "Primitive single-cell organisms"
+                                    , biodiversity = "2"
+                                    , compatibility = "3"
+                                    , habitability = "Actively hostile world: not survivable without specialised equipment"
+                                    , sophonts = "None"
+                                    }
+                                }
+
+                        Star (StarDataWrap starDataConfig) ->
+                            AnalyisDetailStar
+            in
+            ( { model | objectToBeAnalyzed = Just { stellarObject = stellarObject, data = analysisDetail } }
             , Cmd.none
             )
 
