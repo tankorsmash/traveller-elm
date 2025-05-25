@@ -799,8 +799,8 @@ drawStar ( starX, starY ) radius size starColor =
         []
 
 
-renderHexWithStar : StarSystem -> String -> HexAddress -> VisualHexOrigin -> Float -> List ( Float, Float ) -> Svg Msg
-renderHexWithStar starSystem hexColour hexAddress ( vox, voy ) size rawHexaPoints =
+renderHexWithStar : StarSystem -> String -> HexAddress -> Int -> Int -> Float -> String -> Svg Msg
+renderHexWithStar starSystem hexColour hexAddress vox voy size hexapointsStr =
     let
         si =
             starSystem.surveyIndex
@@ -819,7 +819,7 @@ renderHexWithStar starSystem hexColour hexAddress ( vox, voy ) size rawHexaPoint
         ]
         [ -- background hex
           Svg.Lazy.lazy2 renderPolygon
-            (convertRawHexagonPoints ( toFloat vox, toFloat voy ) rawHexaPoints)
+            hexapointsStr
             hexColour
         , -- center star
           if showStar then
@@ -1031,17 +1031,15 @@ viewHex :
     Float
     -> SolarSystemDict
     -> HexAddress
-    -> VisualHexOrigin
+    -> Int
+    -> Int
     -> String
     -> List ( Float, Float )
     -> Svg Msg
-viewHex hexSize solarSystemDict hexAddress visualHexOrigin hexColour rawHexaPoints =
+viewHex hexSize solarSystemDict hexAddress vox voy hexColour rawHexaPoints =
     let
         solarSystem =
             Dict.get (HexAddress.toKey hexAddress) solarSystemDict
-
-        ( vox, voy ) =
-            visualHexOrigin
 
         viewEmptyHelper txt =
             Svg.Lazy.lazy7 viewHexEmpty hexAddress.x hexAddress.y vox voy hexSize txt hexColour
@@ -1049,13 +1047,18 @@ viewHex hexSize solarSystemDict hexAddress visualHexOrigin hexColour rawHexaPoin
         hexSVG =
             case solarSystem of
                 Just (LoadedSolarSystem ss) ->
-                    Svg.Lazy.lazy6 renderHexWithStar
+                    let
+                        hexapointsStr =
+                            convertRawHexagonPoints ( toFloat vox, toFloat voy ) rawHexaPoints
+                    in
+                    Svg.Lazy.lazy7 renderHexWithStar
                         ss
                         hexColour
                         hexAddress
-                        visualHexOrigin
+                        vox
+                        voy
                         hexSize
-                        rawHexaPoints
+                        hexapointsStr
 
                 Just LoadingSolarSystem ->
                     viewEmptyHelper "Loading..."
@@ -1201,7 +1204,6 @@ hexBackgroundColour referee hexKey solarSystemDict =
 
 viewHexes :
     ( HexRect, List ( Float, Float ) )
-    -- -> { screenVp : Browser.Dom.Viewport, hexmapViewport : Browser.Dom.Viewport }
     -> { svgWidth : Float, svgHeight : Float, maxAcross : Int, maxTall : Int }
     -> { solarSystemDict : SolarSystemDict, hexColours : HexColorDict, regionLabels : RegionLabelDict }
     -> ( RouteList, HexAddress )
@@ -1211,9 +1213,6 @@ viewHexes :
     -> Html Msg
 viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { svgWidth, svgHeight, maxAcross, maxTall } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) hexSize maybeSelectedHex referee =
     let
-        _ =
-            Debug.log "viewHexes" 123
-
         renderCurrentAddressOutline : HexAddress -> Svg Msg
         renderCurrentAddressOutline ca =
             let
@@ -1243,55 +1242,57 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { svgWidth, svgHeig
                 (HexAddress.shiftAddressBy { deltaX = -1, deltaY = -1 } upperLeftHex)
                 lowerRightHex
                 { maxAcross = maxAcross, maxTall = maxTall }
+
+        viewSingleHex hexAddr =
+            let
+                hexKey =
+                    HexAddress.toKey hexAddr
+
+                ( vox, voy ) =
+                    calcVisualOrigin hexSize
+                        { row = hexAddr.y, col = hexAddr.x }
+
+                hexColour =
+                    if hexAddr == currentAddress then
+                        currentAddressHexBg
+
+                    else if isOnRoute route hexAddr then
+                        routeHexBg
+
+                    else
+                        case Dict.get hexKey hexColours of
+                            Just color ->
+                                Color.Convert.colorToHex <| color
+
+                            Nothing ->
+                                case maybeSelectedHex of
+                                    Just selectedHex ->
+                                        if selectedHex == hexAddr then
+                                            selectedHexBg
+
+                                        else
+                                            hexBackgroundColour referee hexKey solarSystemDict
+
+                                    Nothing ->
+                                        hexBackgroundColour referee hexKey solarSystemDict
+
+                hexSvgsWithHexAddr =
+                    ( hexAddr
+                    , Svg.Lazy.lazy7 viewHex
+                        hexSize
+                        solarSystemDict
+                        hexAddr
+                        vox
+                        voy
+                        hexColour
+                        rawHexaPoints
+                    )
+            in
+            hexSvgsWithHexAddr
     in
     hexRange
         |> List.map
-            (\hexAddr ->
-                let
-                    hexKey =
-                        HexAddress.toKey hexAddr
-
-                    hexSVGOrigin =
-                        calcVisualOrigin hexSize
-                            { row = hexAddr.y, col = hexAddr.x }
-
-                    hexColour =
-                        if hexAddr == currentAddress then
-                            currentAddressHexBg
-
-                        else if isOnRoute route hexAddr then
-                            routeHexBg
-
-                        else
-                            case Dict.get hexKey hexColours of
-                                Just color ->
-                                    Color.Convert.colorToHex <| color
-
-                                Nothing ->
-                                    case maybeSelectedHex of
-                                        Just selectedHex ->
-                                            if selectedHex == hexAddr then
-                                                selectedHexBg
-
-                                            else
-                                                hexBackgroundColour referee hexKey solarSystemDict
-
-                                        Nothing ->
-                                            hexBackgroundColour referee hexKey solarSystemDict
-
-                    hexSvgsWithHexAddr =
-                        ( hexAddr
-                        , viewHex
-                            hexSize
-                            solarSystemDict
-                            hexAddr
-                            hexSVGOrigin
-                            hexColour
-                            rawHexaPoints
-                        )
-                in
-                hexSvgsWithHexAddr
-            )
+            viewSingleHex
         |> (\hexSvgsWithHexAddress ->
                 let
                     labelPos hexAddr =
@@ -2605,10 +2606,6 @@ viewSidebarColumn :
     }
     -> Element Msg
 viewSidebarColumn { hexScale, viewMode, selectedHex, solarSystems, sectors, regions, selectedSystem, selectedStellarObject, isReferee } =
-    let
-        _ =
-            Debug.log "render sidebar" 123
-    in
     column [ Element.spacing 10, Element.centerX, Element.height Element.fill ]
         [ column [ Element.width Element.fill ]
             [ let
