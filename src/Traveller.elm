@@ -524,15 +524,13 @@ rawHexagonPoint size n =
     ( x, y )
 
 
-hexagonPoints : ( Float, Float ) -> Float -> String
+hexagonPoints : ( Float, Float ) -> Float -> List String
 hexagonPoints ( xOrigin, yOrigin ) size =
-    List.range 0 5
+    rawHexagonPoints size
         |> List.map
-            (toFloat
-                >> rawHexagonPoint size
-                >> (\( x, y ) -> String.fromFloat (xOrigin + x) ++ "," ++ String.fromFloat (yOrigin + y))
+            (\( x, y ) ->
+                String.fromFloat (xOrigin + x) ++ "," ++ String.fromFloat (yOrigin + y)
             )
-        |> String.join " "
 
 
 {-| hexagon points indepedent of origin
@@ -603,8 +601,7 @@ rotatePoint hexSize idx ( x_, y_ ) degrees_ distance =
 
 isOnRoute : RouteList -> HexAddress -> Bool
 isOnRoute route address =
-    List.any (\a -> a.address == address)
-        route
+    List.any (\a -> a.address == address) route
 
 
 viewHexEmpty : Int -> Int -> Int -> Int -> Float -> String -> String -> Svg Msg
@@ -636,9 +633,7 @@ viewHexEmpty hx hy x y size childSvgTxt hexColour =
         , SvgAttrs.id <| "rendered-hex:" ++ HexAddress.toKey hexAddress
         ]
         [ -- background hex
-          Svg.Lazy.lazy2 renderPolygon
-            (hexagonPoints origin size)
-            hexColour
+          Svg.Lazy.lazy2 renderPolygon (String.join " " <| hexagonPoints origin size) hexColour
         , Svg.text_
             [ SvgAttrs.x <| String.fromInt <| x
             , SvgAttrs.y <| String.fromInt <| y - (floor <| size * 0.65)
@@ -1129,6 +1124,7 @@ renderSectorOutline hexSize hex =
         []
 
 
+regionLabel : Int -> Int -> String -> Svg msg
 regionLabel x y name =
     Svg.text_
         [ SvgAttrs.x <| String.fromInt x
@@ -1188,7 +1184,7 @@ viewHexes :
     -> Maybe HexAddress
     -> Bool
     -> Html Msg
-viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { svgWidth, svgHeight, maxAcross, maxTall } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) hexSize maybeSelectedHex referee =
+viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { svgWidth, svgHeight, maxAcross, maxTall } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) hexSize maybeSelectedHex isReferee =
     let
         renderCurrentAddressOutline : HexAddress -> Svg Msg
         renderCurrentAddressOutline ca =
@@ -1196,14 +1192,10 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { svgWidth, svgHeig
                 locationOrigin =
                     calcVisualOrigin hexSize
                         { row = upperLeftHex.y - ca.y, col = ca.x - upperLeftHex.x }
-                        |> (\( x, y ) ->
-                                ( toFloat <| x
-                                , toFloat <| y
-                                )
-                           )
+                        |> Tuple.mapBoth toFloat toFloat
 
                 points =
-                    case String.split " " <| hexagonPoints locationOrigin hexSize of
+                    case hexagonPoints locationOrigin hexSize of
                         first :: points_ ->
                             (first :: points_) ++ [ first ]
 
@@ -1239,7 +1231,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { svgWidth, svgHeig
                     else
                         case Dict.get hexKey hexColours of
                             Just color ->
-                                Color.Convert.colorToHex <| color
+                                Color.Convert.colorToHex color
 
                             Nothing ->
                                 case maybeSelectedHex of
@@ -1248,24 +1240,21 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { svgWidth, svgHeig
                                             selectedHexBg
 
                                         else
-                                            hexBackgroundColour referee hexKey solarSystemDict
+                                            hexBackgroundColour isReferee hexKey solarSystemDict
 
                                     Nothing ->
-                                        hexBackgroundColour referee hexKey solarSystemDict
-
-                hexSvgsWithHexAddr =
-                    ( hexAddr
-                    , viewHex
-                        hexSize
-                        solarSystemDict
-                        hexAddr
-                        vox
-                        voy
-                        hexColour
-                        rawHexaPoints
-                    )
+                                        hexBackgroundColour isReferee hexKey solarSystemDict
             in
-            hexSvgsWithHexAddr
+            ( hexAddr
+            , viewHex
+                hexSize
+                solarSystemDict
+                hexAddr
+                vox
+                voy
+                hexColour
+                rawHexaPoints
+            )
     in
     hexRange
         |> List.map viewSingleHex
@@ -1301,8 +1290,12 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { svgWidth, svgHeig
 
                     keyedHexes : Svg Msg
                     keyedHexes =
-                        Svg.Keyed.node "g" [] <|
-                            List.map (Tuple.mapFirst HexAddress.toKey) hexSvgsWithHexAddress
+                        hexSvgsWithHexAddress
+                            |> List.map
+                                (\( addr, hex ) ->
+                                    ( HexAddress.toKey addr, hex )
+                                )
+                            |> Svg.Keyed.node "g" []
                 in
                 [ keyedHexes
                 , renderSectorOutline hexSize (upperLeftHex |> HexAddress.toSectorAddress)
