@@ -787,8 +787,8 @@ moveDecoder onMoveMsg =
         |> JsDecode.map (.offsetPos >> onMoveMsg)
 
 
-drawStar : ( Float, Float ) -> Int -> Float -> String -> Svg Msg
-drawStar ( starX, starY ) radius size starColor =
+drawStar : Float -> Float -> Int -> Float -> String -> Svg Msg
+drawStar starX starY radius size starColor =
     Svg.circle
         [ SvgAttrs.cx <| String.fromFloat <| starX
         , SvgAttrs.cy <| String.fromFloat <| starY
@@ -799,9 +799,12 @@ drawStar ( starX, starY ) radius size starColor =
         []
 
 
-renderHexWithStar : StarSystem -> String -> HexAddress -> Int -> Int -> Float -> String -> Svg Msg
-renderHexWithStar starSystem hexColour hexAddress vox voy size hexapointsStr =
+renderHexWithStar : StarSystem -> String -> Int -> Int -> Int -> Int -> Float -> String -> Svg Msg
+renderHexWithStar starSystem hexColour hexAddrX hexAddrY vox voy size hexapointsStr =
     let
+        hexAddress =
+            HexAddress hexAddrX hexAddrY
+
         si =
             starSystem.surveyIndex
 
@@ -845,7 +848,7 @@ renderHexWithStar starSystem hexColour hexAddress vox voy size hexapointsStr =
                         starData =
                             getStarTypeData starType
 
-                        starPos =
+                        ( sx, sy ) =
                             if idx == 0 then
                                 ( toFloat vox, toFloat voy )
 
@@ -855,25 +858,25 @@ renderHexWithStar starSystem hexColour hexAddress vox voy size hexapointsStr =
                     case starData.companion of
                         Just companion ->
                             let
-                                compStarPos =
-                                    Tuple.mapFirst (\x_ -> x_ - 5) starPos
+                                ( cx, cy ) =
+                                    ( sx - 5, sy )
 
                                 compStarData =
                                     getStarTypeData companion
                             in
                             Svg.g []
-                                [ drawStar starPos 7 size <| starColourRGB starData.colour
-                                , drawStar compStarPos 3 size <| starColourRGB compStarData.colour
+                                [ Svg.Lazy.lazy5 drawStar sx sy 7 size <| starColourRGB starData.colour
+                                , Svg.Lazy.lazy5 drawStar cx cy 3 size <| starColourRGB compStarData.colour
                                 ]
 
                         Nothing ->
-                            drawStar starPos 7 size <| starColourRGB starData.colour
+                            Svg.Lazy.lazy5 drawStar sx sy 7 size <| starColourRGB starData.colour
             in
             Svg.g
                 []
                 (starSystem.stars
                     |> List.filter isKnown
-                    |> List.indexedMap generateStar
+                    |> List.indexedMap (Svg.Lazy.lazy2 generateStar)
                 )
 
           else
@@ -942,15 +945,15 @@ renderHexWithStar starSystem hexColour hexAddress vox voy size hexapointsStr =
                      in
                      [ Svg.tspan
                         [ SvgAttrs.fill "#109076", SvgAttrs.fontWeight "800" ]
-                        [ showGasGiants |> Svg.text ]
+                        [ Svg.text showGasGiants ]
                      , Svg.text "–"
                      , Svg.tspan
                         [ SvgAttrs.fill "#809076", SvgAttrs.fontWeight "800" ]
-                        [ showTerrestrialPlanets |> Svg.text ]
+                        [ Svg.text showTerrestrialPlanets ]
                      , Svg.text "–"
                      , Svg.tspan
                         [ SvgAttrs.fill "#68B976", SvgAttrs.fontWeight "800" ]
-                        [ showplanetoidBelts |> Svg.text ]
+                        [ Svg.text showplanetoidBelts ]
                      ]
                     )
                 ]
@@ -1051,10 +1054,11 @@ viewHex hexSize solarSystemDict hexAddress vox voy hexColour rawHexaPoints =
                         hexapointsStr =
                             convertRawHexagonPoints ( toFloat vox, toFloat voy ) rawHexaPoints
                     in
-                    Svg.Lazy.lazy7 renderHexWithStar
+                    Svg.Lazy.lazy8 renderHexWithStar
                         ss
                         hexColour
-                        hexAddress
+                        hexAddress.x
+                        hexAddress.y
                         vox
                         voy
                         hexSize
@@ -1278,7 +1282,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { svgWidth, svgHeig
 
                 hexSvgsWithHexAddr =
                     ( hexAddr
-                    , Svg.Lazy.lazy7 viewHex
+                    , viewHex
                         hexSize
                         solarSystemDict
                         hexAddr
@@ -1291,8 +1295,7 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { svgWidth, svgHeig
             hexSvgsWithHexAddr
     in
     hexRange
-        |> List.map
-            viewSingleHex
+        |> List.map viewSingleHex
         |> (\hexSvgsWithHexAddress ->
                 let
                     labelPos hexAddr =
