@@ -922,38 +922,21 @@ renderHexWithStar starSystem hexColour hexAddrX hexAddrY vox voy size hexapoints
                     , SvgAttrs.textAnchor "middle"
                     ]
                     (let
-                        showGasGiants =
-                            if si >= gasGiantSI then
-                                String.fromInt <| starSystem.gasGiantCount
-
-                            else
-                                "?"
-
-                        showTerrestrialPlanets =
-                            if si >= terrestrialSI then
-                                String.fromInt <| starSystem.terrestrialPlanetCount
-
-                            else
-                                "?"
-
-                        showplanetoidBelts =
-                            if si >= planetoidSI then
-                                String.fromInt <| starSystem.planetoidBeltCount
+                        showIfKnown req value =
+                            if si >= req then
+                                String.fromInt <| value
 
                             else
                                 "?"
                      in
-                     [ Svg.tspan
-                        [ SvgAttrs.fill "#109076", SvgAttrs.fontWeight "800" ]
-                        [ Svg.text showGasGiants ]
+                     [ Svg.tspan [ SvgAttrs.fill "#109076", SvgAttrs.fontWeight "800" ]
+                        [ Svg.text <| showIfKnown gasGiantSI starSystem.gasGiantCount ]
                      , Svg.text "–"
-                     , Svg.tspan
-                        [ SvgAttrs.fill "#809076", SvgAttrs.fontWeight "800" ]
-                        [ Svg.text showTerrestrialPlanets ]
+                     , Svg.tspan [ SvgAttrs.fill "#809076", SvgAttrs.fontWeight "800" ]
+                        [ Svg.text <| showIfKnown terrestrialSI starSystem.terrestrialPlanetCount ]
                      , Svg.text "–"
-                     , Svg.tspan
-                        [ SvgAttrs.fill "#68B976", SvgAttrs.fontWeight "800" ]
-                        [ Svg.text showplanetoidBelts ]
+                     , Svg.tspan [ SvgAttrs.fill "#68B976", SvgAttrs.fontWeight "800" ]
+                        [ Svg.text <| showIfKnown planetoidSI starSystem.planetoidBeltCount ]
                      ]
                     )
                 ]
