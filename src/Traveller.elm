@@ -543,13 +543,17 @@ rawHexagonPoints size =
         |> List.map (toFloat >> rawHexagonPoint size)
 
 
+hexapointsBuilder : Float -> Float -> ( Float, Float ) -> String
+hexapointsBuilder xOrigin yOrigin ( x, y ) =
+    String.fromFloat (xOrigin + x) ++ "," ++ String.fromFloat (yOrigin + y)
+
+
 {-| localize the hexagon points to the visualOrigin
 -}
 convertRawHexagonPoints : ( Float, Float ) -> List ( Float, Float ) -> String
 convertRawHexagonPoints ( xOrigin, yOrigin ) points =
     points
-        |> List.map
-            (\( x, y ) -> String.fromFloat (xOrigin + x) ++ "," ++ String.fromFloat (yOrigin + y))
+        |> List.map (hexapointsBuilder xOrigin yOrigin)
         |> String.join " "
 
 
@@ -976,22 +980,13 @@ defaultHexSize =
     40
 
 
-isEmptyHex : Maybe a -> Int
-isEmptyHex maybeSolarSystem =
-    case maybeSolarSystem of
-        Just _ ->
-            1
-
-        Nothing ->
-            0
-
-
+hexColOffset : Int -> Float
 hexColOffset row =
     if remainderBy 2 row == 0 then
-        1
+        1.0
 
     else
-        0
+        0.0
 
 
 calcVisualOrigin : Float -> { row : Int, col : Int } -> VisualHexOrigin
@@ -1017,24 +1012,26 @@ viewHex :
     -> Svg Msg
 viewHex hexSize solarSystemDict hexAddress vox voy hexColour rawHexaPoints =
     let
-        solarSystem =
+        remoteSolarSystem =
             Dict.get (HexAddress.toKey hexAddress) solarSystemDict
 
         viewEmptyHelper txt =
             Svg.Lazy.lazy7 viewHexEmpty hexAddress.x hexAddress.y vox voy hexSize txt hexColour
 
         hexSVG =
-            case solarSystem of
-                Just (LoadedSolarSystem ss) ->
+            case remoteSolarSystem of
+                Just (LoadedSolarSystem loadedSystem) ->
                     let
                         hexapointsStr =
                             convertRawHexagonPoints ( toFloat vox, toFloat voy ) rawHexaPoints
                     in
                     Svg.Lazy.lazy8 renderHexWithStar
-                        ss
+                        loadedSystem
                         hexColour
+                        -- hex address
                         hexAddress.x
                         hexAddress.y
+                        -- visual origin
                         vox
                         voy
                         hexSize
