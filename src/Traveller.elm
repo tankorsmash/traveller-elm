@@ -626,8 +626,8 @@ viewHexEmpty hx hy x y size childSvgTxt hexColour =
         , SvgEvents.onClick (ViewingHex hexAddress)
         , SvgEvents.onMouseUp MapMouseUp
         , -- listens for the JS 'mousedown' event and then runs the `downDecoder` on the JS Event, returning the Msg
-          SvgEvents.on "mousedown" <| downDecoder MapMouseDown
-        , SvgEvents.on "mousemove" <| moveDecoder MapMouseMove
+          SvgEvents.on "mousedown" <| mouseDownDecoder MapMouseDown
+        , SvgEvents.on "mousemove" <| mouseMoveDecoder MapMouseMove
         , SvgAttrs.style "cursor: pointer; user-select: none"
         , SvgAttrs.id <| "rendered-hex:" ++ HexAddress.toKey hexAddress
         ]
@@ -705,8 +705,8 @@ renderPolygon points_ fill =
 
 {-| a decoder that takes JSON and emits either a decode failure or a Msg
 -}
-downDecoder : (( Float, Float ) -> msg) -> JsDecode.Decoder msg
-downDecoder onDownMsg =
+mouseDownDecoder : (( Float, Float ) -> msg) -> JsDecode.Decoder msg
+mouseDownDecoder onDownMsg =
     let
         -- takes a raw JS mouse event and turns it into a parsed Elm mouse event
         jsMouseEventDecoder =
@@ -730,8 +730,8 @@ downDecoder onDownMsg =
            JsDecode.map (\evt -> onDownMsg evt.offsetPos)
 
 
-clickDecoder : (( Float, Float ) -> msg) -> JsDecode.Decoder msg
-clickDecoder onDownMsg =
+mouseClickDecoder : (( Float, Float ) -> msg) -> JsDecode.Decoder msg
+mouseClickDecoder onDownMsg =
     let
         -- takes a raw JS mouse event and turns it into a parsed Elm mouse event
         jsMouseEventDecoder =
@@ -755,8 +755,8 @@ clickDecoder onDownMsg =
            JsDecode.map (\evt -> onDownMsg evt.offsetPos)
 
 
-mouseupDecoder : (( Float, Float ) -> msg) -> JsDecode.Decoder msg
-mouseupDecoder onDownMsg =
+mouseUpDecoder : (( Float, Float ) -> msg) -> JsDecode.Decoder msg
+mouseUpDecoder onDownMsg =
     let
         -- takes a raw JS mouse event and turns it into a parsed Elm mouse event
         jsMouseEventDecoder =
@@ -780,9 +780,8 @@ mouseupDecoder onDownMsg =
            JsDecode.map (\evt -> onDownMsg evt.offsetPos)
 
 
-moveDecoder : (( Float, Float ) -> msg) -> JsDecode.Decoder msg
-moveDecoder onMoveMsg =
-    -- equivalent to the `downDecoder`, only it returns `MapMouseMove` instead
+mouseMoveDecoder : (( Float, Float ) -> msg) -> JsDecode.Decoder msg
+mouseMoveDecoder onMoveMsg =
     Html.Events.Extra.Mouse.eventDecoder
         |> JsDecode.map (.offsetPos >> onMoveMsg)
 
@@ -816,14 +815,12 @@ renderHexWithStar starSystem hexColour hexAddrX hexAddrY vox voy size hexapoints
         , SvgEvents.onClick (ViewingHex hexAddress)
         , SvgEvents.onMouseUp MapMouseUp
         , -- listens for the JS 'mousedown' event and then runs the `downDecoder` on the JS Event, returning the Msg
-          SvgEvents.on "mousedown" <| downDecoder MapMouseDown
-        , SvgEvents.on "mousemove" <| moveDecoder MapMouseMove
+          SvgEvents.on "mousedown" <| mouseDownDecoder MapMouseDown
+        , SvgEvents.on "mousemove" <| mouseMoveDecoder MapMouseMove
         , SvgAttrs.style "cursor: pointer; user-select: none"
         ]
         [ -- background hex
-          Svg.Lazy.lazy2 renderPolygon
-            hexapointsStr
-            hexColour
+          Svg.Lazy.lazy2 renderPolygon hexapointsStr hexColour
         , -- center star
           if showStar then
             let
@@ -832,11 +829,7 @@ renderHexWithStar starSystem hexColour hexAddrX hexAddrY vox voy size hexapoints
 
                 isKnown : StarType -> Bool
                 isKnown theStar =
-                    let
-                        starData =
-                            getStarTypeData theStar
-                    in
-                    if isBrownDwarfType starData then
+                    if theStar |> (getStarTypeData >> isBrownDwarfType) then
                         starSystem.surveyIndex >= 4
 
                     else
@@ -2341,9 +2334,9 @@ viewFullJourney model viewport =
         , width <| Element.px <| floor maxWidth
         , height <| Element.px <| floor maxHeight
         , Element.clip
-        , Element.htmlAttribute <| Html.Events.on "mousemove" <| moveDecoder (JourneyMsg << MouseMove)
-        , Element.htmlAttribute <| Html.Events.on "mousedown" <| downDecoder (JourneyMsg << MouseDown)
-        , Element.htmlAttribute <| Html.Events.on "mouseup" <| mouseupDecoder (JourneyMsg << MouseUp)
+        , Element.htmlAttribute <| Html.Events.on "mousemove" <| mouseMoveDecoder (JourneyMsg << MouseMove)
+        , Element.htmlAttribute <| Html.Events.on "mousedown" <| mouseDownDecoder (JourneyMsg << MouseDown)
+        , Element.htmlAttribute <| Html.Events.on "mouseup" <| mouseUpDecoder (JourneyMsg << MouseUp)
         , Events.onMouseLeave (JourneyMsg MouseLeave)
         , Background.color <| Element.rgb 1.0 0.498 0.0
         ]
