@@ -129,8 +129,8 @@ main =
 subscriptions : Model -> Sub Msg
 subscriptions { travellerModel } =
     case travellerModel of
-        Just tm ->
-            Traveller.subscriptions tm
+        Just ( t, tm ) ->
+            Traveller.subscriptions t tm
                 |> Sub.map GotTravellerMsg
 
         Nothing ->

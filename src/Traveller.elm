@@ -1,4 +1,4 @@
-port module Traveller exposing (Model, Msg(..), auToKMs, init, subscriptions, update, view)
+port module Traveller exposing (Model, ModelData, Msg(..), auToKMs, init, subscriptions, update, view)
 
 import Browser.Dom
 import Browser.Events
@@ -26,6 +26,7 @@ import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
+import Element.Lazy
 import FontAwesome as Icon exposing (Icon)
 import FontAwesome.Solid as Icon
 import HostConfig exposing (HostConfig)
@@ -47,6 +48,7 @@ import Svg.Events as SvgEvents
 import Svg.Keyed
 import Svg.Lazy
 import Task
+import Time
 import Traveller.Atmosphere exposing (atmosphereDescription)
 import Traveller.Government as Government
 import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, createFromStarSystem, shiftAddressBy, toSectorAddress, toUniversalAddress)
@@ -128,7 +130,7 @@ type RequestNum
 {-| RequestEntry is a record of a request made to the server.
 
 Each time we call sendSolarSystemRequest we prep a RequestEntry and store it in
-the Model.
+the ModelData.
 
 Then when we get a response back, we mark the request as complete and update
 our model, using `markRequestComplete`.
@@ -273,6 +275,12 @@ type alias JourneyModel =
 
 
 type alias Model =
+    ( Time.Posix
+    , ModelData
+    )
+
+
+type alias ModelData =
     { key : Browser.Navigation.Key
     , hexScale : Float
     , viewMode : ViewMode
@@ -289,8 +297,10 @@ type alias Model =
     , selectedHex : Maybe HexAddress
     , selectedSystem : Maybe SolarSystem
     , sidebarHoverText : Maybe String
-    , viewport : Browser.Dom.Viewport
-    , hexmapViewport : Maybe HexMapViewport
+    , viewport :
+        { viewport : Browser.Dom.Viewport
+        , hexmapViewport : Maybe HexMapViewport
+        }
     , selectedStellarObject : Maybe StellarObject
     , hexRect : HexRect
     , currentAddress : HexAddress
@@ -299,7 +309,7 @@ type alias Model =
     , regions : RegionDict
     , regionLabels : Dict.Dict String String
     , hexColours : Dict.Dict String Color
-    , referee : Bool
+    , isReferee : Bool
     , objectToBeAnalyzed : Maybe { stellarObject : StellarObject, data : AnalysisDetail }
     }
 
@@ -312,6 +322,7 @@ type ZoomType
 
 type Msg
     = NoOpMsg
+    | Tick Time.Posix
     | DownloadSolarSystems
     | DownloadedSolarSystems ( RequestEntry, String ) (Result Http.Error (List FallibleStarSystem))
     | ClearAllErrors
@@ -352,12 +363,12 @@ type alias VisualHexOrigin =
     ( Int, Int )
 
 
-keyDecoder : Model -> JsDecode.Decoder Msg
+keyDecoder : ModelData -> JsDecode.Decoder Msg
 keyDecoder model =
     JsDecode.map (toKey model) (JsDecode.field "key" JsDecode.string)
 
 
-toKey : Model -> String -> Msg
+toKey : ModelData -> String -> Msg
 toKey model string =
     case ( model.objectToBeAnalyzed, string ) of
         ( Just _, "Escape" ) ->
@@ -367,11 +378,12 @@ toKey model string =
             NoOpMsg
 
 
-subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions : Time.Posix -> ModelData -> Sub Msg
+subscriptions time model =
     Sub.batch
         [ Browser.Events.onResize GotResize
         , Browser.Events.onKeyDown (keyDecoder model)
+        , Time.every ((1 / 4) * 1000) Tick
         ]
 
 
@@ -454,7 +466,7 @@ init viewport settings key hostConfig referee =
             , dragMode = NoDragging
             }
 
-        model : Model
+        model : ModelData
         model =
             { hexScale = settings.hexSize
             , viewMode = HexMap
@@ -470,8 +482,10 @@ init viewport settings key hostConfig referee =
             , selectedHex = Nothing
             , selectedSystem = Nothing
             , sidebarHoverText = Nothing
-            , viewport = viewport
-            , hexmapViewport = Nothing
+            , viewport =
+                { viewport = viewport
+                , hexmapViewport = Nothing
+                }
             , key = key
             , selectedStellarObject = Nothing
             , hexRect = hexRect
@@ -482,11 +496,13 @@ init viewport settings key hostConfig referee =
             , regions = Dict.empty
             , regionLabels = Dict.empty
             , hexColours = Dict.empty
-            , referee = referee
+            , isReferee = referee
             , objectToBeAnalyzed = Nothing
             }
     in
-    ( model
+    ( ( Time.millisToPosix 0
+      , model
+      )
     , Cmd.batch
         [ sendSolarSystemRequest ssReqEntry model.hostConfig model.hexRect
         , sendSectorRequest secReqEntry model.hostConfig
@@ -1185,20 +1201,18 @@ hexBackgroundColour referee hexKey solarSystemDict =
 
 viewHexes :
     ( HexRect, List ( Float, Float ) )
-    -> { screenVp : Browser.Dom.Viewport, hexmapVp : Maybe Browser.Dom.Viewport }
+    -- -> { screenVp : Browser.Dom.Viewport, hexmapViewport : Browser.Dom.Viewport }
+    -> { svgWidth : Float, svgHeight : Float, maxAcross : Int, maxTall : Int }
     -> { solarSystemDict : SolarSystemDict, hexColours : HexColorDict, regionLabels : RegionLabelDict }
     -> ( RouteList, HexAddress )
     -> Float
     -> Maybe HexAddress
     -> Bool
     -> Html Msg
-viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapVp } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) hexSize maybeSelectedHex referee =
+viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { svgWidth, svgHeight, maxAcross, maxTall } { solarSystemDict, hexColours, regionLabels } ( route, currentAddress ) hexSize maybeSelectedHex referee =
     let
-        svgHeight =
-            screenVp.viewport.height - consoleTitleHeight
-
-        svgWidth =
-            screenVp.viewport.width - 420
+        _ =
+            Debug.log "viewHexes" 123
 
         renderCurrentAddressOutline : HexAddress -> Svg Msg
         renderCurrentAddressOutline ca =
@@ -1224,42 +1238,11 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { screenVp, hexmapV
                 (points |> String.join " ")
                 currentAddressHexBg
 
-        widestViewport =
-            case hexmapVp of
-                Nothing ->
-                    screenVp
-
-                Just hexmapViewport ->
-                    hexmapViewport
-
         hexRange =
             HexAddress.betweenWithMax
                 (HexAddress.shiftAddressBy { deltaX = -1, deltaY = -1 } upperLeftHex)
                 lowerRightHex
                 { maxAcross = maxAcross, maxTall = maxTall }
-
-        ( visualHexWidth, visualHexHeight ) =
-            let
-                ( left_x, left_y ) =
-                    calcVisualOrigin hexSize { row = 1, col = 1 }
-
-                ( right_x, _ ) =
-                    calcVisualOrigin hexSize { row = 1, col = 2 }
-
-                ( _, down_y ) =
-                    calcVisualOrigin hexSize { row = 2, col = 1 }
-            in
-            ( left_x - right_x |> abs, down_y - left_y |> abs )
-
-        ( maxAcross, maxTall ) =
-            case hexmapVp of
-                Nothing ->
-                    ( 10000, 10000 )
-
-                Just hvp ->
-                    ( (hvp.viewport.width / toFloat visualHexWidth) + 2 |> floor
-                    , (hvp.viewport.height / toFloat visualHexHeight) + 2 |> floor
-                    )
     in
     hexRange
         |> List.map
@@ -2458,7 +2441,7 @@ conditionalAttribute condition attribute =
         noopAttribute
 
 
-viewStatusRow : Model -> Element.Element Msg
+viewStatusRow : ModelData -> Element.Element Msg
 viewStatusRow model =
     let
         extras =
@@ -2608,178 +2591,226 @@ viewStatusRow model =
             :: extras
 
 
-view : Model -> Element.Element Msg
-view model =
+viewSidebarColumn :
+    { a
+        | hexScale : Float
+        , viewMode : ViewMode
+        , selectedHex : Maybe HexAddress
+        , solarSystems : Dict.Dict String RemoteSolarSystem
+        , sectors : SectorDict
+        , regions : Dict.Dict k { b | hexes : List HexAddress, name : String, colour : Color }
+        , selectedSystem : Maybe SolarSystem
+        , selectedStellarObject : Maybe StellarObject
+        , isReferee : Bool
+    }
+    -> Element Msg
+viewSidebarColumn { hexScale, viewMode, selectedHex, solarSystems, sectors, regions, selectedSystem, selectedStellarObject, isReferee } =
     let
-        sidebarColumn =
-            column [ Element.spacing 10, Element.centerX, Element.height Element.fill ]
-                [ column [ Element.width Element.fill ]
-                    [ let
-                        clickableIcon size =
-                            let
-                                selectorColor =
-                                    if model.hexScale == size / 2 && model.viewMode == HexMap then
-                                        deepnightColor
+        _ =
+            Debug.log "render sidebar" 123
+    in
+    column [ Element.spacing 10, Element.centerX, Element.height Element.fill ]
+        [ column [ Element.width Element.fill ]
+            [ let
+                clickableIcon size =
+                    let
+                        selectorColor =
+                            if hexScale == size / 2 && viewMode == HexMap then
+                                deepnightColor
 
-                                    else
-                                        textColor
+                            else
+                                textColor
 
-                                hexStyle =
-                                    if model.hexScale == size / 2 && model.viewMode == HexMap then
-                                        "fa-regular"
+                        hexStyle =
+                            if hexScale == size / 2 && viewMode == HexMap then
+                                "fa-regular"
 
-                                    else
-                                        "fa-thin"
-                            in
-                            renderFAIcon (hexStyle ++ " fa-hexagon") (floor size)
-                                |> Element.el
-                                    [ Element.pointer
-                                    , Element.mouseOver [ Font.color <| convertColor (Color.Manipulate.lighten 0.15 selectorColor) ]
-                                    , Events.onClick <| SetHexSize <| size / 2
-                                    , Font.color <| convertColor selectorColor
-                                    ]
-                      in
-                      row [ Element.spacing 6, Element.centerX ]
-                        [ clickableIcon 80
-                        , clickableIcon 60
-                        , clickableIcon 50
-                        , clickableIcon 30
-                        , let
-                            selectorColor =
-                                if model.viewMode == FullJourney then
-                                    deepnightColor
-
-                                else
-                                    textColor
-
-                            hexStyle =
-                                if model.viewMode == FullJourney then
-                                    "fa-regular"
-
-                                else
-                                    "fa-thin"
-                          in
-                          el
-                            [ Element.width <| Element.px 50
-                            , Element.height <| Element.px 50
-                            , Element.pointer
-                            , Events.onClick ToggleHexmap
+                            else
+                                "fa-thin"
+                    in
+                    renderFAIcon (hexStyle ++ " fa-hexagon") (floor size)
+                        |> Element.el
+                            [ Element.pointer
                             , Element.mouseOver [ Font.color <| convertColor (Color.Manipulate.lighten 0.15 selectorColor) ]
+                            , Events.onClick <| SetHexSize <| size / 2
                             , Font.color <| convertColor selectorColor
                             ]
-                          <|
-                            renderFAIcon (hexStyle ++ " " ++ "fa-map") 50
-                        ]
-                    , case model.selectedHex of
-                        Just viewingAddress ->
-                            column [ centerY, Element.paddingXY 0 10, width fill ]
-                                [ case model.solarSystems |> Dict.get (HexAddress.toKey viewingAddress) of
-                                    Just (LoadedSolarSystem _) ->
-                                        Element.none
+              in
+              row [ Element.spacing 6, Element.centerX ]
+                [ clickableIcon 80
+                , clickableIcon 60
+                , clickableIcon 50
+                , clickableIcon 30
+                , let
+                    selectorColor =
+                        if viewMode == FullJourney then
+                            deepnightColor
 
-                                    Just LoadingSolarSystem ->
-                                        text "loading..."
+                        else
+                            textColor
 
-                                    Just LoadedEmptyHex ->
-                                        Element.none
+                    hexStyle =
+                        if viewMode == FullJourney then
+                            "fa-regular"
 
-                                    Just (FailedSolarSystem _) ->
-                                        text "failed."
-
-                                    Just (FailedStarsSolarSystem _) ->
-                                        text "decoding a star failed"
-
-                                    Nothing ->
-                                        text "No solar system data found for system."
-                                , row [ Element.spacing 5, width fill ]
-                                    [ text <| universalHexLabel model.sectors viewingAddress
-                                    , model.regions
-                                        |> Dict.values
-                                        |> -- abusing lists here since we only expect one label,
-                                           -- but this iterates over all the regions
-                                           -- and renders the name if it exists
-                                           List.filterMap
-                                            (\region ->
-                                                if List.member viewingAddress region.hexes then
-                                                    text region.name
-                                                        |> el [ Font.size 12, Font.color <| convertColor region.colour ]
-                                                        |> Just
-
-                                                else
-                                                    Nothing
-                                            )
-                                        |> column [ Element.alignRight ]
-                                    ]
-                                ]
-
-                        Nothing ->
-                            column [ centerX, centerY, Font.size 10 ]
-                                [ text "Select hex in console to view parsec details."
-                                ]
-                    , case model.selectedSystem of
-                        Just solarSystem ->
-                            viewSystemDetailsSidebar
-                                solarSystem
-                                model.selectedStellarObject
-                                model.referee
-
-                        Nothing ->
-                            column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
-                                [ text "Click a hex to view system details."
-                                ]
-                    ]
-                , -- footer
-                  Element.el
-                    [ Element.padding 10
-                    , Element.alignBottom
-                    , centerX
-                    , Font.size 10
-                    , uiDeepnightColorFontColour
+                        else
+                            "fa-thin"
+                  in
+                  el
+                    [ Element.width <| Element.px 50
+                    , Element.height <| Element.px 50
+                    , Element.pointer
+                    , Events.onClick ToggleHexmap
+                    , Element.mouseOver [ Font.color <| convertColor (Color.Manipulate.lighten 0.15 selectorColor) ]
+                    , Font.color <| convertColor selectorColor
                     ]
                   <|
-                    case model.selectedHex of
-                        Just viewingAddress ->
-                            text <| Debug.toString viewingAddress
-
-                        Nothing ->
-                            text "Deepnight Corporation LLC"
+                    renderFAIcon (hexStyle ++ " " ++ "fa-map") 50
                 ]
+            , case selectedHex of
+                Just viewingAddress ->
+                    column [ centerY, Element.paddingXY 0 10, width fill ]
+                        [ case solarSystems |> Dict.get (HexAddress.toKey viewingAddress) of
+                            Just (LoadedSolarSystem _) ->
+                                Element.none
+
+                            Just LoadingSolarSystem ->
+                                text "loading..."
+
+                            Just LoadedEmptyHex ->
+                                Element.none
+
+                            Just (FailedSolarSystem _) ->
+                                text "failed."
+
+                            Just (FailedStarsSolarSystem _) ->
+                                text "decoding a star failed"
+
+                            Nothing ->
+                                text "No solar system data found for system."
+                        , row [ Element.spacing 5, width fill ]
+                            [ text <| universalHexLabel sectors viewingAddress
+                            , regions
+                                |> Dict.values
+                                |> -- abusing lists here since we only expect one label,
+                                   -- but this iterates over all the regions
+                                   -- and renders the name if it exists
+                                   List.filterMap
+                                    (\region ->
+                                        if List.member viewingAddress region.hexes then
+                                            text region.name
+                                                |> el [ Font.size 12, Font.color <| convertColor region.colour ]
+                                                |> Just
+
+                                        else
+                                            Nothing
+                                    )
+                                |> column [ Element.alignRight ]
+                            ]
+                        ]
+
+                Nothing ->
+                    column [ centerX, centerY, Font.size 10 ]
+                        [ text "Select hex in console to view parsec details."
+                        ]
+            , case selectedSystem of
+                Just solarSystem ->
+                    Element.Lazy.lazy3 viewSystemDetailsSidebar
+                        solarSystem
+                        selectedStellarObject
+                        isReferee
+
+                Nothing ->
+                    column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
+                        [ text "Click a hex to view system details."
+                        ]
+            ]
+        , Element.Lazy.lazy viewSidebarFooter selectedHex
+        ]
+
+
+viewSidebarFooter : Maybe HexAddress -> Element msg
+viewSidebarFooter selectedHex =
+    let
+        _ =
+            Debug.log "footer" 123
+    in
+    -- footer
+    Element.el
+        [ Element.padding 10
+        , Element.alignBottom
+        , centerX
+        , Font.size 10
+        , uiDeepnightColorFontColour
+        ]
+    <|
+        case selectedHex of
+            Just viewingAddress ->
+                text <| Debug.toString viewingAddress
+
+            Nothing ->
+                text "Deepnight Corporation LLC"
+
+
+viewHexMap : ModelData -> Element Msg
+viewHexMap model =
+    let
+        svgHeight =
+            model.viewport.viewport.viewport.height - consoleTitleHeight
+
+        svgWidth =
+            model.viewport.viewport.viewport.width - 420
+
+        ( maxAcross, maxTall ) =
+            case model.viewport.hexmapViewport of
+                Nothing ->
+                    ( 10000, 10000 )
+
+                Just (Ok hvp) ->
+                    ( (hvp.viewport.width / toFloat visualHexWidth) + 2 |> floor
+                    , (hvp.viewport.height / toFloat visualHexHeight) + 2 |> floor
+                    )
+
+                Just (Err _) ->
+                    ( 10000, 10000 )
+
+        ( visualHexWidth, visualHexHeight ) =
+            let
+                ( left_x, left_y ) =
+                    calcVisualOrigin model.hexScale { row = 1, col = 1 }
+
+                ( right_x, _ ) =
+                    calcVisualOrigin model.hexScale { row = 1, col = 2 }
+
+                ( _, down_y ) =
+                    calcVisualOrigin model.hexScale { row = 2, col = 1 }
+            in
+            ( left_x - right_x |> abs, down_y - left_y |> abs )
+    in
+    viewHexes
+        ( model.hexRect, model.rawHexaPoints )
+        { svgWidth = svgWidth, svgHeight = svgHeight, maxAcross = maxAcross, maxTall = maxTall }
+        { solarSystemDict = model.solarSystems, hexColours = model.hexColours, regionLabels = model.regionLabels }
+        ( model.route, model.currentAddress )
+        model.hexScale
+        model.selectedHex
+        model.isReferee
+        |> Element.html
+
+
+view : Model -> Element.Element Msg
+view ( time, model ) =
+    let
+        sidebarColumn =
+            Element.Lazy.lazy viewSidebarColumn model
 
         contentColumn =
             case model.viewMode of
                 HexMap ->
-                    let
-                        defaultViewport =
-                            { screenVp = model.viewport, hexmapVp = Nothing }
-
-                        viewPortConfig =
-                            case model.hexmapViewport of
-                                Nothing ->
-                                    defaultViewport
-
-                                Just (Ok hexmapViewport) ->
-                                    { defaultViewport | hexmapVp = Just hexmapViewport }
-
-                                Just (Err notFoundError) ->
-                                    let
-                                        _ =
-                                            --TODO handle the hexmap svg not being present
-                                            Debug.log "cant use, element not present" notFoundError
-                                    in
-                                    defaultViewport
-                    in
-                    viewHexes
-                        ( model.hexRect, model.rawHexaPoints )
-                        viewPortConfig
-                        { solarSystemDict = model.solarSystems, hexColours = model.hexColours, regionLabels = model.regionLabels }
-                        ( model.route, model.currentAddress )
-                        model.hexScale
-                        model.selectedHex
-                        model.referee
-                        |> Element.html
+                    viewHexMap model
 
                 FullJourney ->
-                    viewFullJourney model.journeyModel model.viewport
+                    viewFullJourney model.journeyModel model.viewport.viewport
     in
     row
         [ width fill
@@ -2798,7 +2829,7 @@ view model =
             sidebarColumn
         , column [ width fill ]
             [ viewStatusRow model
-            , el [ Element.alignTop ] <| contentColumn
+            , el [ Element.alignTop ] contentColumn
             ]
         , Element.html <| errorDialog model.newSolarSystemErrors
         ]
@@ -3169,10 +3200,11 @@ port storeHexSize : Float -> Cmd msg
 
 
 updateJourney : JourneyMsg -> Model -> ( Model, Cmd Msg )
-updateJourney journeyMsg ({ journeyModel } as model) =
+updateJourney journeyMsg ( time, { journeyModel } as model ) =
     let
+        setJourneyModel : JourneyModel -> Model
         setJourneyModel newJourneyModel =
-            { model | journeyModel = newJourneyModel }
+            ( time, { model | journeyModel = newJourneyModel } )
     in
     case journeyMsg of
         Zoom zoomType ->
@@ -3212,8 +3244,8 @@ updateJourney journeyMsg ({ journeyModel } as model) =
                             )
 
                         ( maxWidth, maxHeight ) =
-                            ( model.viewport.viewport.width - sidebarWidth - 50
-                            , model.viewport.viewport.height
+                            ( model.viewport.viewport.viewport.width - sidebarWidth - 50
+                            , model.viewport.viewport.viewport.height
                             )
 
                         ( oldX, oldY ) =
@@ -3264,7 +3296,7 @@ updateJourney journeyMsg ({ journeyModel } as model) =
                                 ( maxWidth, maxHeight ) =
                                     let
                                         scaledWidth =
-                                            model.viewport.viewport.width - sidebarWidth - 50
+                                            model.viewport.viewport.viewport.width - sidebarWidth - 50
                                     in
                                     ( scaledWidth
                                     , scaledWidth * (fullJourneyImageHeight / fullJourneyImageWidth)
@@ -3280,10 +3312,10 @@ updateJourney journeyMsg ({ journeyModel } as model) =
                                     shiftAddressBy { deltaX = -2, deltaY = -2 } <| createFromStarSystem { x = 1, y = 1, sectorX = sector.x, sectorY = sector.y }
 
                                 hh =
-                                    horizontalHexes model.hexmapViewport model.hexScale + 2
+                                    horizontalHexes model.viewport.hexmapViewport model.hexScale + 2
 
                                 vh =
-                                    verticalHexes model.hexmapViewport model.hexScale + 3
+                                    verticalHexes model.viewport.hexmapViewport model.hexScale + 3
 
                                 newHexRect =
                                     { upperLeftHex = hexAddress
@@ -3301,23 +3333,32 @@ updateJourney journeyMsg ({ journeyModel } as model) =
                                         , journeyModel = newJourneyModel
                                     }
                             in
-                            update DownloadSolarSystems newModel
+                            update DownloadSolarSystems ( time, newModel )
                     in
                     if dist > 2 then
-                        ( setJourneyModel { journeyModel | dragMode = NoDragging }, Cmd.none )
+                        ( setJourneyModel { journeyModel | dragMode = NoDragging }
+                        , Cmd.none
+                        )
 
                     else
                         hexViewToSector ()
 
                 NoDragging ->
-                    ( model, Cmd.none )
+                    ( ( time, model ), Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update msg ( time, model ) =
+    let
+        withTime m =
+            ( time, m )
+    in
     case msg of
         NoOpMsg ->
-            ( model, Cmd.none )
+            ( withTime model, Cmd.none )
+
+        Tick newTime ->
+            ( ( newTime, model ), Cmd.none )
 
         SetHexSize newSize ->
             let
@@ -3325,10 +3366,10 @@ update msg model =
                     2
 
                 hh =
-                    horizontalHexes model.hexmapViewport newSize + extraPaddingHexes
+                    horizontalHexes model.viewport.hexmapViewport newSize + extraPaddingHexes
 
                 vh =
-                    verticalHexes model.hexmapViewport newSize + extraPaddingHexes
+                    verticalHexes model.viewport.hexmapViewport newSize + extraPaddingHexes
 
                 lr =
                     HexAddress.shiftAddressBy
@@ -3352,7 +3393,7 @@ update msg model =
                             , saveHexSize newSize
                             )
                     in
-                    update DownloadSolarSystems newModel_
+                    update DownloadSolarSystems (withTime newModel_)
                         |> Tuple.mapSecond (\newestCmds -> Cmd.batch [ newCmds_, newestCmds ])
             in
             ( newModel, newCmds )
@@ -3362,10 +3403,11 @@ update msg model =
                 ( nextRequestEntry, ( newSolarSystemDict, newRequestHistory ) ) =
                     prepNextRequest ( model.solarSystems, model.requestHistory ) model.hexRect
             in
-            ( { model
-                | requestHistory = newRequestHistory
-                , solarSystems = newSolarSystemDict
-              }
+            ( withTime
+                { model
+                    | requestHistory = newRequestHistory
+                    , solarSystems = newSolarSystemDict
+                }
             , sendSolarSystemRequest nextRequestEntry model.hostConfig model.hexRect
             )
 
@@ -3403,7 +3445,7 @@ update msg model =
                                 if not hasFailed then
                                     let
                                         si =
-                                            if model.referee then
+                                            if model.isReferee then
                                                 refereeSI
 
                                             else
@@ -3475,11 +3517,12 @@ update msg model =
                 newRequestHistory =
                     markRequestComplete requestEntry (RemoteData.Success ()) model.requestHistory
             in
-            ( { model
-                | solarSystems = solarSystemDict
-                , newSolarSystemErrors = newErrors ++ model.newSolarSystemErrors
-                , requestHistory = newRequestHistory
-              }
+            ( withTime
+                { model
+                    | solarSystems = solarSystemDict
+                    , newSolarSystemErrors = newErrors ++ model.newSolarSystemErrors
+                    , requestHistory = newRequestHistory
+                }
             , Cmd.batch
                 [ Browser.Dom.getViewportOf "hexmap"
                     |> Task.attempt GotHexMapViewport
@@ -3496,9 +3539,10 @@ update msg model =
                         Dict.empty
                         sectors
             in
-            ( { model
-                | sectors = sectorDict
-              }
+            ( withTime
+                { model
+                    | sectors = sectorDict
+                }
             , Cmd.none
             )
 
@@ -3507,7 +3551,7 @@ update msg model =
                 _ =
                     Debug.log "Sectors did not work" err
             in
-            ( { model | newSolarSystemErrors = ( err, url ) :: model.newSolarSystemErrors }, Cmd.none )
+            ( withTime { model | newSolarSystemErrors = ( err, url ) :: model.newSolarSystemErrors }, Cmd.none )
 
         DownloadedRegions requestEntry (Ok regions) ->
             let
@@ -3543,11 +3587,12 @@ update msg model =
                         regions
                         |> Dict.fromList
             in
-            ( { model
-                | regions = regionDict
-                , hexColours = hexColourDict
-                , regionLabels = regionLabelDict
-              }
+            ( withTime
+                { model
+                    | regions = regionDict
+                    , hexColours = hexColourDict
+                    , regionLabels = regionLabelDict
+                }
             , Cmd.none
             )
 
@@ -3591,11 +3636,12 @@ update msg model =
                         [ stub ]
                         |> Dict.fromList
             in
-            ( { model
-                | regions = Dict.fromList [ ( 1, stub ) ]
-                , hexColours = hexColourDict
-                , regionLabels = regionLabelDict
-              }
+            ( withTime
+                { model
+                    | regions = Dict.fromList [ ( 1, stub ) ]
+                    , hexColours = hexColourDict
+                    , regionLabels = regionLabelDict
+                }
             , Cmd.none
             )
 
@@ -3611,17 +3657,19 @@ update msg model =
             in
             case firstEntry of
                 Just address ->
-                    ( { model
-                        | route = route
-                        , currentAddress = address
-                      }
+                    ( withTime
+                        { model
+                            | route = route
+                            , currentAddress = address
+                        }
                     , Cmd.none
                     )
 
                 Nothing ->
-                    ( { model
-                        | route = route
-                      }
+                    ( withTime
+                        { model
+                            | route = route
+                        }
                     , Cmd.none
                     )
 
@@ -3630,12 +3678,12 @@ update msg model =
                 _ =
                     Debug.log "Route did not work" err
             in
-            ( { model | newSolarSystemErrors = ( err, url ) :: model.newSolarSystemErrors }, Cmd.none )
+            ( withTime { model | newSolarSystemErrors = ( err, url ) :: model.newSolarSystemErrors }, Cmd.none )
 
         FetchedSolarSystem (Ok solarSystem) ->
             let
                 si =
-                    if model.referee then
+                    if model.isReferee then
                         refereeSI
 
                     else
@@ -3646,21 +3694,22 @@ update msg model =
                         | surveyIndex = si
                     }
             in
-            ( { model
-                | selectedSystem = Just updatedSS
-              }
+            ( withTime
+                { model
+                    | selectedSystem = Just updatedSS
+                }
             , Cmd.none
             )
 
         FetchedSolarSystem (Err (Http.BadBody err)) ->
-            ( { model | newSolarSystemErrors = model.newSolarSystemErrors ++ [ ( Http.BadBody err, "foo" ) ] }, Cmd.none )
+            ( withTime { model | newSolarSystemErrors = model.newSolarSystemErrors ++ [ ( Http.BadBody err, "foo" ) ] }, Cmd.none )
 
         FetchedSolarSystem (Err err) ->
             let
                 _ =
                     Debug.log "404" err
             in
-            ( model, Cmd.none )
+            ( withTime model, Cmd.none )
 
         DownloadedSolarSystems ( requestEntry, url ) (Err err) ->
             let
@@ -3711,29 +3760,38 @@ update msg model =
                 existingDict =
                     model.solarSystems
             in
-            ( { model
-                | solarSystems = solarSystemDict
-                , newSolarSystemErrors = ( err, url ) :: model.newSolarSystemErrors
-                , lastSolarSystemError = Just err
-                , requestHistory = newRequestHistory
-              }
+            ( withTime
+                { model
+                    | solarSystems = solarSystemDict
+                    , newSolarSystemErrors = ( err, url ) :: model.newSolarSystemErrors
+                    , lastSolarSystemError = Just err
+                    , requestHistory = newRequestHistory
+                }
             , Cmd.none
             )
 
         HoveringHex hoveringHex ->
-            ( { model | hoveringHex = Just hoveringHex }, Cmd.none )
+            ( withTime { model | hoveringHex = Just hoveringHex }, Cmd.none )
 
         GotViewport viewport ->
-            ( { model | viewport = viewport }
+            let
+                oldViewport =
+                    model.viewport
+            in
+            ( withTime { model | viewport = { oldViewport | viewport = viewport } }
             , Browser.Dom.getViewportOf "hexmap"
                 |> Task.attempt GotHexMapViewport
             )
 
         GotHexMapViewport hexmapOrErr ->
-            ( { model | hexmapViewport = Just hexmapOrErr }, Cmd.none )
+            let
+                oldViewport =
+                    model.viewport
+            in
+            ( withTime { model | viewport = { oldViewport | hexmapViewport = Just hexmapOrErr } }, Cmd.none )
 
         GotResize width height ->
-            ( model
+            ( withTime model
             , Cmd.batch
                 [ Browser.Dom.getViewport
                     |> Task.perform GotViewport
@@ -3771,24 +3829,26 @@ update msg model =
                             )
                         |> Maybe.withDefault []
             in
-            ( { model
-                | selectedHex = Just hexAddress
-                , selectedStellarObject = Nothing
-                , selectedSystem = Nothing
-                , newSolarSystemErrors = focusedErrors
-              }
+            ( withTime
+                { model
+                    | selectedHex = Just hexAddress
+                    , selectedStellarObject = Nothing
+                    , selectedSystem = Nothing
+                    , newSolarSystemErrors = focusedErrors
+                }
             , fetchSingleSolarSystemRequest model.hostConfig <| toSectorAddress hexAddress
             )
 
         FocusInSidebar stellarObject ->
-            ( { model | selectedStellarObject = Just stellarObject }
+            ( withTime { model | selectedStellarObject = Just stellarObject }
             , Cmd.none
             )
 
         MapMouseDown coordinates ->
-            ( { model
-                | dragMode = IsDragging { start = coordinates, last = coordinates }
-              }
+            ( withTime
+                { model
+                    | dragMode = IsDragging { start = coordinates, last = coordinates }
+                }
             , Cmd.none
             )
 
@@ -3800,25 +3860,28 @@ update msg model =
                             ( nextRequestEntry, ( newSolarSystemDict, newRequestHistory ) ) =
                                 prepNextRequest ( model.solarSystems, model.requestHistory ) model.hexRect
                         in
-                        ( { model
-                            | dragMode = NoDragging
-                            , requestHistory = newRequestHistory
-                            , solarSystems = newSolarSystemDict
-                          }
+                        ( withTime
+                            { model
+                                | dragMode = NoDragging
+                                , requestHistory = newRequestHistory
+                                , solarSystems = newSolarSystemDict
+                            }
                         , sendSolarSystemRequest nextRequestEntry model.hostConfig model.hexRect
                         )
 
                     else
-                        ( { model
-                            | dragMode = NoDragging
-                          }
+                        ( withTime
+                            { model
+                                | dragMode = NoDragging
+                            }
                         , Cmd.none
                         )
 
                 _ ->
-                    ( { model
-                        | dragMode = NoDragging
-                      }
+                    ( withTime
+                        { model
+                            | dragMode = NoDragging
+                        }
                     , Cmd.none
                     )
 
@@ -3852,24 +3915,24 @@ update msg model =
                             }
                     in
                     if xDelta /= 0 || yDelta /= 0 then
-                        ( newModel
+                        ( withTime newModel
                         , saveMapCoords newModel.hexRect.upperLeftHex
                         )
 
                     else
-                        ( model, Cmd.none )
+                        ( withTime model, Cmd.none )
 
                 NoDragging ->
-                    ( model, Cmd.none )
+                    ( withTime model, Cmd.none )
 
         MapMouseLeave ->
-            ( { model | hoveringHex = Nothing }, Cmd.none )
+            ( withTime { model | hoveringHex = Nothing }, Cmd.none )
 
         ClearAllErrors ->
-            ( { model | newSolarSystemErrors = [], oldSolarSystemErrors = model.newSolarSystemErrors ++ model.oldSolarSystemErrors }, Cmd.none )
+            ( withTime { model | newSolarSystemErrors = [], oldSolarSystemErrors = model.newSolarSystemErrors ++ model.oldSolarSystemErrors }, Cmd.none )
 
         JumpToShip ->
-            update (ZoomToHex model.currentAddress True) model
+            update (ZoomToHex model.currentAddress True) <| withTime model
 
         ZoomToHex hexAddress centre ->
             let
@@ -3877,10 +3940,10 @@ update msg model =
                     2
 
                 hHexes =
-                    horizontalHexes model.hexmapViewport model.hexScale + extraPadding
+                    horizontalHexes model.viewport.hexmapViewport model.hexScale + extraPadding
 
                 vHexes =
-                    verticalHexes model.hexmapViewport model.hexScale + extraPadding
+                    verticalHexes model.viewport.hexmapViewport model.hexScale + extraPadding
 
                 newUpperLeft =
                     if centre then
@@ -3910,11 +3973,12 @@ update msg model =
                 ( nextRequestEntry, ( newSolarSystemDict, newRequestHistory ) ) =
                     prepNextRequest ( model.solarSystems, model.requestHistory ) newHexRect
             in
-            ( { model
-                | hexRect = newHexRect
-                , requestHistory = newRequestHistory
-                , solarSystems = newSolarSystemDict
-              }
+            ( withTime
+                { model
+                    | hexRect = newHexRect
+                    , requestHistory = newRequestHistory
+                    , solarSystems = newSolarSystemDict
+                }
             , Cmd.batch
                 [ saveMapCoords newHexRect.upperLeftHex
                 , sendSolarSystemRequest nextRequestEntry model.hostConfig newHexRect
@@ -3930,10 +3994,10 @@ update msg model =
                     else
                         HexMap
             in
-            ( { model | viewMode = newViewMode }, Cmd.none )
+            ( withTime { model | viewMode = newViewMode }, Cmd.none )
 
         JourneyMsg journeyMsg ->
-            updateJourney journeyMsg model
+            updateJourney journeyMsg <| withTime model
 
         ViewObjectAnalysisDetail stellarObject ->
             let
@@ -3961,7 +4025,7 @@ update msg model =
                     in
                     case stellarObject of
                         GasGiant gasGiantData ->
-                            AnalyisDetailGasGiant 
+                            AnalyisDetailGasGiant
 
                         TerrestrialPlanet pdata ->
                             AnalyisDetailPlanetoid header <|
@@ -4049,12 +4113,12 @@ update msg model =
                         Star (StarDataWrap starDataConfig) ->
                             AnalyisDetailStar
             in
-            ( { model | objectToBeAnalyzed = Just { stellarObject = stellarObject, data = analysisDetail } }
+            ( withTime { model | objectToBeAnalyzed = Just { stellarObject = stellarObject, data = analysisDetail } }
             , Cmd.none
             )
 
         CloseObjectAnalysis ->
-            ( { model | objectToBeAnalyzed = Nothing }
+            ( withTime { model | objectToBeAnalyzed = Nothing }
             , Cmd.none
             )
 
