@@ -476,7 +476,7 @@ encodeStellarObject stellarObject =
 
 type alias Hydrographics =
     { code : Int
-    , distribution : Int
+    , distribution : Maybe Int
     }
 
 
@@ -485,7 +485,7 @@ codecHydrographics : Codec Hydrographics
 codecHydrographics =
     Codec.object Hydrographics
         |> Codec.field "code" .code Codec.int
-        |> Codec.field "distribution" .distribution Codec.int
+        |> Codec.field "distribution" .distribution (Codec.nullable Codec.int)
         |> Codec.buildObject
 
 
