@@ -1,4 +1,48 @@
-module Traveller.Lifeforms exposing (biocomplexityDescription, biodiversityDescription)
+module Traveller.Lifeforms exposing (bioChemistryCompatibilityDescription, biocomplexityDescription, biodiversityDescription, biomassDescription, habitabilityDescription)
+
+
+biomassDescription : Int -> String
+biomassDescription rating =
+    case rating of
+        0 ->
+            "None (No native life exists; surface and atmosphere sterile)"
+
+        1 ->
+            "Trace (Microscopic or sparse microbial life, often in isolated niches)"
+
+        2 ->
+            "Very Low (Thin biosphere, with small colonies of hardy species; biomass barely detectable from orbit)"
+
+        3 ->
+            "Low (Life present in limited habitats, such as only in oceans, lakes, or certain regions)"
+
+        4 ->
+            "Moderate-Low (Ecosystems present but not lush; limited vegetation and animal density)"
+
+        5 ->
+            "Moderate (Noticeable biomass in most regions; productive ecosystems but still thin compared to fertile worlds)"
+
+        6 ->
+            "Moderate-High (Healthy and varied biomass in most regions; large, stable food webs)"
+
+        7 ->
+            "High (Dense plant and animal life in most biomes; little uncolonised surface)"
+
+        8 ->
+            "Very High (Rich biomass with extreme density in some regions; ecosystems highly productive year-round)"
+
+        9 ->
+            "Abundant (Biomass so high it shapes climate and geology; ecosystems are resilient and self-repairing)"
+
+        10 ->
+            "Garden World (Equivalent to pre-human Terra; lush, balanced, and productive biosphere across the planet)"
+
+        _ ->
+            if rating < 0 then
+                "None (No native life exists; surface and atmosphere sterile)"
+
+            else
+                "Hyper-abundant (More biomass than pre-human Terra; alien biochemistries or evolutionary histories have produced extreme productivity)"
 
 
 biodiversityDescription : Int -> String
@@ -76,3 +120,55 @@ biocomplexityDescription rating =
 
         _ ->
             "Unknown biocomplexity rating."
+
+
+bioChemistryCompatibilityDescription : Int -> String
+bioChemistryCompatibilityDescription compatibilityRating =
+    if compatibilityRating < 10 then
+        String.fromInt (compatibilityRating * 10) ++ "%"
+
+    else
+        "100% compatible"
+
+
+habitabilityDescription : Maybe Int -> String
+habitabilityDescription maybeRating =
+    let
+        ratingToString rating =
+            case rating of
+                0 ->
+                    "Actively hostile world: not survivable without specialised equipment"
+
+                1 ->
+                    "Barely habitable world: full protective equipment often needed"
+
+                2 ->
+                    "Barely habitable world: full protective equipment often needed"
+
+                3 ->
+                    "Marginally survivable world with proper equipment"
+
+                4 ->
+                    "Marginally survivable world with proper equipment"
+
+                5 ->
+                    "Marginally survivable world with proper equipment"
+
+                6 ->
+                    "Regionally habitable world: may require acclimation"
+
+                7 ->
+                    "Regionally habitable world: may require acclimation"
+
+                8 ->
+                    "Suitable for human habitation with minimal equipment or acclimation"
+
+                9 ->
+                    "Suitable for human habitation with minimal equipment or acclimation"
+
+                _ ->
+                    "Terra-equivalent garden world"
+    in
+    maybeRating
+        |> Maybe.map ratingToString
+        |> Maybe.withDefault "N/A"
