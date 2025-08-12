@@ -53,6 +53,7 @@ import Traveller.Atmosphere exposing (atmosphereDescription)
 import Traveller.Government as Government
 import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, createFromStarSystem, shiftAddressBy, toSectorAddress, toUniversalAddress)
 import Traveller.LawLevel as LawLevel
+import Traveller.Lifeforms exposing (biocomplexityDescription, biodiversityDescription)
 import Traveller.Parser exposing (UWP, hydrosphereDescription, sizeDescription, uwp)
 import Traveller.Point exposing (StellarPoint)
 import Traveller.Population exposing (populationDescription)
@@ -3002,12 +3003,12 @@ viewPlanetoidAnalysisDetail data =
             [ text <| "Atmosphere"
             , column groupAttrs
                 [ textDisplay "Type" data.atmosphere.type_
+                , textDisplay "BAR" data.atmosphere.bar
                 , if True then
                     textDisplay "Hazard Code" data.atmosphere.hazardCode
 
                   else
                     Element.none
-                , textDisplay "BAR" data.atmosphere.bar
                 , row [ width fill ]
                     [ el
                         [ uiDeepnightColorFontColour
@@ -4021,12 +4022,12 @@ update msg ( time, model ) =
                                     }
                                 , hydrographics =
                                     { percentage = "10%"
-                                    , surfaceDistribution = "Scattered"
+                                    , surfaceDistribution = hydrographicsDistribuitionDescription pdata."Scattered"
                                     }
                                 , life =
                                     { biomass = "1"
-                                    , biocomplexity = "Primitive single-cell organisms"
-                                    , biodiversity = "2"
+                                    , biocomplexity = biocomplexityDescription pdata.biocomplexityCode
+                                    , biodiversity = biodiversityDescription pdata.biodiversityRating
                                     , compatibility = "3"
                                     , habitability = "Actively hostile world: not survivable without specialised equipment"
                                     , sophonts = "None"
@@ -4068,8 +4069,8 @@ update msg ( time, model ) =
                                     }
                                 , life =
                                     { biomass = "1"
-                                    , biocomplexity = "Primitive single-cell organisms"
-                                    , biodiversity = "2"
+                                    , biocomplexity = biocomplexityDescription pdata.biocomplexityCode
+                                    , biodiversity = biodiversityDescription pdata.biodiversityRating
                                     , compatibility = "3"
                                     , habitability = "Actively hostile world: not survivable without specialised equipment"
                                     , sophonts = "None"
