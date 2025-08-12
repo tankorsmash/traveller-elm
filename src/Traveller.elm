@@ -52,6 +52,7 @@ import Time
 import Traveller.Atmosphere exposing (atmosphereDescription)
 import Traveller.Government as Government
 import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, createFromStarSystem, shiftAddressBy, toSectorAddress, toUniversalAddress)
+import Traveller.Hydrographics exposing (hydrographicsPercentageDescription, surfaceDistributionDescription)
 import Traveller.LawLevel as LawLevel
 import Traveller.Lifeforms exposing (bioChemistryCompatibilityDescription, biocomplexityDescription, biodiversityDescription, biomassDescription, habitabilityDescription)
 import Traveller.Parser exposing (UWP, hydrosphereDescription, sizeDescription, uwp)
@@ -4021,8 +4022,20 @@ update msg ( time, model ) =
                                         }
                                     }
                                 , hydrographics =
-                                    { percentage = "10%"
-                                    , surfaceDistribution = "Scattered"
+                                    { percentage =
+                                        pdata.hydrographics
+                                            |> Maybe.map
+                                                (.code
+                                                    >> hydrographicsPercentageDescription
+                                                )
+                                            |> Maybe.withDefault "N/A"
+                                    , surfaceDistribution =
+                                        pdata.hydrographics
+                                            |> Maybe.map
+                                                (.distribution
+                                                    >> surfaceDistributionDescription
+                                                )
+                                            |> Maybe.withDefault "N/A"
                                     }
                                 , life =
                                     { biomass = biomassDescription pdata.biomassRating
@@ -4069,8 +4082,20 @@ update msg ( time, model ) =
                                         }
                                     }
                                 , hydrographics =
-                                    { percentage = "10%"
-                                    , surfaceDistribution = "Scattered"
+                                    { percentage =
+                                        pdata.hydrographics
+                                            |> Maybe.map
+                                                (.code
+                                                    >> hydrographicsPercentageDescription
+                                                )
+                                            |> Maybe.withDefault "N/A"
+                                    , surfaceDistribution =
+                                        pdata.hydrographics
+                                            |> Maybe.map
+                                                (.distribution
+                                                    >> surfaceDistributionDescription
+                                                )
+                                            |> Maybe.withDefault "N/A"
                                     }
                                 , life =
                                     { biomass = biomassDescription pdata.biomassRating

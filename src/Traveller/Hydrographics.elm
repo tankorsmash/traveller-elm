@@ -1,4 +1,4 @@
-module Traveller.Hydrographics exposing (StellarHydrographics, codec, surfaceDistributionDescription)
+module Traveller.Hydrographics exposing (StellarHydrographics, codec, surfaceDistributionDescription, hydrographicsPercentageDescription)
 
 import Codec exposing (Codec)
 
@@ -13,6 +13,11 @@ codec =
         |> Codec.field "code" .code Codec.int
         |> Codec.field "distribution" .distribution Codec.int
         |> Codec.buildObject
+
+
+hydrographicsPercentageDescription : Int -> String
+hydrographicsPercentageDescription code =
+    String.fromInt (code * 10) ++ "%"
 
 
 surfaceDistributionDescription : Int -> String

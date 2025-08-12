@@ -28,6 +28,7 @@ type alias SharedPData =
     , nativeSophont : Bool
     , extinctSophont : Bool
     , hasRing : Bool
+    , hydrographics : Maybe Hydrographics
     , albedo : Float
     , density : Maybe Float
     , greenhouse : Maybe Float
@@ -396,6 +397,7 @@ codecSharedPData =
         |> Codec.field "nativeSophont" .nativeSophont Codec.bool
         |> Codec.field "extinctSophont" .extinctSophont Codec.bool
         |> Codec.field "hasRing" .hasRing Codec.bool
+        |> Codec.optionalField "hydrographics" .hydrographics (codecHydrographics)
         |> Codec.field "albedo" .albedo Codec.float
         |> Codec.optionalField "density" .density Codec.float
         |> Codec.optionalField "greenhouse" .greenhouse Codec.float
@@ -470,6 +472,21 @@ encodeStellarObject stellarObject =
 
         Star data ->
             Codec.encodeToValue codecStarData data
+
+
+type alias Hydrographics =
+    { code : Int
+    , distribution : Int
+    }
+
+
+
+codecHydrographics : Codec Hydrographics
+codecHydrographics =
+    Codec.object Hydrographics
+        |> Codec.field "code" .code Codec.int
+        |> Codec.field "distribution" .distribution Codec.int
+        |> Codec.buildObject
 
 
 codecStellarObject : Codec StellarObject
