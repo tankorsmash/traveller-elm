@@ -4022,7 +4022,7 @@ update msg ( time, model ) =
                                     }
                                 , hydrographics =
                                     { percentage = "10%"
-                                    , surfaceDistribution = hydrographicsDistribuitionDescription pdata."Scattered"
+                                    , surfaceDistribution = "Scattered"
                                     }
                                 , life =
                                     { biomass = "1"
