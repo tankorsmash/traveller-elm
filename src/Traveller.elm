@@ -68,6 +68,9 @@ import Traveller.Starport as Starport
 import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, SharedPData, StarData(..), StellarObject(..), getInnerStarData, getProfileString, getStarData, getStellarOrbit, isBrownDwarf)
 import Traveller.TechLevel as TechLevel
 import Url.Builder
+import Traveller.Atmosphere exposing (atmosphereDescriptionEx)
+import Traveller.Atmosphere exposing (atmosphereHazardDescription)
+import Traveller.StellarTaint exposing (taintSubtypeDescription)
 
 
 uiDeepnightColorFontColour =
@@ -3990,127 +3993,76 @@ update msg ( time, model ) =
                                     ++ getProfileString stellarObject
                                     ++ "]"
                             }
+
+                        buildStringPlanet : SharedPData -> AnalyisDetailPlanetoidData
+                        buildStringPlanet pdata =
+                            { physical =
+                                { au = rnd 2 pdata.au
+                                , period = rnd 2 pdata.period
+                                , inclination = rnd 0 pdata.inclination ++ "°"
+                                , eccentricity = rnd 2 pdata.eccentricity
+                                , mass = rndm 2 0 pdata.mass
+                                , density = rndm 2 0 pdata.density
+                                , gravity = rndm 2 0 pdata.gravity
+                                , diameter = rnd 0 pdata.diameter
+                                , meanTemperature = fromKelvin pdata.meanTemperature
+                                , albedo = rnd 2 pdata.albedo
+                                , axialTilt = rnd 2 pdata.axialTilt ++ "°"
+                                , greenhouse = rndm 2 0 pdata.greenhouse
+                                }
+                            , atmosphere =
+                                { type_ = atmosphereDescriptionEx pdata.atmosphere.code
+                                , hazardCode = atmosphereHazardDescription pdata.atmosphere.hazardCode
+                                , bar = rnd 1 <| pdata.atmosphere.bar
+                                , taint =
+                                    { subtype = taintSubtypeDescription pdata.atmosphere.taint.subtype
+                                    , severity = "Trivial irritant. After 1D weeks acclimation, this taint is inconsequential"
+                                    , persistence = "Occasional and brief: Occurs periodically or on a 2D roll of 12 per day and lasts 1D hours"
+                                    }
+                                }
+                            , hydrographics =
+                                { percentage =
+                                    pdata.hydrographics
+                                        |> Maybe.map
+                                            (.code
+                                                >> hydrographicsPercentageDescription
+                                            )
+                                        |> Maybe.withDefault "N/A"
+                                , surfaceDistribution =
+                                    pdata.hydrographics
+                                        |> Maybe.map
+                                            (.distribution
+                                                >> surfaceDistributionDescription
+                                            )
+                                        |> Maybe.withDefault "N/A"
+                                }
+                            , life =
+                                { biomass = biomassDescription pdata.biomassRating
+                                , biocomplexity = biocomplexityDescription pdata.biocomplexityCode
+                                , biodiversity = biodiversityDescription pdata.biodiversityRating
+                                , compatibility = bioChemistryCompatibilityDescription pdata.compatibilityRating
+                                , habitability = habitabilityDescription pdata.habitabilityRating
+                                , sophonts =
+                                    if pdata.nativeSophont then
+                                        "Yes"
+
+                                    else
+                                        "No"
+                                }
+                            }
                     in
                     case stellarObject of
                         GasGiant gasGiantData ->
                             AnalyisDetailGasGiant
 
                         TerrestrialPlanet pdata ->
-                            AnalyisDetailPlanetoid header <|
-                                { physical =
-                                    { au = rnd 2 pdata.au
-                                    , period = rnd 2 pdata.period
-                                    , inclination = rnd 0 pdata.inclination ++ "°"
-                                    , eccentricity = rnd 2 pdata.eccentricity
-                                    , mass = rndm 2 0 pdata.mass
-                                    , density = rndm 2 0 pdata.density
-                                    , gravity = rndm 2 0 pdata.gravity
-                                    , diameter = rnd 0 pdata.diameter
-                                    , meanTemperature = fromKelvin pdata.meanTemperature
-                                    , albedo = rnd 2 pdata.albedo
-                                    , axialTilt = rnd 2 pdata.axialTilt ++ "°"
-                                    , greenhouse = rndm 2 0 pdata.greenhouse
-                                    }
-                                , atmosphere =
-                                    { type_ = "Exotic, Thin"
-                                    , hazardCode = "Biologic"
-                                    , bar = "1.6"
-                                    , taint =
-                                        { subtype = "Low Oxygen"
-                                        , severity = "Trivial irritant. After 1D weeks acclimation, this taint is inconsequential"
-                                        , persistence = "Occasional and brief: Occurs periodically or on a 2D roll of 12 per day and lasts 1D hours"
-                                        }
-                                    }
-                                , hydrographics =
-                                    { percentage =
-                                        pdata.hydrographics
-                                            |> Maybe.map
-                                                (.code
-                                                    >> hydrographicsPercentageDescription
-                                                )
-                                            |> Maybe.withDefault "N/A"
-                                    , surfaceDistribution =
-                                        pdata.hydrographics
-                                            |> Maybe.map
-                                                (.distribution
-                                                    >> surfaceDistributionDescription
-                                                )
-                                            |> Maybe.withDefault "N/A"
-                                    }
-                                , life =
-                                    { biomass = biomassDescription pdata.biomassRating
-                                    , biocomplexity = biocomplexityDescription pdata.biocomplexityCode
-                                    , biodiversity = biodiversityDescription pdata.biodiversityRating
-                                    , compatibility = bioChemistryCompatibilityDescription pdata.compatibilityRating
-                                    , habitability = habitabilityDescription pdata.habitabilityRating
-                                    , sophonts =
-                                        if pdata.nativeSophont then
-                                            "Yes"
-
-                                        else
-                                            "No"
-                                    }
-                                }
+                            AnalyisDetailPlanetoid header <| buildStringPlanet pdata
 
                         PlanetoidBelt planetoidBeltData ->
                             AnalyisDetailPlanetoidBelt
 
                         Planetoid pdata ->
-                            AnalyisDetailPlanetoid header <|
-                                { physical =
-                                    { au = rnd 2 pdata.au
-                                    , period = rnd 2 pdata.period
-                                    , inclination = rnd 0 pdata.inclination ++ "°"
-                                    , eccentricity = rnd 2 pdata.eccentricity
-                                    , mass = rndm 2 0 pdata.mass
-                                    , density = rndm 2 0 pdata.density
-                                    , gravity = rndm 2 0 pdata.gravity
-                                    , diameter = rnd 0 pdata.diameter
-                                    , meanTemperature = fromKelvin pdata.meanTemperature
-                                    , albedo = rnd 2 pdata.albedo
-                                    , axialTilt = rnd 2 pdata.axialTilt ++ "°"
-                                    , greenhouse = rndm 2 0 pdata.greenhouse
-                                    }
-                                , atmosphere =
-                                    { type_ = "Exotic, Thin"
-                                    , hazardCode = "Biologic"
-                                    , bar = "1.6"
-                                    , taint =
-                                        { subtype = "Low Oxygen"
-                                        , severity = "Trivial irritant. After 1D weeks acclimation, this taint is inconsequential"
-                                        , persistence = "Occasional and brief: Occurs periodically or on a 2D roll of 12 per day and lasts 1D hours"
-                                        }
-                                    }
-                                , hydrographics =
-                                    { percentage =
-                                        pdata.hydrographics
-                                            |> Maybe.map
-                                                (.code
-                                                    >> hydrographicsPercentageDescription
-                                                )
-                                            |> Maybe.withDefault "N/A"
-                                    , surfaceDistribution =
-                                        pdata.hydrographics
-                                            |> Maybe.map
-                                                (.distribution
-                                                    >> surfaceDistributionDescription
-                                                )
-                                            |> Maybe.withDefault "N/A"
-                                    }
-                                , life =
-                                    { biomass = biomassDescription pdata.biomassRating
-                                    , biocomplexity = biocomplexityDescription pdata.biocomplexityCode
-                                    , biodiversity = biodiversityDescription pdata.biodiversityRating
-                                    , compatibility = bioChemistryCompatibilityDescription pdata.compatibilityRating
-                                    , habitability = habitabilityDescription pdata.habitabilityRating
-                                    , sophonts =
-                                        if pdata.nativeSophont then
-                                            "Yes"
-
-                                        else
-                                            "No"
-                                    }
-                                }
+                            AnalyisDetailPlanetoid header <| buildStringPlanet pdata
 
                         Star (StarDataWrap starDataConfig) ->
                             AnalyisDetailStar

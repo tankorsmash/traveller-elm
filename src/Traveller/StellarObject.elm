@@ -2,13 +2,15 @@ module Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidB
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
+import Traveller.Atmosphere as Atmosphere exposing (StellarAtmosphere)
 import Traveller.Moon as Moon exposing (Moon)
 import Traveller.Point as Point exposing (StellarPoint)
 import Traveller.StarColour exposing (StarColour, codecStarColour)
 
 
 type alias SharedPData =
-    { orbitPosition : StellarPoint
+    { atmosphere : StellarAtmosphere
+    , orbitPosition : StellarPoint
     , inclination : Float
     , eccentricity : Float
     , effectiveHZCODeviation : Float
@@ -371,6 +373,7 @@ codecGasGiantData =
 codecSharedPData : Codec SharedPData
 codecSharedPData =
     Codec.object SharedPData
+        |> Codec.field "atmosphere" .atmosphere Atmosphere.codec
         |> Codec.field "orbitPosition" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
@@ -397,7 +400,7 @@ codecSharedPData =
         |> Codec.field "nativeSophont" .nativeSophont Codec.bool
         |> Codec.field "extinctSophont" .extinctSophont Codec.bool
         |> Codec.field "hasRing" .hasRing Codec.bool
-        |> Codec.optionalField "hydrographics" .hydrographics (codecHydrographics)
+        |> Codec.optionalField "hydrographics" .hydrographics codecHydrographics
         |> Codec.field "albedo" .albedo Codec.float
         |> Codec.optionalField "density" .density Codec.float
         |> Codec.optionalField "greenhouse" .greenhouse Codec.float
@@ -478,7 +481,6 @@ type alias Hydrographics =
     { code : Int
     , distribution : Maybe Int
     }
-
 
 
 codecHydrographics : Codec Hydrographics

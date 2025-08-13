@@ -1,4 +1,4 @@
-module Traveller.Atmosphere exposing (Atmosphere(..), StellarAtmosphere, atmosphere, atmosphereDescription, codec)
+module Traveller.Atmosphere exposing (Atmosphere(..), StellarAtmosphere, atmosphere, atmosphereDescription, atmosphereDescriptionEx, atmosphereHazardDescription, codec)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -135,3 +135,86 @@ atmosphereDescription code =
 
         HSeventeen ->
             "Gas, Hydrogen"
+
+
+atmosphereDescriptionEx : Int -> String
+atmosphereDescriptionEx code =
+    case code of
+        0 ->
+            "None (Survival Gear: Vacc Suit)"
+
+        1 ->
+            "Trace (Survival Gear: Vacc Suit)"
+
+        2 ->
+            "Very Thin, Tainted (Survival Gear: Respirator and Filter)"
+
+        3 ->
+            "Very Thin (Survival Gear: Respirator)"
+
+        4 ->
+            "Thin, Tainted (Survival Gear: Filter)"
+
+        5 ->
+            "Thin (Survival Gear: None)"
+
+        6 ->
+            "Standard (Survival Gear: None)"
+
+        7 ->
+            "Standard, Tainted (Survival Gear: Filter)"
+
+        8 ->
+            "Dense (Survival Gear: None)"
+
+        9 ->
+            "Dense, Tainted (Survival Gear: Filter)"
+
+        10 ->
+            "Exotic (Survival Gear: Air Supply)"
+
+        11 ->
+            "Corrosive (Survival Gear: Vacc Suit)"
+
+        12 ->
+            "Insidious (Survival Gear: Vacc Suit)"
+
+        13 ->
+            "Very Dense (Survival Gear: Varies by altitude)"
+
+        14 ->
+            "Low (Survival Gear: Varies by altitude)"
+
+        15 ->
+            "Unusual (Survival Gear: Varies)"
+
+        16 ->
+            "Gas, Helium (Survival Gear: HEV Suit)"
+
+        17 ->
+            "Gas, Hydrogen (Survival Gear: Not Survivable)"
+
+        _ ->
+            "Unknown atmosphere code"
+
+
+atmosphereHazardDescription : Maybe String -> String
+atmosphereHazardDescription maybeCode =
+    case maybeCode of
+        Nothing ->
+            "N/A"
+
+        Just "B" ->
+            "Biologic"
+
+        Just "G" ->
+            "Gas Mix"
+
+        Just "R" ->
+            "Radioctivity"
+
+        Just "T" ->
+            "Temperature"
+
+        Just _ ->
+            "N/A"

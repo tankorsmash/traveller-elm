@@ -1,4 +1,4 @@
-module Traveller.StellarTaint exposing (StellarTaint, codecStellarTaint)
+module Traveller.StellarTaint exposing (StellarTaint, codecStellarTaint, taintSubtypeDescription)
 
 import Codec exposing (Codec)
 import Json.Decode as JsDecode
@@ -19,3 +19,31 @@ codecStellarTaint =
         |> Codec.field "severity" .severity Codec.int
         |> Codec.field "persistence" .persistence Codec.int
         |> Codec.buildObject
+
+
+taintSubtypeDescription : String -> String
+taintSubtypeDescription code =
+    case String.toUpper (String.trim code) of
+        "L" ->
+            "Low Oxygen"
+
+        "R" ->
+            "Radioactivity"
+
+        "B" ->
+            "Biologic"
+
+        "G" ->
+            "Gas Mix"
+
+        "P" ->
+            "Particulates"
+
+        "S" ->
+            "Sulphur Compounds"
+
+        "H" ->
+            "High Oxygen"
+
+        _ ->
+            "N/A"
