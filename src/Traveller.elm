@@ -49,7 +49,7 @@ import Svg.Keyed
 import Svg.Lazy
 import Task
 import Time
-import Traveller.Atmosphere exposing (atmosphereDescription)
+import Traveller.Atmosphere exposing (atmosphereDescription, atmosphereDescriptionEx, atmosphereHazardDescription)
 import Traveller.Government as Government
 import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, createFromStarSystem, shiftAddressBy, toSectorAddress, toUniversalAddress)
 import Traveller.Hydrographics exposing (hydrographicsPercentageDescription, surfaceDistributionDescription)
@@ -66,13 +66,9 @@ import Traveller.SolarSystemStars exposing (FallibleStarSystem, StarSystem, Star
 import Traveller.StarColour exposing (starColourRGB)
 import Traveller.Starport as Starport
 import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, SharedPData, StarData(..), StellarObject(..), getInnerStarData, getProfileString, getStarData, getStellarOrbit, isBrownDwarf)
+import Traveller.StellarTaint exposing (taintPersistenceDescription, taintSeverityDescription, taintSubtypeDescription)
 import Traveller.TechLevel as TechLevel
 import Url.Builder
-import Traveller.Atmosphere exposing (atmosphereDescriptionEx)
-import Traveller.Atmosphere exposing (atmosphereHazardDescription)
-import Traveller.StellarTaint exposing (taintSubtypeDescription)
-import Traveller.StellarTaint exposing (taintSeverityDescription)
-import Traveller.StellarTaint exposing (taintPersistenceDescription)
 
 
 uiDeepnightColorFontColour =
@@ -2839,8 +2835,22 @@ textDisplay lbl val =
         [ width fill
         , Element.paddingEach <| { zeroEach | top = 5 }
         ]
-        [ el ((width <| Element.px 150) :: headerAttrs) <| text lbl
-        , el valueAttrs <| monospaceText val
+        [ Element.paragraph
+            [ Element.alignTop, width Element.shrink ]
+            [ el ((width <| Element.px 150) :: headerAttrs) <| text lbl ]
+        , Element.paragraph
+            [ width fill, Element.spacing 0 ]
+            [ el valueAttrs <| monospaceText val ]
+        ]
+
+
+taintTextDisplay lbl val =
+    row []
+        [ Element.paragraph [ Element.alignTop, width Element.shrink ]
+            [ el ((width <| Element.px 100) :: headerAttrs) <| text lbl ]
+        , Element.paragraph
+            [ Element.alignTop, width <| Element.px 530, Element.spacing 0 ]
+            [ el valueAttrs <| monospaceText val ]
         ]
 
 
@@ -3021,15 +3031,15 @@ viewPlanetoidAnalysisDetail data =
                         , Font.bold
                         , Font.size 14
                         , Element.alignTop
-                        , width <| Element.px 150
+                        , width <| Element.px 50
                         , Element.paddingEach <| { zeroEach | top = 5 }
                         ]
                       <|
                         text "Taint"
                     , column [ width fill ]
-                        [ textDisplayNarrow "Subtype" data.atmosphere.taint.subtype
-                        , textDisplayNarrow "Severity" data.atmosphere.taint.severity
-                        , textDisplayNarrow "Persistence" data.atmosphere.taint.persistence
+                        [ taintTextDisplay "Subtype" data.atmosphere.taint.subtype
+                        , taintTextDisplay "Severity" data.atmosphere.taint.severity
+                        , taintTextDisplay "Persistence" data.atmosphere.taint.persistence
                         ]
                     ]
                 ]
