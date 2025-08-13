@@ -71,6 +71,8 @@ import Url.Builder
 import Traveller.Atmosphere exposing (atmosphereDescriptionEx)
 import Traveller.Atmosphere exposing (atmosphereHazardDescription)
 import Traveller.StellarTaint exposing (taintSubtypeDescription)
+import Traveller.StellarTaint exposing (taintSeverityDescription)
+import Traveller.StellarTaint exposing (taintPersistenceDescription)
 
 
 uiDeepnightColorFontColour =
@@ -4015,9 +4017,9 @@ update msg ( time, model ) =
                                 , hazardCode = atmosphereHazardDescription pdata.atmosphere.hazardCode
                                 , bar = rnd 1 <| pdata.atmosphere.bar
                                 , taint =
-                                    { subtype = taintSubtypeDescription pdata.atmosphere.taint.subtype
-                                    , severity = "Trivial irritant. After 1D weeks acclimation, this taint is inconsequential"
-                                    , persistence = "Occasional and brief: Occurs periodically or on a 2D roll of 12 per day and lasts 1D hours"
+                                    { subtype = taintSubtypeDescription pdata.atmosphere.taint.code
+                                    , severity = taintSeverityDescription pdata.atmosphere.taint.severity
+                                    , persistence = taintPersistenceDescription pdata.atmosphere.taint.persistence
                                     }
                                 }
                             , hydrographics =
