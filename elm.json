@@ -6,6 +6,7 @@
     "elm-version": "0.19.1",
     "dependencies": {
         "direct": {
+            "MartinSStewart/elm-audio": "4.0.4",
             "NoRedInk/elm-json-decode-pipeline": "1.0.1",
             "Punie/elm-parser-extras": "1.0.0",
             "TSFoster/elm-md5": "2.0.1",
@@ -51,6 +52,7 @@
             "fredcy/elm-parseint": "2.0.1",
             "justinmimbs/date": "4.1.0",
             "justinmimbs/time-extra": "1.2.0",
+            "mgold/elm-nonempty-list": "4.2.0",
             "robinheghan/murmur3": "1.0.0",
             "rtfeldman/elm-iso8601-date-strings": "1.1.4",
             "ryan-haskell/date-format": "1.0.0",

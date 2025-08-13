@@ -1,5 +1,6 @@
 port module Main exposing (main)
 
+import Audio exposing (Audio, AudioCmd, AudioData)
 import Browser
 import Browser.Dom
 import Browser.Navigation as Nav
@@ -8,8 +9,10 @@ import Element
 import HostConfig
 import Html exposing (Html, a, div, text)
 import Html.Attributes exposing (class, href)
+import Json.Decode
 import Json.Encode
 import Task
+import Time
 import Traveller
 import Url
 import Url.Parser exposing (Parser, map, oneOf, top)
@@ -25,6 +28,7 @@ type alias Model =
     , flags : Flags
     , referee : Bool
     , hostConfig : HostConfig.HostConfig
+    , music : Maybe Audio.Source
     }
 
 
@@ -35,6 +39,7 @@ type Msg
     | ToggleErrorDialog
     | GotTravellerMsg Traveller.Msg
     | GotViewport Browser.Dom.Viewport
+    | SoundLoaded (Result Audio.LoadError Audio.Source)
 
 
 type Route
@@ -66,7 +71,7 @@ type alias Flags =
     }
 
 
-init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg, AudioCmd Msg )
 init flags url key =
     let
         referee : Bool
@@ -104,6 +109,7 @@ init flags url key =
             , hostConfig = hostConfig
             , travellerModel = Nothing
             , referee = referee
+            , music = Nothing
             }
     in
     ( model
@@ -111,23 +117,43 @@ init flags url key =
         [ Browser.Dom.getViewport
             |> Task.perform GotViewport
         ]
+    , Audio.loadAudio SoundLoaded "/audio.mp3"
     )
 
 
-main : Program Flags Model Msg
+audio : AudioData -> Model -> Audio
+audio _ model =
+    case model.music of
+        Just source ->
+            Audio.audio source (Time.millisToPosix 0)
+
+        Nothing ->
+            Audio.silence
+
+
+main : Program Flags (Audio.Model Msg Model) (Audio.Msg Msg)
 main =
-    Browser.application
+    -- Browser.application
+    Audio.applicationWithAudio
         { init = init
         , view = view
         , update = update
         , subscriptions = subscriptions
         , onUrlChange = UrlChanged
         , onUrlRequest = LinkClicked
+        , audio = audio
+        , audioPort = { toJS = audioPortToJS, fromJS = audioPortFromJS }
         }
 
 
-subscriptions : Model -> Sub Msg
-subscriptions { travellerModel } =
+port audioPortToJS : Json.Encode.Value -> Cmd msg
+
+
+port audioPortFromJS : (Json.Decode.Value -> msg) -> Sub msg
+
+
+subscriptions : AudioData -> Model -> Sub Msg
+subscriptions audioData { travellerModel } =
     case travellerModel of
         Just ( t, tm ) ->
             Traveller.subscriptions t tm
@@ -137,21 +163,22 @@ subscriptions { travellerModel } =
             Sub.none |> Debug.log "Ignored subscription"
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update : AudioData -> Msg -> Model -> ( Model, Cmd Msg, AudioCmd Msg )
+update audioData msg model =
     case msg of
         NoOp ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Audio.cmdNone )
 
         LinkClicked urlRequest ->
             case urlRequest of
                 Browser.Internal url ->
                     ( model
                     , Nav.pushUrl model.key (Url.toString url)
+                    , Audio.cmdNone
                     )
 
                 Browser.External href ->
-                    ( model, Nav.load href )
+                    ( model, Nav.load href, Audio.cmdNone )
 
         UrlChanged url ->
             ( { model
@@ -159,10 +186,11 @@ update msg model =
                 , route = Url.Parser.parse routeParser url
               }
             , Cmd.none
+            , Audio.cmdNone
             )
 
         ToggleErrorDialog ->
-            ( model, toggleDialog "error-dialog" )
+            ( model, toggleDialog "error-dialog", Audio.cmdNone )
 
         GotTravellerMsg travellerMsg ->
             case model.travellerModel of
@@ -173,10 +201,11 @@ update msg model =
                     in
                     ( { model | travellerModel = Just newTravellerModel }
                     , Cmd.map GotTravellerMsg newTravellerCmds
+                    , Audio.cmdNone
                     )
 
                 Nothing ->
-                    ( model, Cmd.none )
+                    ( model, Cmd.none, Audio.cmdNone )
 
         GotViewport viewport ->
             case model.travellerModel of
@@ -185,7 +214,7 @@ update msg model =
                         ( newTraveller, cmd ) =
                             Traveller.update (Traveller.GotViewport viewport) tm
                     in
-                    ( { model | travellerModel = Just newTraveller }, Cmd.map GotTravellerMsg cmd )
+                    ( { model | travellerModel = Just newTraveller }, Cmd.map GotTravellerMsg cmd, Audio.cmdNone )
 
                 Nothing ->
                     let
@@ -195,7 +224,17 @@ update msg model =
                         newModel =
                             { model | travellerModel = Just newTraveller }
                     in
-                    ( newModel, Cmd.map GotTravellerMsg cmd )
+                    ( newModel, Cmd.map GotTravellerMsg cmd, Audio.cmdNone )
+
+        SoundLoaded (Ok track) ->
+            ( { model | music = Just track }, Cmd.none, Audio.cmdNone )
+
+        SoundLoaded (Err trackErr) ->
+            let
+                _ =
+                    Debug.log "Sound loading error" trackErr
+            in
+            ( { model | music = Nothing }, Cmd.none, Audio.cmdNone )
 
 
 
@@ -228,8 +267,8 @@ elmUiHackLayout =
         ]
 
 
-view : Model -> Browser.Document Msg
-view model =
+view : AudioData -> Model -> Browser.Document Msg
+view audioData model =
     { title = "Revelation"
     , body =
         [ Dialog.view "error-dialog" ToggleErrorDialog model.dialogBody
