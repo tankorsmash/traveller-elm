@@ -1,5 +1,6 @@
 port module Traveller exposing (Model, ModelData, Msg(..), auToKMs, init, subscriptions, update, view)
 
+import Array
 import Browser.Dom
 import Browser.Events
 import Browser.Navigation
@@ -37,6 +38,7 @@ import Html.Events.Extra.Mouse
 import Html.Lazy
 import Http
 import Json.Decode as JsDecode
+import List.Extra as List
 import Maybe.Extra as Maybe
 import Parser
 import RemoteData exposing (RemoteData(..))
@@ -2786,7 +2788,7 @@ view ( time, model ) =
 
         timeChars : Int
         timeChars =
-            (Time.posixToMillis time - Time.posixToMillis model.timeOpened) // 50
+            (Time.posixToMillis time - Time.posixToMillis model.timeOpened) // 20
     in
     row
         [ width fill
@@ -2999,40 +3001,81 @@ type alias AnalyisDetailPlanetoidData =
 viewPlanetoidAnalysisDetail : Int -> AnalyisDetailPlanetoidData -> Element.Element Msg
 viewPlanetoidAnalysisDetail timeChars data =
     let
-        showTimeChars str =
-            String.left timeChars str
+        showTimeCharsTEMP index str =
+            let
+                offset =
+                    timeChars - (Array.get index counts |> Maybe.withDefault 0)
+            in
+            if timeChars < 0 then
+                ""
+
+            else
+                String.left offset str
+
+        strings =
+            [ data.physical.au
+            , data.physical.period
+            , data.physical.inclination
+            , data.physical.eccentricity
+            , data.physical.mass
+            , data.physical.density
+            , data.physical.gravity
+            , data.physical.diameter
+            , data.physical.meanTemperature
+            , data.physical.albedo
+            , data.physical.axialTilt
+            , data.physical.greenhouse
+            , data.atmosphere.type_
+            , data.atmosphere.bar
+            , data.atmosphere.hazardCode
+            , data.atmosphere.taint.subtype
+            , data.atmosphere.taint.severity
+            , data.atmosphere.taint.persistence
+            , data.hydrographics.percentage
+            , data.hydrographics.surfaceDistribution
+            , data.life.biomass
+            , data.life.biocomplexity
+            , data.life.biodiversity
+            , data.life.compatibility
+            , data.life.habitability
+            , data.life.sophonts
+            ]
+
+        counts =
+            List.scanl (\word total -> total + (floor <| sqrt <| toFloat <| String.length word)) 0 strings
+                |> Array.fromList
     in
     column []
         [ column []
             [ text <| "Physical"
             , row (Element.spacing 40 :: groupAttrs)
                 [ column [ Element.alignTop ]
-                    [ textDisplayNarrow "AU" <| showTimeChars data.physical.au
-                    , textDisplayNarrow "Period (yrs)" <| showTimeChars data.physical.period
-                    , textDisplayNarrow "Inclination" <| showTimeChars data.physical.inclination
-                    , textDisplayNarrow "Eccentricity" <| showTimeChars data.physical.eccentricity
+                    [ textDisplayNarrow "AU" <| showTimeCharsTEMP 0 data.physical.au
+                    , textDisplayNarrow "Period (yrs)" <| showTimeCharsTEMP 1 data.physical.period
+                    , textDisplayNarrow "Inclination" <| showTimeCharsTEMP 2 data.physical.inclination
+                    , textDisplayNarrow "Eccentricity" <| showTimeCharsTEMP 3 data.physical.eccentricity
                     ]
                 , column [ Element.alignTop ]
-                    [ textDisplayMedium "Mass (earths)" <| showTimeChars data.physical.mass
-                    , textDisplayMedium "Density (earth)" <| showTimeChars data.physical.density
-                    , textDisplayMedium "Gravity (G)" <| showTimeChars data.physical.gravity
-                    , textDisplayMedium "Diameter (km)" <| showTimeChars data.physical.diameter
+                    [ textDisplayMedium "Mass (earths)" <| showTimeCharsTEMP 4 data.physical.mass
+                    , textDisplayMedium "Density (earth)" <| showTimeCharsTEMP 5 data.physical.density
+                    , textDisplayMedium "Gravity (G)" <| showTimeCharsTEMP 6 data.physical.gravity
+                    , textDisplayMedium "Diameter (km)" <| showTimeCharsTEMP 7 data.physical.diameter
                     ]
                 , column [ Element.alignTop ]
-                    [ textDisplayNarrow "Temperature" <| showTimeChars data.physical.meanTemperature
-                    , textDisplayNarrow "Albedo" <| showTimeChars data.physical.albedo
-                    , textDisplayNarrow "Axial Tilt" <| showTimeChars data.physical.axialTilt
-                    , textDisplayNarrow "Greenhouse" <| showTimeChars data.physical.greenhouse
+                    [ textDisplayNarrow "Temperature" <| showTimeCharsTEMP 8 data.physical.meanTemperature
+                    , textDisplayNarrow "Albedo" <| showTimeCharsTEMP 9 data.physical.albedo
+                    , textDisplayNarrow "Axial Tilt" <| showTimeCharsTEMP 10 data.physical.axialTilt
+                    , textDisplayNarrow "Greenhouse" <| showTimeCharsTEMP 11 data.physical.greenhouse
                     ]
                 ]
             ]
         , column [ width fill, Element.paddingXY 0 10 ]
             [ text <| "Atmosphere"
             , column groupAttrs
-                [ textDisplay "Type" <| showTimeChars data.atmosphere.type_
-                , textDisplay "BAR" <| showTimeChars data.atmosphere.bar
+                [ textDisplay "Type" <| showTimeCharsTEMP 12 data.atmosphere.type_
+                , textDisplay "BAR" <| showTimeCharsTEMP 13 data.atmosphere.bar
                 , if True then
-                    textDisplay "Hazard Code" <| showTimeChars data.atmosphere.hazardCode
+                    textDisplay "Hazard Code" <| showTimeCharsTEMP 14 data.atmosphere.hazardCode
 
                   else
                     Element.none
@@ -3048,9 +3091,9 @@ viewPlanetoidAnalysisDetail timeChars data =
                       <|
                         text "Taint"
                     , column [ width fill ]
-                        [ taintTextDisplay "Subtype" <| showTimeChars data.atmosphere.taint.subtype
-                        , taintTextDisplay "Severity" <| showTimeChars data.atmosphere.taint.severity
-                        , taintTextDisplay "Persistence" <| showTimeChars data.atmosphere.taint.persistence
+                        [ taintTextDisplay "Subtype" <| showTimeCharsTEMP 15 data.atmosphere.taint.subtype
+                        , taintTextDisplay "Severity" <| showTimeCharsTEMP 16 data.atmosphere.taint.severity
+                        , taintTextDisplay "Persistence" <| showTimeCharsTEMP 17 data.atmosphere.taint.persistence
                         ]
                     ]
                 ]
@@ -3058,19 +3101,19 @@ viewPlanetoidAnalysisDetail timeChars data =
         , column [ Element.paddingXY 0 10 ]
             [ text <| "Hydrographics"
             , column groupAttrs
-                [ textDisplay "Percentage" <| showTimeChars data.hydrographics.percentage
-                , textDisplay "Surface Distribution" <| showTimeChars data.hydrographics.surfaceDistribution
+                [ textDisplay "Percentage" <| showTimeCharsTEMP 18 data.hydrographics.percentage
+                , textDisplay "Surface Distribution" <| showTimeCharsTEMP 19 data.hydrographics.surfaceDistribution
                 ]
             ]
         , column [ Element.paddingXY 0 10 ]
             [ text <| "Life"
             , column groupAttrs
-                [ textDisplay "Biomass" <| showTimeChars data.life.biomass
-                , textDisplay "Biocomplexity" <| showTimeChars data.life.biocomplexity
-                , textDisplay "Biodiversity" <| showTimeChars data.life.biodiversity
-                , textDisplay "Compatibilty" <| showTimeChars data.life.compatibility
-                , textDisplay "Habitability" <| showTimeChars data.life.habitability
-                , textDisplay "Sophonts" <| showTimeChars data.life.sophonts
+                [ textDisplay "Biomass" <| showTimeCharsTEMP 20 data.life.biomass
+                , textDisplay "Biocomplexity" <| showTimeCharsTEMP 21 data.life.biocomplexity
+                , textDisplay "Biodiversity" <| showTimeCharsTEMP 22 data.life.biodiversity
+                , textDisplay "Compatibilty" <| showTimeCharsTEMP 23 data.life.compatibility
+                , textDisplay "Habitability" <| showTimeCharsTEMP 24 data.life.habitability
+                , textDisplay "Sophonts" <| showTimeCharsTEMP 25 data.life.sophonts
                 ]
             ]
         ]
