@@ -314,6 +314,7 @@ type alias ModelData =
     , hexColours : Dict.Dict String Color
     , isReferee : Bool
     , objectToBeAnalyzed : Maybe { stellarObject : StellarObject, data : AnalysisDetail }
+    , timeOpened : Time.Posix
     }
 
 
@@ -349,6 +350,7 @@ type Msg
     | ZoomToHex HexAddress Bool
     | JourneyMsg JourneyMsg
     | ViewObjectAnalysisDetail StellarObject
+    | OpenedObjectAnalysisTime Time.Posix
     | CloseObjectAnalysis
 
 
@@ -386,7 +388,7 @@ subscriptions time model =
     Sub.batch
         [ Browser.Events.onResize GotResize
         , Browser.Events.onKeyDown (keyDecoder model)
-        , Time.every ((1 / 4) * 1000) Tick
+        , Time.every ((1 / 30) * 1000) Tick
         ]
 
 
@@ -501,6 +503,7 @@ init viewport settings key hostConfig referee =
             , hexColours = Dict.empty
             , isReferee = referee
             , objectToBeAnalyzed = Nothing
+            , timeOpened = Time.millisToPosix 0
             }
     in
     ( ( Time.millisToPosix 0
@@ -2780,6 +2783,10 @@ view ( time, model ) =
 
                 FullJourney ->
                     viewFullJourney model.journeyModel model.viewport.viewport
+
+        timeChars : Int
+        timeChars =
+            (Time.posixToMillis time - Time.posixToMillis model.timeOpened) // 50
     in
     row
         [ width fill
@@ -2789,7 +2796,7 @@ view ( time, model ) =
         , Element.paddingXY 15 0
         , case model.objectToBeAnalyzed of
             Just analysisDetail ->
-                Element.inFront <| viewObjectAnalysisDetail analysisDetail.data
+                Element.inFront <| viewObjectAnalysisDetail timeChars analysisDetail.data
 
             Nothing ->
                 Element.htmlAttribute <| HtmlAttrs.class ""
@@ -2886,16 +2893,16 @@ textDisplayMedium lbl val =
         ]
 
 
-viewObjectAnalysisDetail : AnalysisDetail -> Element.Element Msg
-viewObjectAnalysisDetail data =
+viewObjectAnalysisDetail : Int -> AnalysisDetail -> Element.Element Msg
+viewObjectAnalysisDetail timeChars data =
     let
         ( header, content ) =
             case data of
                 AnalyisDetailTerrestialPlanet detailHeader sharedPData ->
-                    ( detailHeader.header, viewPlanetoidAnalysisDetail sharedPData )
+                    ( detailHeader.header, viewPlanetoidAnalysisDetail timeChars sharedPData )
 
                 AnalyisDetailPlanetoid detailHeader sharedPData ->
-                    ( detailHeader.header, viewPlanetoidAnalysisDetail sharedPData )
+                    ( detailHeader.header, viewPlanetoidAnalysisDetail timeChars sharedPData )
 
                 AnalyisDetailGasGiant ->
                     ( "TODO: Gas Giant", text "Gas Giant not yet implemented" )
@@ -2989,39 +2996,43 @@ type alias AnalyisDetailPlanetoidData =
     }
 
 
-viewPlanetoidAnalysisDetail : AnalyisDetailPlanetoidData -> Element.Element Msg
-viewPlanetoidAnalysisDetail data =
+viewPlanetoidAnalysisDetail : Int -> AnalyisDetailPlanetoidData -> Element.Element Msg
+viewPlanetoidAnalysisDetail timeChars data =
+    let
+        showTimeChars str =
+            String.left timeChars str
+    in
     column []
         [ column []
             [ text <| "Physical"
             , row (Element.spacing 40 :: groupAttrs)
                 [ column [ Element.alignTop ]
-                    [ textDisplayNarrow "AU" data.physical.au
-                    , textDisplayNarrow "Period (yrs)" data.physical.period
-                    , textDisplayNarrow "Inclination" data.physical.inclination
-                    , textDisplayNarrow "Eccentricity" data.physical.eccentricity
+                    [ textDisplayNarrow "AU" <| showTimeChars data.physical.au
+                    , textDisplayNarrow "Period (yrs)" <| showTimeChars data.physical.period
+                    , textDisplayNarrow "Inclination" <| showTimeChars data.physical.inclination
+                    , textDisplayNarrow "Eccentricity" <| showTimeChars data.physical.eccentricity
                     ]
                 , column [ Element.alignTop ]
-                    [ textDisplayMedium "Mass (earths)" data.physical.mass
-                    , textDisplayMedium "Density (earth)" data.physical.density
-                    , textDisplayMedium "Gravity (G)" data.physical.gravity
-                    , textDisplayMedium "Diameter (km)" data.physical.diameter
+                    [ textDisplayMedium "Mass (earths)" <| showTimeChars data.physical.mass
+                    , textDisplayMedium "Density (earth)" <| showTimeChars data.physical.density
+                    , textDisplayMedium "Gravity (G)" <| showTimeChars data.physical.gravity
+                    , textDisplayMedium "Diameter (km)" <| showTimeChars data.physical.diameter
                     ]
                 , column [ Element.alignTop ]
-                    [ textDisplayNarrow "Temperature" data.physical.meanTemperature
-                    , textDisplayNarrow "Albedo" data.physical.albedo
-                    , textDisplayNarrow "Axial Tilt" data.physical.axialTilt
-                    , textDisplayNarrow "Greenhouse" data.physical.greenhouse
+                    [ textDisplayNarrow "Temperature" <| showTimeChars data.physical.meanTemperature
+                    , textDisplayNarrow "Albedo" <| showTimeChars data.physical.albedo
+                    , textDisplayNarrow "Axial Tilt" <| showTimeChars data.physical.axialTilt
+                    , textDisplayNarrow "Greenhouse" <| showTimeChars data.physical.greenhouse
                     ]
                 ]
             ]
         , column [ width fill, Element.paddingXY 0 10 ]
             [ text <| "Atmosphere"
             , column groupAttrs
-                [ textDisplay "Type" data.atmosphere.type_
-                , textDisplay "BAR" data.atmosphere.bar
+                [ textDisplay "Type" <| showTimeChars data.atmosphere.type_
+                , textDisplay "BAR" <| showTimeChars data.atmosphere.bar
                 , if True then
-                    textDisplay "Hazard Code" data.atmosphere.hazardCode
+                    textDisplay "Hazard Code" <| showTimeChars data.atmosphere.hazardCode
 
                   else
                     Element.none
@@ -3037,9 +3048,9 @@ viewPlanetoidAnalysisDetail data =
                       <|
                         text "Taint"
                     , column [ width fill ]
-                        [ taintTextDisplay "Subtype" data.atmosphere.taint.subtype
-                        , taintTextDisplay "Severity" data.atmosphere.taint.severity
-                        , taintTextDisplay "Persistence" data.atmosphere.taint.persistence
+                        [ taintTextDisplay "Subtype" <| showTimeChars data.atmosphere.taint.subtype
+                        , taintTextDisplay "Severity" <| showTimeChars data.atmosphere.taint.severity
+                        , taintTextDisplay "Persistence" <| showTimeChars data.atmosphere.taint.persistence
                         ]
                     ]
                 ]
@@ -3047,19 +3058,19 @@ viewPlanetoidAnalysisDetail data =
         , column [ Element.paddingXY 0 10 ]
             [ text <| "Hydrographics"
             , column groupAttrs
-                [ textDisplay "Percentage" data.hydrographics.percentage
-                , textDisplay "Surface Distribution" data.hydrographics.surfaceDistribution
+                [ textDisplay "Percentage" <| showTimeChars data.hydrographics.percentage
+                , textDisplay "Surface Distribution" <| showTimeChars data.hydrographics.surfaceDistribution
                 ]
             ]
         , column [ Element.paddingXY 0 10 ]
             [ text <| "Life"
             , column groupAttrs
-                [ textDisplay "Biomass" data.life.biomass
-                , textDisplay "Biocomplexity" data.life.biocomplexity
-                , textDisplay "Biodiversity" data.life.biodiversity
-                , textDisplay "Compatibilty" data.life.compatibility
-                , textDisplay "Habitability" data.life.habitability
-                , textDisplay "Sophonts" data.life.sophonts
+                [ textDisplay "Biomass" <| showTimeChars data.life.biomass
+                , textDisplay "Biocomplexity" <| showTimeChars data.life.biocomplexity
+                , textDisplay "Biodiversity" <| showTimeChars data.life.biodiversity
+                , textDisplay "Compatibilty" <| showTimeChars data.life.compatibility
+                , textDisplay "Habitability" <| showTimeChars data.life.habitability
+                , textDisplay "Sophonts" <| showTimeChars data.life.sophonts
                 ]
             ]
         ]
@@ -4080,8 +4091,15 @@ update msg ( time, model ) =
                             AnalyisDetailStar
             in
             ( withTime { model | objectToBeAnalyzed = Just { stellarObject = stellarObject, data = analysisDetail } }
-            , Cmd.none
+            , Task.perform OpenedObjectAnalysisTime Time.now
             )
+
+        OpenedObjectAnalysisTime openedTime ->
+            let
+                _ =
+                    Debug.log "got time" 123
+            in
+            ( withTime { model | timeOpened = openedTime }, Cmd.none )
 
         CloseObjectAnalysis ->
             ( withTime { model | objectToBeAnalyzed = Nothing }
