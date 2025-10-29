@@ -2875,7 +2875,7 @@ textDisplayNarrow lbl val =
             )
           <|
             text lbl
-        , Element.paragraph [ Element.spacing 0 ]
+        , Element.row [ Element.spacing 0 ]
             [ el ([ Element.alignTop, Element.spacing 0, Element.padding 0 ] ++ valueAttrs) <| monospaceText val
             ]
         ]
@@ -2912,8 +2912,8 @@ viewObjectAnalysisDetail timeChars data =
                     ( detailHeader.header, viewGasGiantAnalysisDetail timeChars sharedGGData )
 
                 --( "TODO: Gas Giant", text "Gas Giant not yet implemented" )
-                AnalyisDetailPlanetoidBelt ->
-                    ( "PTODO: lanetoid Belt", text "Planetoid Belt not yet implemented" )
+                AnalyisDetailPlanetoidBelt detailHeader sharePBData ->
+                    ( detailHeader.header, viewPlanetoidBeltAnalysisDetail timeChars sharePBData )
 
                 AnalyisDetailStar ->
                     ( "TODO: Star", text "Star not yet implemented" )
@@ -2957,7 +2957,7 @@ type AnalysisDetail
     = AnalyisDetailTerrestialPlanet AnalysisDetailHeader AnalyisDetailPlanetoidData
     | AnalyisDetailPlanetoid AnalysisDetailHeader AnalyisDetailPlanetoidData
     | AnalyisDetailGasGiant AnalysisDetailHeader AnalyisDetailGasGiantData
-    | AnalyisDetailPlanetoidBelt
+    | AnalyisDetailPlanetoidBelt AnalysisDetailHeader AnalyisDetailPlanetoidBeltData
     | AnalyisDetailStar
 
 
@@ -2972,6 +2972,22 @@ type alias AnalyisDetailGasGiantData =
         , axialTilt : String
         , moons : String
         , hasRing : String
+        }
+    }
+
+
+type alias AnalyisDetailPlanetoidBeltData =
+    { physical :
+        { au : String
+        , period : String
+        , inclination : String
+        , eccentricity : String
+        , bulk : String
+        , span : String
+        , cType : String
+        , sType : String
+        , oType : String
+        , mType : String
         }
     }
 
@@ -3185,6 +3201,62 @@ viewGasGiantAnalysisDetail timeChars data =
                 , column [ Element.alignTop ]
                     [ textDisplayNarrow "Moons" <| showTimeCharsTEMP 7 data.physical.moons
                     , textDisplayNarrow "Rings" <| showTimeCharsTEMP 8 data.physical.hasRing
+                    ]
+                ]
+            ]
+        ]
+
+
+viewPlanetoidBeltAnalysisDetail : Int -> AnalyisDetailPlanetoidBeltData -> Element.Element Msg
+viewPlanetoidBeltAnalysisDetail timeChars data =
+    let
+        showTimeCharsTEMP index str =
+            let
+                offset =
+                    timeChars - (Array.get index counts |> Maybe.withDefault 0)
+            in
+            if timeChars < 0 then
+                ""
+
+            else
+                String.left offset str
+
+        strings =
+            [ data.physical.au
+            , data.physical.period
+            , data.physical.inclination
+            , data.physical.eccentricity
+            , data.physical.span
+            , data.physical.bulk
+            , data.physical.cType
+            , data.physical.mType
+            , data.physical.sType
+            , data.physical.oType
+            ]
+
+        counts =
+            List.scanl (\word total -> total + (floor <| sqrt <| toFloat <| String.length word)) 0 strings
+                |> Array.fromList
+    in
+    column []
+        [ column []
+            [ text <| "Physical"
+            , row (Element.spacing 40 :: groupAttrs)
+                [ column [ Element.alignTop ]
+                    [ textDisplayNarrow "AU" <| showTimeCharsTEMP 0 data.physical.au
+                    , textDisplayNarrow "Period (yrs)" <| showTimeCharsTEMP 1 data.physical.period
+                    , textDisplayNarrow "Inclination" <| showTimeCharsTEMP 2 data.physical.inclination
+                    , textDisplayNarrow "Eccentricity" <| showTimeCharsTEMP 3 data.physical.eccentricity
+                    ]
+                , column [ Element.alignTop ]
+                    [ textDisplayNarrow "Span" <| showTimeCharsTEMP 4 data.physical.span
+                    , textDisplayNarrow "Bulk" <| showTimeCharsTEMP 5 data.physical.bulk
+                    ]
+                , column [ Element.alignTop ]
+                    [ textDisplayNarrow "c-type" <| showTimeCharsTEMP 6 data.physical.cType
+                    , textDisplayNarrow "m-type" <| showTimeCharsTEMP 7 data.physical.mType
+                    , textDisplayNarrow "s-type" <| showTimeCharsTEMP 8 data.physical.sType
+                    , textDisplayNarrow "o-type" <| showTimeCharsTEMP 9 data.physical.oType
                     ]
                 ]
             ]
@@ -4152,6 +4224,22 @@ update msg ( time, model ) =
                                 }
                             }
 
+                        buildStringPlanetoidBelt : PlanetoidBeltData -> AnalyisDetailPlanetoidBeltData
+                        buildStringPlanetoidBelt pdata =
+                            { physical =
+                                { au = rnd 2 pdata.au
+                                , period = rnd 2 pdata.period
+                                , inclination = rnd 0 pdata.inclination ++ "°"
+                                , eccentricity = rnd 2 pdata.eccentricity
+                                , bulk = rnd 0 pdata.bulk
+                                , span = rnd 0 pdata.span
+                                , cType = rnd 0 pdata.cType ++ "%"
+                                , mType = rnd 0 pdata.mType ++ "%"
+                                , oType = rnd 0 pdata.oType ++ "%"
+                                , sType = rnd 0 pdata.sType ++ "%"
+                                }
+                            }
+
                         buildStringPlanet : SharedPData -> AnalyisDetailPlanetoidData
                         buildStringPlanet pdata =
                             { physical =
@@ -4217,7 +4305,7 @@ update msg ( time, model ) =
                             AnalyisDetailPlanetoid header <| buildStringPlanet pdata
 
                         PlanetoidBelt planetoidBeltData ->
-                            AnalyisDetailPlanetoidBelt
+                            AnalyisDetailPlanetoidBelt header <| buildStringPlanetoidBelt planetoidBeltData
 
                         Planetoid pdata ->
                             AnalyisDetailPlanetoid header <| buildStringPlanet pdata
