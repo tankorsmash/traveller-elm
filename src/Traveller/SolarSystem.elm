@@ -15,6 +15,8 @@ type alias SolarSystem =
     , surveyIndex : Int
     , nativeSophont : Bool
     , extinctSophont : Bool
+    , allegiance : Maybe String
+    , name : String
     , sectorName : String
     }
 
@@ -31,6 +33,8 @@ type alias RawSolarSystem =
     , extinctSophont : Bool
     , sectorX : Int
     , sectorY : Int
+    , allegiance : Maybe String
+    , name : String
     , sectorName : String
     }
 
@@ -52,6 +56,8 @@ rawToFinal rawSolarSystem =
         , surveyIndex = rawSolarSystem.surveyIndex
         , nativeSophont = rawSolarSystem.nativeSophont
         , extinctSophont = rawSolarSystem.extinctSophont
+        , allegiance = rawSolarSystem.allegiance
+        , name = rawSolarSystem.name
         , sectorName = rawSolarSystem.sectorName
         }
 
@@ -69,6 +75,8 @@ finalToRaw solarSystem =
     , extinctSophont = solarSystem.extinctSophont
     , sectorX = 9999999999
     , sectorY = 9999999999
+    , allegiance = solarSystem.allegiance
+    , name = solarSystem.name
     , sectorName = solarSystem.sectorName
     }
 
@@ -87,5 +95,7 @@ rawCodec =
         |> Codec.field "extinct_sophont" .extinctSophont Codec.bool
         |> Codec.field "sector_x" .sectorX Codec.int
         |> Codec.field "sector_y" .sectorY Codec.int
+        |> Codec.field "allegiance" .allegiance (Codec.nullable Codec.string)
+        |> Codec.field "name" .name Codec.string
         |> Codec.field "sector_name" .sectorName Codec.string
         |> Codec.buildObject
