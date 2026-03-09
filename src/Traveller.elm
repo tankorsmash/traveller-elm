@@ -1,4 +1,4 @@
-port module Traveller exposing (Model, ModelData, Msg(..), auToKMs, init, subscriptions, update, view)
+port module Traveller exposing (Model, ModelData, Msg(..), init, subscriptions, update, view)
 
 import Array
 import Browser.Dom
@@ -53,9 +53,35 @@ import Svg.Keyed
 import Svg.Lazy
 import Task
 import Time
+import Traveller.AnalysisDetail
+    exposing
+        ( AnalyisDetailGasGiantData
+        , AnalyisDetailPlanetoidBeltData
+        , AnalyisDetailPlanetoidData
+        , AnalysisDetail(..)
+        , AnalysisDetailHeader
+        , viewObjectAnalysisDetail
+        )
 import Traveller.Atmosphere exposing (atmosphereDescription, atmosphereDescriptionEx, atmosphereHazardDescription)
 import Traveller.Government as Government
 import Traveller.HexAddress as HexAddress exposing (HexAddress, SectorHexAddress, createFromStarSystem, shiftAddressBy, toSectorAddress, toUniversalAddress)
+import Traveller.HexGeometry
+    exposing
+        ( VisualHexOrigin
+        , calcVisualOrigin
+        , convertRawHexagonPoints
+        , defaultHexSize
+        , hexColOffset
+        , hexHeight
+        , hexSizeFactor
+        , hexWidth
+        , hexagonPoints
+        , hexapointsBuilder
+        , rawHexagonPoint
+        , rawHexagonPoints
+        , rotatePoint
+        , scaleAttr
+        )
 import Traveller.Hydrographics exposing (hydrographicsPercentageDescription, surfaceDistributionDescription)
 import Traveller.LawLevel as LawLevel
 import Traveller.Lifeforms exposing (bioChemistryCompatibilityDescription, biocomplexityDescription, biodiversityDescription, biomassDescription, habitabilityDescription)
@@ -65,22 +91,61 @@ import Traveller.Population exposing (populationDescription)
 import Traveller.Region as Region exposing (Region, RegionDict)
 import Traveller.Route as Route exposing (Route, RouteList)
 import Traveller.Sector exposing (Sector, SectorDict, codec, sectorKey)
+import Traveller.Sidebar
+    exposing
+        ( SidebarMsgs
+        , sidebarWidth
+        , viewSidebarColumn
+        , viewSidebarFooter
+        , viewSystemDetailsSidebar
+        )
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.SolarSystemStars exposing (FallibleStarSystem, StarSystem, StarType, StarTypeData, fallibleStarSystemDecoder, getStarTypeData, isBrownDwarfType)
 import Traveller.StarColour exposing (starColourRGB)
 import Traveller.Starport as Starport
 import Traveller.StellarObject exposing (GasGiantData, InnerStarData, PlanetoidBeltData, PlanetoidData, SharedPData, StarData(..), StellarObject(..), getInnerStarData, getProfileString, getStarData, getStellarOrbit, isBrownDwarf)
+import Traveller.StellarObjectView
+    exposing
+        ( JumpShadowChecker
+        , JumpShadowCheckers
+        , StellarObjectMsgs
+        , convertColor
+        , displayStarDetails
+        )
 import Traveller.StellarTaint exposing (taintPersistenceDescription, taintSeverityDescription, taintSubtypeDescription)
 import Traveller.TechLevel as TechLevel
+import Traveller.TravelCalculations exposing (auToKMs, calcDistance2F, secondsToDaysWatches, travelTime, travelTimeInSeconds)
+import Traveller.UI
+    exposing
+        ( colorToElementColor
+        , deepnightColor
+        , deepnightGray
+        , deepnightLightGray
+        , descriptionStyle
+        , floatDisplay
+        , fontDarkTextColor
+        , fontTextColor
+        , groupAttrs
+        , headerAttrs
+        , imageStyle
+        , jumpShadowTextColor
+        , monospaceText
+        , numberDisplay
+        , orbitStyle
+        , safeJumpStyle
+        , sequenceStyle
+        , taintTextDisplay
+        , textColor
+        , textDisplay
+        , textDisplayMedium
+        , textDisplayNarrow
+        , travelStyle
+        , travellerRed
+        , uiDeepnightColorFontColour
+        , valueAttrs
+        , zeroEach
+        )
 import Url.Builder
-
-
-uiDeepnightColorFontColour =
-    Font.color <| colorToElementColor <| deepnightColor
-
-
-hexSizeFactor =
-    2 * pi / 6
 
 
 refereeSI =
@@ -97,10 +162,6 @@ terrestrialSI =
 
 planetoidSI =
     6
-
-
-sidebarWidth =
-    400
 
 
 consoleTitleHeight =
@@ -187,16 +248,6 @@ nextRequestNum requestHistory =
                         |> Maybe.withDefault 0
     in
     MkRequestNum (lastRequestNum + 1)
-
-
-hexWidth : Float -> Float
-hexWidth hexScale =
-    hexScale * (1.0 + cos hexSizeFactor)
-
-
-hexHeight : Float -> Float
-hexHeight hexScale =
-    hexScale * (1.0 + sin hexSizeFactor)
 
 
 horizontalHexes : Maybe HexMapViewport -> Float -> Int
@@ -366,12 +417,6 @@ type JourneyMsg
     | MouseLeave
 
 
-{-| Where the Hex is on the screen, in pixel coordinates
--}
-type alias VisualHexOrigin =
-    ( Int, Int )
-
-
 keyDecoder : ModelData -> JsDecode.Decoder Msg
 keyDecoder model =
     JsDecode.map (toKey model) (JsDecode.field "key" JsDecode.string)
@@ -519,93 +564,6 @@ init viewport settings key hostConfig referee =
         , sendRegionRequest secReqEntry model.hostConfig -- Josh to fix later
         , sendRouteRequest routeReqEntry model.hostConfig
         ]
-    )
-
-
-rawHexagonPoint : Float -> Float -> ( Float, Float )
-rawHexagonPoint size n =
-    let
-        x =
-            size * cos (hexSizeFactor * n)
-
-        y =
-            size * sin (hexSizeFactor * n)
-    in
-    ( x, y )
-
-
-hexagonPoints : ( Float, Float ) -> Float -> List String
-hexagonPoints ( xOrigin, yOrigin ) size =
-    rawHexagonPoints size
-        |> List.map
-            (\( x, y ) ->
-                String.fromFloat (xOrigin + x) ++ "," ++ String.fromFloat (yOrigin + y)
-            )
-
-
-{-| hexagon points indepedent of origin
--}
-rawHexagonPoints : Float -> List ( Float, Float )
-rawHexagonPoints size =
-    List.range 0 5
-        |> List.map (toFloat >> rawHexagonPoint size)
-
-
-hexapointsBuilder : Float -> Float -> ( Float, Float ) -> String
-hexapointsBuilder xOrigin yOrigin ( x, y ) =
-    String.fromFloat (xOrigin + x) ++ "," ++ String.fromFloat (yOrigin + y)
-
-
-{-| localize the hexagon points to the visualOrigin
--}
-convertRawHexagonPoints : ( Float, Float ) -> List ( Float, Float ) -> String
-convertRawHexagonPoints ( xOrigin, yOrigin ) points =
-    points
-        |> List.map (hexapointsBuilder xOrigin yOrigin)
-        |> String.join " "
-
-
-
---isStarOrbit : StellarObject -> Bool
---isStarOrbit obj =
---    case obj of
---        GasGiant gasGiantData ->
---            gasGiantData.orbitType < 10
---
---        TerrestrialPlanet terrestrialData ->
---            terrestrialData.orbitType < 10
---
---        PlanetoidBelt planetoidBeltData ->
---            planetoidBeltData.orbitType < 10
---
---        Planetoid planetoidData ->
---            planetoidData.orbitType < 10
---
---        Star (StarDataWrap starDataConfig) ->
---            starDataConfig.orbitType < 10
-
-
-scaleAttr : Float -> Int -> Float
-scaleAttr hexSize default =
-    toFloat default * min 1 (hexSize / defaultHexSize)
-
-
-rotatePoint : Float -> Int -> ( Float, Float ) -> Float -> Int -> ( Float, Float )
-rotatePoint hexSize idx ( x_, y_ ) degrees_ distance =
-    let
-        rads =
-            (toFloat idx * degrees_)
-                - 30
-                |> degrees
-
-        cosTheta =
-            cos rads
-
-        sinTheta =
-            sin rads
-    in
-    ( x_ + (scaleAttr hexSize distance * cosTheta) - (0 * sinTheta)
-    , y_ + (scaleAttr hexSize distance * sinTheta) + (0 * cosTheta)
     )
 
 
@@ -981,31 +939,6 @@ allegianceColours =
         ]
 
 
-defaultHexSize =
-    40
-
-
-hexColOffset : Int -> Float
-hexColOffset row =
-    if remainderBy 2 row == 0 then
-        1.0
-
-    else
-        0.0
-
-
-calcVisualOrigin : Float -> { row : Int, col : Int } -> VisualHexOrigin
-calcVisualOrigin hexSize { row, col } =
-    let
-        x =
-            hexSize + toFloat col * (hexSize + hexSize * cos hexSizeFactor)
-
-        y =
-            -1 * (hexSize + toFloat row * 2 * hexSize * sin hexSizeFactor + hexSize * hexColOffset col * sin hexSizeFactor)
-    in
-    ( floor x, floor y )
-
-
 viewHex :
     Float
     -> SolarSystemDict
@@ -1346,417 +1279,6 @@ toViewBox hexScale { x, y } =
            )
 
 
-orbitStyle : List (Element.Attribute msg)
-orbitStyle =
-    [ width <| Element.px 45
-    , Element.alignRight
-    ]
-
-
-descriptionStyle : List (Element.Attribute msg)
-descriptionStyle =
-    [ width <| Element.px 84
-    ]
-
-
-sequenceStyle : List (Element.Attribute msg)
-sequenceStyle =
-    [ width <| Element.px 60
-    ]
-
-
-safeJumpStyle : List (Element.Attribute msg)
-safeJumpStyle =
-    [ width <| Element.px 62
-    , Font.size 12
-    ]
-
-
-imageStyle : List (Element.Attribute msg)
-imageStyle =
-    [ width <| Element.px 40
-    ]
-
-
-travelStyle : List (Element.Attribute msg)
-travelStyle =
-    [ width <| Element.px 60
-    ]
-
-
-{-| Builds a monospace text element
--}
-monospaceText : String -> Element.Element msg
-monospaceText someString =
-    text someString |> el [ Font.family [ Font.monospace ] ]
-
-
-calcNestedOffset : Int -> Float
-calcNestedOffset newNestingLevel =
-    toFloat <| newNestingLevel * 10
-
-
-renderRawOrbit : Float -> Element.Element msg
-renderRawOrbit au =
-    let
-        roundedAU =
-            if au < 1 then
-                Round.round 2 au
-
-            else if au < 100 then
-                Round.round 1 au
-
-            else
-                Round.round 0 au
-    in
-    Element.el
-        orbitStyle
-        (monospaceText <| roundedAU)
-
-
-renderOrbit : Float -> Float -> Maybe Float -> Bool -> Element.Element msg
-renderOrbit au hzcoDeviation maybeTemp isReferee =
-    let
-        roundedAU =
-            if au < 1 then
-                Round.round 2 au
-
-            else if au < 100 then
-                Round.round 1 au
-
-            else
-                Round.round 0 au
-
-        zoneImage =
-            if abs hzcoDeviation <= 0.2 then
-                "🌐"
-
-            else if abs hzcoDeviation <= 1 then
-                if hzcoDeviation > 0 then
-                    "🔥"
-
-                else
-                    "❄"
-
-            else
-                ""
-
-        style =
-            case maybeTemp of
-                Just temp ->
-                    orbitStyle ++ [ Element.htmlAttribute <| HtmlAttrs.title <| Round.round 0 (temp - 237) ++ " ºC" ]
-
-                Nothing ->
-                    orbitStyle
-    in
-    Element.el
-        style
-        (monospaceText <| roundedAU ++ zoneImage)
-
-
-renderOrbitSequence : String -> Element.Element msg
-renderOrbitSequence sequence =
-    Element.el
-        sequenceStyle
-        (monospaceText <| sequence)
-
-
-renderSODescription : Msg -> String -> String -> Element.Element Msg
-renderSODescription onClick description orbitSequence =
-    Element.el
-        descriptionStyle
-        (row []
-            [ monospaceText <| description
-            , el
-                [ Font.size 10
-                , height fill
-                , Element.paddingEach { zeroEach | left = 4, top = 2 }
-                , Element.pointer
-                , Element.mouseOver [ Font.color <| Element.rgb 1 1 1 ]
-                , Events.onClick <| onClick
-                ]
-              <|
-                renderIconRaw "fa-solid fa-scanner-touchscreen"
-            ]
-        )
-
-
-iconSizing : List (Element.Attribute msg)
-iconSizing =
-    [ Element.height <| Element.px 16, Element.width <| Element.px 16 ]
-
-
-{-| Zero spacing for padding
-Use with elm-ui to easily add padding to an element. e.g.
-
-        Element.paddingEach { zeroEach | left = 4 }
-        Border.roundEach { zeroEach | right = 2 }
-        Border.widthEach { zeroEach | top = 2 }
-
--}
-zeroEach : { top : number, left : number, bottom : number, right : number }
-zeroEach =
-    { top = 0, left = 0, bottom = 0, right = 0 }
-
-
-renderIcon : Icon a -> Element.Element Msg
-renderIcon icon =
-    let
-        iconSpacing =
-            { zeroEach | right = 4 }
-    in
-    icon
-        |> Icon.view
-        |> Element.html
-        |> Element.el (Element.paddingEach iconSpacing :: iconSizing)
-
-
-renderIconRaw : String -> Element.Element Msg
-renderIconRaw icon =
-    let
-        iconSpacing =
-            { zeroEach | right = 4 }
-    in
-    Html.i [ HtmlAttrs.class icon ] []
-        |> Element.html
-        |> Element.el [ Element.paddingEach iconSpacing, height <| Element.px 10, width <| Element.px 10 ]
-
-
-renderJumpTime : Maybe Float -> String -> Element.Element Msg
-renderJumpTime maxJumpTime time =
-    Element.row safeJumpStyle
-        [ renderIcon Icon.arrowUpFromBracket
-        , text <|
-            case maxJumpTime of
-                Just maxTime ->
-                    secondsToDaysWatches maxTime
-
-                Nothing ->
-                    time
-        ]
-
-
-renderImage : String -> Maybe Float -> Element.Element Msg
-renderImage uwp maybeTemp =
-    let
-        gasGiantUwps =
-            [ "GS", "GM", "GL" ]
-
-        hydrographics =
-            if String.length uwp == 9 then
-                String.slice 3 4 uwp
-
-            else
-                ""
-
-        atmosphere =
-            if String.length uwp == 9 then
-                String.slice 2 3 uwp
-
-            else
-                ""
-
-        imageUrl =
-            if List.member uwp gasGiantUwps then
-                "public/gasgiant-small.png"
-
-            else if atmosphere == "B" || atmosphere == "C" then
-                "public/corrosivehellworld-small.png"
-
-            else if hydrographics == "A" then
-                "public/waterworld-small.png"
-
-            else if hydrographics == "0" then
-                "public/desertworld-small.png"
-
-            else if atmosphere == "1" || atmosphere == "2" || atmosphere == "3" then
-                "public/traceworld-small.png"
-
-            else
-                "public/moon-small.png"
-    in
-    Element.image [ width <| Element.px 18, height <| Element.px 18 ]
-        { src = imageUrl
-        , description = ""
-        }
-
-
-renderTravelTime : StellarObject -> Maybe StellarObject -> Element.Element Msg
-renderTravelTime destination origin =
-    let
-        shipMDrive =
-            4
-
-        travelTimeStr =
-            case origin of
-                Just obj ->
-                    if obj /= destination then
-                        let
-                            destPosition =
-                                (getStellarOrbit destination).orbitPosition
-
-                            objPosition =
-                                (getStellarOrbit obj).orbitPosition
-
-                            dist =
-                                calcDistance2F destPosition objPosition
-                        in
-                        travelTime dist shipMDrive False
-
-                    else
-                        ""
-
-                Nothing ->
-                    ""
-    in
-    case origin of
-        Just obj ->
-            if obj /= destination then
-                Element.el
-                    travelStyle
-                    (monospaceText <| travelTimeStr)
-
-            else
-                Element.row travelStyle
-                    [ renderIcon Icon.upDown
-                    ]
-
-        Nothing ->
-            monospaceText <| ""
-
-
-
-{-
-   const travelTime = (kms, mdrive, useHours) => {
-     const seconds = 2 * Math.sqrt(kms1000/(mdrive9.8));
-     if (useHours) {
-       let minutes = Math.ceil(seconds / 60);
-       let hours = Math.floor(minutes/60);
-       minutes -= hours60;
-       if (hours > 0)
-         return ${hours}h ${minutes}m;
-       else
-         return ${minutes}m;
-     } else {
-       let watches = Math.ceil(seconds/(60608));
-       let days = Math.floor(watches/3);
-       watches -= days3
-       return ${days}d ${watches}w;
-     }
-   }
--}
-
-
-travelTimeInSeconds : Float -> Int -> Float
-travelTimeInSeconds kms mdrive =
-    2 * sqrt (kms * 1000 / (toFloat mdrive * 9.8))
-
-
-secondsToDaysWatches : Float -> String
-secondsToDaysWatches secs =
-    let
-        watches =
-            toFloat <| ceiling <| secs / (60 * 60 * 8)
-
-        days =
-            toFloat <| floor <| watches / 3
-
-        watches_ =
-            watches - days * 3
-    in
-    Round.floor 0 days ++ "d " ++ Round.ceiling 0 watches_ ++ "w"
-
-
-travelTime : Float -> Int -> Bool -> String
-travelTime kms mdrive useHours =
-    let
-        rawSeconds =
-            travelTimeInSeconds kms mdrive
-    in
-    if useHours then
-        let
-            rawMinutes =
-                toFloat <| ceiling <| rawSeconds / 60
-
-            hours =
-                toFloat <| floor <| rawMinutes / 60
-
-            minutes =
-                rawMinutes - hours * 60
-        in
-        if hours > 0 then
-            Round.floor 0 hours ++ "h " ++ Round.ceiling 0 minutes ++ "m"
-
-        else
-            Round.ceiling 0 minutes ++ "m"
-
-    else
-        secondsToDaysWatches rawSeconds
-
-
-
--- ( watches_, days )
-{-
-   const calculateDistance = (x1, y1, x2, y2) => {
-     const deltaX = x2 - x1;
-     const deltaY = y2 - y1;
-
-     const distanceSquared = deltaX * deltaX + deltaY * deltaY;
-
-     const distance = Math.sqrt(distanceSquared);
-
-     return distance;
-   }
-
--}
-
-
-calcDistance2F : StellarPoint -> StellarPoint -> Float
-calcDistance2F p1 p2 =
-    let
-        deltaX =
-            p1.x - p2.x
-
-        deltaY =
-            p1.y - p2.y
-
-        distanceSquared =
-            deltaX * deltaX + deltaY * deltaY
-
-        distance =
-            sqrt distanceSquared
-    in
-    distance
-
-
-renderGasGiant : Int -> GasGiantData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
-renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarObject isReferee =
-    let
-        stellarObject =
-            GasGiant gasGiantData
-
-        maxShadow =
-            List.maximum <|
-                List.filterMap (\checker -> checker stellarObject) jumpShadowCheckers
-
-        orbit =
-            renderOrbit gasGiantData.au gasGiantData.effectiveHZCODeviation Nothing isReferee
-    in
-    row
-        [ Element.spacing 8
-        , Element.moveRight <| calcNestedOffset newNestingLevel
-        , Font.size 14
-        , Events.onClick <| FocusInSidebar stellarObject
-        ]
-        [ orbit
-        , renderOrbitSequence gasGiantData.orbitSequence
-        , renderSODescription (ViewObjectAnalysisDetail stellarObject) gasGiantData.code gasGiantData.orbitSequence
-        , renderImage gasGiantData.code Nothing
-        , renderJumpTime maxShadow gasGiantData.safeJumpTime
-        , renderTravelTime stellarObject selectedStellarObject
-        ]
-
-
 uwpBreakdown : UWP -> List ( String, String )
 uwpBreakdown uwp =
     [ ( "Starport", Starport.description uwp.starport )
@@ -1805,333 +1327,6 @@ uwpExplainer uwpString =
 
         _ ->
             text ("Could not parse " ++ uwpString)
-
-
-renderTerrestrialPlanet : Int -> SharedPData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
-renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject isReferee =
-    let
-        planet =
-            TerrestrialPlanet terrestrialData
-
-        maxShadow =
-            List.maximum <| List.filterMap (\checker -> checker planet) jumpShadowCheckers
-
-        orbit =
-            renderOrbit terrestrialData.au terrestrialData.effectiveHZCODeviation terrestrialData.meanTemperature isReferee
-    in
-    row
-        [ Element.spacing 8
-        , Element.moveRight <| calcNestedOffset newNestingLevel
-        , Font.size 14
-        , Events.onClick <| FocusInSidebar planet
-        ]
-        [ orbit
-        , renderOrbitSequence terrestrialData.orbitSequence
-        , renderSODescription (ViewObjectAnalysisDetail planet) terrestrialData.uwp terrestrialData.orbitSequence
-        , renderImage terrestrialData.uwp terrestrialData.meanTemperature
-        , renderJumpTime maxShadow terrestrialData.safeJumpTime
-        , renderTravelTime planet selectedStellarObject
-        ]
-
-
-renderPlanetoidBelt : Int -> PlanetoidBeltData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
-renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selectedStellarObject isReferee =
-    let
-        belt =
-            PlanetoidBelt planetoidBeltData
-
-        maxShadow =
-            List.maximum <| List.filterMap (\checker -> checker belt) jumpShadowCheckers
-
-        orbit =
-            renderOrbit planetoidBeltData.au planetoidBeltData.effectiveHZCODeviation Nothing isReferee
-    in
-    row
-        [ Element.spacing 8
-        , Element.moveRight <| calcNestedOffset newNestingLevel
-        , Font.size 14
-        , Events.onClick <| FocusInSidebar belt
-        ]
-        [ orbit
-        , renderOrbitSequence planetoidBeltData.orbitSequence
-        , renderSODescription (ViewObjectAnalysisDetail belt) planetoidBeltData.uwp planetoidBeltData.orbitSequence
-        , renderImage planetoidBeltData.uwp Nothing
-        , renderJumpTime maxShadow planetoidBeltData.safeJumpTime
-        , renderTravelTime belt selectedStellarObject
-        ]
-
-
-renderPlanetoid : Int -> SharedPData -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
-renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellarObject isReferee =
-    let
-        planet =
-            Planetoid planetoidData
-
-        maxShadow =
-            List.maximum <| List.filterMap (\checker -> checker planet) jumpShadowCheckers
-
-        orbit =
-            renderOrbit planetoidData.au planetoidData.effectiveHZCODeviation planetoidData.meanTemperature isReferee
-    in
-    row
-        [ Element.spacing 8
-        , Element.moveRight <| calcNestedOffset newNestingLevel
-        , Font.size 14
-        , Events.onClick <| FocusInSidebar planet
-        ]
-        [ orbit
-        , renderOrbitSequence planetoidData.orbitSequence
-        , renderSODescription (ViewObjectAnalysisDetail planet) planetoidData.uwp planetoidData.orbitSequence
-        , renderImage planetoidData.uwp planetoidData.meanTemperature
-        , renderJumpTime maxShadow planetoidData.safeJumpTime
-        , renderTravelTime planet selectedStellarObject
-        ]
-
-
-renderStellarObject : Int -> Int -> StellarObject -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
-renderStellarObject surveyIndex newNestingLevel stellarObject jumpShadowCheckers selectedStellarObject isReferee =
-    row
-        [ Element.spacing 8
-        , Font.size 14
-        , Element.width Element.fill
-        ]
-        [ case stellarObject of
-            GasGiant gasGiantData ->
-                renderGasGiant newNestingLevel gasGiantData jumpShadowCheckers selectedStellarObject isReferee
-
-            TerrestrialPlanet terrestrialData ->
-                renderTerrestrialPlanet newNestingLevel terrestrialData jumpShadowCheckers selectedStellarObject isReferee
-
-            PlanetoidBelt planetoidBeltData ->
-                renderPlanetoidBelt newNestingLevel planetoidBeltData jumpShadowCheckers selectedStellarObject isReferee
-
-            Planetoid planetoidData ->
-                renderPlanetoid newNestingLevel planetoidData jumpShadowCheckers selectedStellarObject isReferee
-
-            Star starDataConfig ->
-                el [ Element.width Element.fill, Element.paddingEach { top = 0, left = 0, right = 0, bottom = 5 } ] <|
-                    displayStarDetails surveyIndex starDataConfig newNestingLevel jumpShadowCheckers selectedStellarObject isReferee
-        ]
-
-
-displayStarDetails : Int -> StarData -> Int -> JumpShadowCheckers -> Maybe StellarObject -> Bool -> Element.Element Msg
-displayStarDetails surveyIndex (StarDataWrap starData) nestingLevel jumpShadowCheckers selectedStellarObject isReferee =
-    let
-        inJumpShadow obj =
-            case starData.jumpShadow of
-                Just jumpShadow ->
-                    jumpShadow >= (getStellarOrbit obj).au
-
-                Nothing ->
-                    False
-
-        isKnown obj =
-            case obj of
-                GasGiant _ ->
-                    surveyIndex >= 5
-
-                TerrestrialPlanet _ ->
-                    surveyIndex >= 6
-
-                PlanetoidBelt _ ->
-                    surveyIndex >= 6
-
-                Planetoid _ ->
-                    surveyIndex >= 6
-
-                Star childStar ->
-                    if isBrownDwarf <| getInnerStarData childStar then
-                        surveyIndex >= 4
-
-                    else
-                        surveyIndex >= 3
-
-        nextNestingLevel =
-            nestingLevel + 1
-    in
-    column
-        [ Color.rgba (33 / 255.0) (37 / 255.0) (41 / 255.0) 0.15
-            |> Color.Manipulate.darken 0.4
-            |> convertColor
-            |> Background.color
-        , Element.width Element.fill
-        , Element.moveRight <| toFloat <| nestingLevel * 5
-        , Border.rounded 10
-        , Element.width <| Element.minimum 200 Element.fill
-        , Element.spacing 10
-        , Element.paddingXY 0 5
-        ]
-        [ row [ Element.paddingXY 10 0, Font.alignLeft, Element.alignLeft ]
-            [ if starData.orbitPosition.x == 0 && starData.orbitPosition.y == 0 then
-                Element.none
-
-              else
-                renderRawOrbit starData.au
-            , el [ Font.alignLeft, Element.alignLeft, Font.size 16, Font.bold ] <|
-                text <|
-                    starData.stellarType
-                        ++ (case starData.subtype of
-                                Just num ->
-                                    String.fromInt num
-
-                                Nothing ->
-                                    ""
-                           )
-                        ++ " "
-                        ++ starData.stellarClass
-            ]
-        , starData.companion
-            |> Maybe.map
-                (\compStarData ->
-                    displayStarDetails surveyIndex compStarData nextNestingLevel jumpShadowCheckers selectedStellarObject isReferee
-                )
-            |> Maybe.withDefault Element.none
-        , column [ Element.paddingXY 10 0, Element.width Element.fill ] <|
-            let
-                red =
-                    Element.el
-                        [ width <| Element.fill
-                        , height <| Element.px 4
-                        , Element.centerY
-                        , Border.rounded 2
-                        , Background.gradient
-                            { angle = pi / 2.0
-                            , steps =
-                                [ travellerRed
-                                , Element.rgba 0 0 0 0.25
-                                , travellerRed
-                                ]
-                            }
-                        ]
-                    <|
-                        text <|
-                            " "
-            in
-            [ starData.stellarObjects
-                |> List.filter inJumpShadow
-                |> List.filter isKnown
-                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject isReferee)
-                |> column []
-            , column [ Font.size 14, Font.shadow { blur = 1, color = jumpShadowTextColor, offset = ( 0.5, 0.5 ) }, Element.width Element.fill, Element.behindContent red ]
-                [ case starData.jumpShadow of
-                    Just jumpShadow ->
-                        Element.el [ Element.centerX ] <| text <| Round.round 2 jumpShadow
-
-                    Nothing ->
-                        text ""
-                ]
-            , starData.stellarObjects
-                |> List.filter (not << inJumpShadow)
-                |> List.filter isKnown
-                |> List.map (\so -> renderStellarObject surveyIndex nextNestingLevel so jumpShadowCheckers selectedStellarObject isReferee)
-                |> column []
-            ]
-        ]
-
-
-convertColor : Color.Color -> Element.Color
-convertColor color =
-    Element.fromRgb <| Color.toRgba <| color
-
-
-type alias JumpShadowChecker =
-    StellarObject -> Maybe Float
-
-
-type alias JumpShadowCheckers =
-    List JumpShadowChecker
-
-
-viewSystemDetailsSidebar : SolarSystem -> Maybe StellarObject -> Bool -> Element Msg
-viewSystemDetailsSidebar solarSystem selectedStellarObject isReferee =
-    let
-        jumpShadowCheckers : JumpShadowCheckers
-        jumpShadowCheckers =
-            List.filterMap
-                (getStarData >> Maybe.map getInnerStarData)
-                (Star solarSystem.primaryStar :: (getInnerStarData solarSystem.primaryStar).stellarObjects)
-                |> List.map
-                    (\star so ->
-                        let
-                            objToStarKMs =
-                                calcDistance2F star.orbitPosition (getStellarOrbit so).orbitPosition
-
-                            jumpShadowDistanceKMs =
-                                auToKMs (Maybe.withDefault 0 star.jumpShadow)
-                        in
-                        if objToStarKMs > jumpShadowDistanceKMs then
-                            Nothing
-
-                        else
-                            Just <| travelTimeInSeconds (jumpShadowDistanceKMs - objToStarKMs) 4
-                    )
-    in
-    displayStarDetails
-        solarSystem.surveyIndex
-        solarSystem.primaryStar
-        0
-        jumpShadowCheckers
-        selectedStellarObject
-        isReferee
-
-
-colorToElementColor : Color.Color -> Element.Color
-colorToElementColor color =
-    color
-        |> Color.toRgba
-        |> (\{ red, green, blue, alpha } -> Element.rgba red green blue alpha)
-
-
-fontTextColor : Element.Color
-fontTextColor =
-    textColor |> colorToElementColor
-
-
-{-| Color.Color is not Element.Color
--}
-textColor : Color.Color
-textColor =
-    Color.rgb 0.5 1.0 0.5
-
-
-deepnightColor : Color.Color
-deepnightColor =
-    Color.rgb255 223 127 51
-
-
-deepnightLightGray : Color.Color
-deepnightLightGray =
-    Color.rgb255 167 180 183
-
-
-deepnightGray : Color.Color
-deepnightGray =
-    Color.rgb255 121 137 144
-
-
-
---Color.rgb 1.0 0.498 0.0
-
-
-fontDarkTextColor : Element.Color
-fontDarkTextColor =
-    textColor
-        |> Color.Manipulate.desaturate 0.85
-        |> Color.Manipulate.darken 0.25
-        |> colorToElementColor
-
-
-jumpShadowTextColor : Element.Color
-jumpShadowTextColor =
-    textColor
-        |> Color.Manipulate.desaturate 0.85
-        |> Color.Manipulate.darken 0.85
-        |> colorToElementColor
-
-
-travellerRed : Element.Color
-travellerRed =
-    Element.rgb 0.882 0.024 0
 
 
 universalHexLabel : SectorDict -> HexAddress -> String
@@ -2571,163 +1766,6 @@ viewStatusRow model =
             :: extras
 
 
-viewSidebarColumn :
-    { a
-        | hexScale : Float
-        , viewMode : ViewMode
-        , selectedHex : Maybe HexAddress
-        , solarSystems : Dict.Dict String RemoteSolarSystem
-        , sectors : SectorDict
-        , regions : Dict.Dict k { b | hexes : List HexAddress, name : String, colour : Color }
-        , selectedSystem : Maybe SolarSystem
-        , selectedStellarObject : Maybe StellarObject
-        , isReferee : Bool
-    }
-    -> Element Msg
-viewSidebarColumn { hexScale, viewMode, selectedHex, solarSystems, sectors, regions, selectedSystem, selectedStellarObject, isReferee } =
-    column [ Element.spacing 10, Element.centerX, Element.height Element.fill ]
-        [ column [ Element.width Element.fill ]
-            [ let
-                clickableIcon size =
-                    let
-                        selectorColor =
-                            if hexScale == size / 2 && viewMode == HexMap then
-                                deepnightColor
-
-                            else
-                                textColor
-
-                        hexStyle =
-                            if hexScale == size / 2 && viewMode == HexMap then
-                                "fa-regular"
-
-                            else
-                                "fa-thin"
-                    in
-                    renderFAIcon (hexStyle ++ " fa-hexagon") (floor size)
-                        |> Element.el
-                            [ Element.pointer
-                            , Element.mouseOver [ Font.color <| convertColor (Color.Manipulate.lighten 0.15 selectorColor) ]
-                            , Events.onClick <| SetHexSize <| size / 2
-                            , Font.color <| convertColor selectorColor
-                            ]
-              in
-              row [ Element.spacing 6, Element.centerX ]
-                [ clickableIcon 80
-                , clickableIcon 60
-                , clickableIcon 50
-                , clickableIcon 30
-                , let
-                    selectorColor =
-                        if viewMode == FullJourney then
-                            deepnightColor
-
-                        else
-                            textColor
-
-                    hexStyle =
-                        if viewMode == FullJourney then
-                            "fa-regular"
-
-                        else
-                            "fa-thin"
-                  in
-                  el
-                    [ Element.width <| Element.px 50
-                    , Element.height <| Element.px 50
-                    , Element.pointer
-                    , Events.onClick ToggleHexmap
-                    , Element.mouseOver [ Font.color <| convertColor (Color.Manipulate.lighten 0.15 selectorColor) ]
-                    , Font.color <| convertColor selectorColor
-                    ]
-                  <|
-                    renderFAIcon (hexStyle ++ " " ++ "fa-map") 50
-                ]
-            , case selectedHex of
-                Just viewingAddress ->
-                    column [ centerY, Element.paddingXY 0 10, width fill ]
-                        [ case solarSystems |> Dict.get (HexAddress.toKey viewingAddress) of
-                            Just (LoadedSolarSystem _) ->
-                                Element.none
-
-                            Just LoadingSolarSystem ->
-                                text "loading..."
-
-                            Just LoadedEmptyHex ->
-                                Element.none
-
-                            Just (FailedSolarSystem _) ->
-                                text "failed."
-
-                            Just (FailedStarsSolarSystem _) ->
-                                text "decoding a star failed"
-
-                            Nothing ->
-                                text "No solar system data found for system."
-                        , row [ Element.spacing 5, width fill ]
-                            [ text <| universalHexLabel sectors viewingAddress
-                            , regions
-                                |> Dict.values
-                                |> -- abusing lists here since we only expect one label,
-                                   -- but this iterates over all the regions
-                                   -- and renders the name if it exists
-                                   List.filterMap
-                                    (\region ->
-                                        if List.member viewingAddress region.hexes then
-                                            text region.name
-                                                |> el [ Font.size 12, Font.color <| convertColor region.colour ]
-                                                |> Just
-
-                                        else
-                                            Nothing
-                                    )
-                                |> column [ Element.alignRight ]
-                            ]
-                        ]
-
-                Nothing ->
-                    column [ centerX, centerY, Font.size 10 ]
-                        [ text "Select hex in console to view parsec details."
-                        ]
-            , case selectedSystem of
-                Just solarSystem ->
-                    Element.Lazy.lazy3 viewSystemDetailsSidebar
-                        solarSystem
-                        selectedStellarObject
-                        isReferee
-
-                Nothing ->
-                    column [ centerX, centerY, Font.size 10, Element.moveDown 20 ]
-                        [ text "Click a hex to view system details."
-                        ]
-            ]
-        , Element.Lazy.lazy viewSidebarFooter selectedHex
-        ]
-
-
-viewSidebarFooter : Maybe HexAddress -> Element msg
-viewSidebarFooter selectedHex =
-    let
-        _ =
-            Debug.log "footer" 123
-    in
-    -- footer
-    Element.el
-        [ Element.padding 10
-        , Element.alignBottom
-        , centerX
-        , Font.size 10
-        , uiDeepnightColorFontColour
-        ]
-    <|
-        case selectedHex of
-            Just viewingAddress ->
-                text <| Debug.toString viewingAddress
-
-            Nothing ->
-                text "Deepnight Corporation LLC"
-
-
 viewHexMap : ModelData -> Element Msg
 viewHexMap model =
     let
@@ -2777,8 +1815,51 @@ viewHexMap model =
 view : Model -> Element.Element Msg
 view ( time, model ) =
     let
+        sidebarMsgs : SidebarMsgs Msg
+        sidebarMsgs =
+            { setHexSize = SetHexSize
+            , toggleHexmap = ToggleHexmap
+            , focusInSidebar = FocusInSidebar
+            , viewDetail = ViewObjectAnalysisDetail
+            }
+
+        solarSystemStatus =
+            case model.selectedHex of
+                Just viewingAddress ->
+                    case model.solarSystems |> Dict.get (HexAddress.toKey viewingAddress) of
+                        Just LoadingSolarSystem ->
+                            Just "loading..."
+
+                        Just (FailedSolarSystem _) ->
+                            Just "failed."
+
+                        Just (FailedStarsSolarSystem _) ->
+                            Just "decoding a star failed"
+
+                        Nothing ->
+                            Just "No solar system data found for system."
+
+                        _ ->
+                            Nothing
+
+                Nothing ->
+                    Nothing
+
+        sidebarData =
+            { hexScale = model.hexScale
+            , isHexMapMode = model.viewMode == HexMap
+            , isFullJourneyMode = model.viewMode == FullJourney
+            , selectedHex = model.selectedHex
+            , solarSystemStatus = solarSystemStatus
+            , sectors = model.sectors
+            , regions = model.regions
+            , selectedSystem = model.selectedSystem
+            , selectedStellarObject = model.selectedStellarObject
+            , isReferee = model.isReferee
+            }
+
         sidebarColumn =
-            Element.Lazy.lazy viewSidebarColumn model
+            Element.Lazy.lazy2 viewSidebarColumn sidebarMsgs sidebarData
 
         contentColumn =
             case model.viewMode of
@@ -2800,7 +1881,7 @@ view ( time, model ) =
         , Element.paddingXY 15 0
         , case model.objectToBeAnalyzed of
             Just analysisDetail ->
-                Element.inFront <| viewObjectAnalysisDetail timeChars analysisDetail.data
+                Element.inFront <| viewObjectAnalysisDetail timeChars CloseObjectAnalysis analysisDetail.data
 
             Nothing ->
                 Element.htmlAttribute <| HtmlAttrs.class ""
@@ -2812,454 +1893,6 @@ view ( time, model ) =
             , el [ Element.alignTop ] contentColumn
             ]
         , Element.html <| errorDialog model.newSolarSystemErrors
-        ]
-
-
-headerAttrs =
-    [ uiDeepnightColorFontColour
-    , Font.size 14
-    , Font.bold
-    , Element.alignTop
-    ]
-
-
-valueAttrs =
-    [ Font.size 14
-    , Element.alignTop
-    ]
-
-
-numberDisplay lbl val =
-    textDisplay lbl <| String.fromInt val
-
-
-floatDisplay lbl val =
-    textDisplay lbl <| String.fromFloat val
-
-
-groupAttrs =
-    [ Element.paddingXY 5 0, width fill ]
-
-
-textDisplay lbl val =
-    row
-        [ width fill
-        , Element.paddingEach <| { zeroEach | top = 5 }
-        ]
-        [ Element.paragraph
-            [ Element.alignTop, width Element.shrink ]
-            [ el ((width <| Element.px 150) :: headerAttrs) <| text lbl ]
-        , Element.paragraph
-            [ width fill, Element.spacing 0 ]
-            [ el valueAttrs <| monospaceText val ]
-        ]
-
-
-taintTextDisplay lbl val =
-    row []
-        [ Element.paragraph [ Element.alignTop, width Element.shrink ]
-            [ el ((width <| Element.px 100) :: headerAttrs) <| text lbl ]
-        , Element.paragraph
-            [ Element.alignTop, width <| Element.px 530, Element.spacing 0 ]
-            [ el valueAttrs <| monospaceText val ]
-        ]
-
-
-textDisplayNarrow lbl val =
-    row [ width fill ]
-        [ el
-            ([ width <| Element.px 90
-             , Element.paddingEach <| { zeroEach | top = 5 }
-             ]
-                ++ headerAttrs
-            )
-          <|
-            text lbl
-        , Element.row [ Element.spacing 0 ]
-            [ el ([ Element.alignTop, Element.spacing 0, Element.padding 0 ] ++ valueAttrs) <| monospaceText val
-            ]
-        ]
-
-
-textDisplayMedium lbl val =
-    row [ width fill ]
-        [ el
-            ([ width <| Element.px 110
-             , Element.paddingEach <| { zeroEach | top = 5 }
-             ]
-                ++ headerAttrs
-            )
-          <|
-            text lbl
-        , Element.row [ Element.spacing 0 ]
-            [ el ([ Element.alignTop, Element.spacing 0, Element.padding 0 ] ++ valueAttrs) <| monospaceText val
-            ]
-        ]
-
-
-viewObjectAnalysisDetail : Int -> AnalysisDetail -> Element.Element Msg
-viewObjectAnalysisDetail timeChars data =
-    let
-        ( header, content ) =
-            case data of
-                AnalyisDetailTerrestialPlanet detailHeader sharedPData ->
-                    ( detailHeader.header, viewPlanetoidAnalysisDetail timeChars sharedPData )
-
-                AnalyisDetailPlanetoid detailHeader sharedPData ->
-                    ( detailHeader.header, viewPlanetoidAnalysisDetail timeChars sharedPData )
-
-                AnalyisDetailGasGiant detailHeader sharedGGData ->
-                    ( detailHeader.header, viewGasGiantAnalysisDetail timeChars sharedGGData )
-
-                --( "TODO: Gas Giant", text "Gas Giant not yet implemented" )
-                AnalyisDetailPlanetoidBelt detailHeader sharePBData ->
-                    ( detailHeader.header, viewPlanetoidBeltAnalysisDetail timeChars sharePBData )
-
-                AnalyisDetailStar ->
-                    ( "TODO: Star", text "Star not yet implemented" )
-    in
-    column
-        [ height fill
-        , centerX
-        , centerY
-        , Background.color <| Element.rgba 0.3 0.3 0.3 0.95
-        , width <| Element.px 750
-        , Element.padding 4
-        , Border.rounded 3
-        , Border.shadow { offset = ( 1, 1 ), size = 2, blur = 4, color = Element.rgba 0.1 0.1 0.1 (1 / 8) }
-        ]
-        [ row [ width fill ]
-            [ el [ Font.size 24, Element.paddingEach { zeroEach | bottom = 15 } ] <|
-                text <|
-                    header
-            , el
-                [ Element.paddingEach { top = 0, left = 10, right = 10, bottom = 10 }
-                , Element.pointer
-                , Element.mouseOver [ Font.color <| Element.rgb 0.8 0.8 0.8 ]
-                , Font.size 16
-                , Element.alignRight
-                , Element.alignTop
-                , Events.onClick CloseObjectAnalysis
-                ]
-              <|
-                text "X"
-            ]
-        , content
-        ]
-
-
-type alias AnalysisDetailHeader =
-    { header : String
-    }
-
-
-type AnalysisDetail
-    = AnalyisDetailTerrestialPlanet AnalysisDetailHeader AnalyisDetailPlanetoidData
-    | AnalyisDetailPlanetoid AnalysisDetailHeader AnalyisDetailPlanetoidData
-    | AnalyisDetailGasGiant AnalysisDetailHeader AnalyisDetailGasGiantData
-    | AnalyisDetailPlanetoidBelt AnalysisDetailHeader AnalyisDetailPlanetoidBeltData
-    | AnalyisDetailStar
-
-
-type alias AnalyisDetailGasGiantData =
-    { physical :
-        { au : String
-        , period : String
-        , inclination : String
-        , eccentricity : String
-        , mass : String
-        , diameter : String
-        , axialTilt : String
-        , moons : String
-        , hasRing : String
-        }
-    }
-
-
-type alias AnalyisDetailPlanetoidBeltData =
-    { physical :
-        { au : String
-        , period : String
-        , inclination : String
-        , eccentricity : String
-        , bulk : String
-        , span : String
-        , cType : String
-        , sType : String
-        , oType : String
-        , mType : String
-        }
-    }
-
-
-type alias AnalyisDetailPlanetoidData =
-    { physical :
-        { au : String
-        , period : String
-        , inclination : String
-        , eccentricity : String
-        , mass : String
-        , density : String
-        , gravity : String
-        , diameter : String
-        , meanTemperature : String
-        , albedo : String
-        , axialTilt : String
-        , greenhouse : String
-        }
-    , atmosphere :
-        { type_ : String
-        , hazardCode : String
-        , bar : String
-        , taint :
-            { subtype : String
-            , severity : String
-            , persistence : String
-            }
-        }
-    , hydrographics :
-        { percentage : String
-        , surfaceDistribution : String
-        }
-    , life :
-        { biomass : String
-        , biocomplexity : String
-        , biodiversity : String
-        , compatibility : String
-        , habitability : String
-        , sophonts : String
-        }
-    }
-
-
-viewPlanetoidAnalysisDetail : Int -> AnalyisDetailPlanetoidData -> Element.Element Msg
-viewPlanetoidAnalysisDetail timeChars data =
-    let
-        showTimeCharsTEMP index str =
-            let
-                offset =
-                    timeChars - (Array.get index counts |> Maybe.withDefault 0)
-            in
-            if timeChars < 0 then
-                ""
-
-            else
-                String.left offset str
-
-        strings =
-            [ data.physical.au
-            , data.physical.period
-            , data.physical.inclination
-            , data.physical.eccentricity
-            , data.physical.mass
-            , data.physical.density
-            , data.physical.gravity
-            , data.physical.diameter
-            , data.physical.meanTemperature
-            , data.physical.albedo
-            , data.physical.axialTilt
-            , data.physical.greenhouse
-            , data.atmosphere.type_
-            , data.atmosphere.bar
-            , data.atmosphere.hazardCode
-            , data.atmosphere.taint.subtype
-            , data.atmosphere.taint.severity
-            , data.atmosphere.taint.persistence
-            , data.hydrographics.percentage
-            , data.hydrographics.surfaceDistribution
-            , data.life.biomass
-            , data.life.biocomplexity
-            , data.life.biodiversity
-            , data.life.compatibility
-            , data.life.habitability
-            , data.life.sophonts
-            ]
-
-        counts =
-            List.scanl (\word total -> total + (floor <| sqrt <| toFloat <| String.length word)) 0 strings
-                |> Array.fromList
-    in
-    column []
-        [ column []
-            [ text <| "Physical"
-            , row (Element.spacing 40 :: groupAttrs)
-                [ column [ Element.alignTop ]
-                    [ textDisplayNarrow "AU" <| showTimeCharsTEMP 0 data.physical.au
-                    , textDisplayNarrow "Period (yrs)" <| showTimeCharsTEMP 1 data.physical.period
-                    , textDisplayNarrow "Inclination" <| showTimeCharsTEMP 2 data.physical.inclination
-                    , textDisplayNarrow "Eccentricity" <| showTimeCharsTEMP 3 data.physical.eccentricity
-                    ]
-                , column [ Element.alignTop ]
-                    [ textDisplayMedium "Mass (earths)" <| showTimeCharsTEMP 4 data.physical.mass
-                    , textDisplayMedium "Density (earth)" <| showTimeCharsTEMP 5 data.physical.density
-                    , textDisplayMedium "Gravity (G)" <| showTimeCharsTEMP 6 data.physical.gravity
-                    , textDisplayMedium "Diameter (km)" <| showTimeCharsTEMP 7 data.physical.diameter
-                    ]
-                , column [ Element.alignTop ]
-                    [ textDisplayNarrow "Temperature" <| showTimeCharsTEMP 8 data.physical.meanTemperature
-                    , textDisplayNarrow "Albedo" <| showTimeCharsTEMP 9 data.physical.albedo
-                    , textDisplayNarrow "Axial Tilt" <| showTimeCharsTEMP 10 data.physical.axialTilt
-                    , textDisplayNarrow "Greenhouse" <| showTimeCharsTEMP 11 data.physical.greenhouse
-                    ]
-                ]
-            ]
-        , column [ width fill, Element.paddingXY 0 10 ]
-            [ text <| "Atmosphere"
-            , column groupAttrs
-                [ textDisplay "Type" <| showTimeCharsTEMP 12 data.atmosphere.type_
-                , textDisplay "BAR" <| showTimeCharsTEMP 13 data.atmosphere.bar
-                , if True then
-                    textDisplay "Hazard Code" <| showTimeCharsTEMP 14 data.atmosphere.hazardCode
-
-                  else
-                    Element.none
-                , row [ width fill ]
-                    [ el
-                        [ uiDeepnightColorFontColour
-                        , Font.bold
-                        , Font.size 14
-                        , Element.alignTop
-                        , width <| Element.px 50
-                        , Element.paddingEach <| { zeroEach | top = 5 }
-                        ]
-                      <|
-                        text "Taint"
-                    , column [ width fill ]
-                        [ taintTextDisplay "Subtype" <| showTimeCharsTEMP 15 data.atmosphere.taint.subtype
-                        , taintTextDisplay "Severity" <| showTimeCharsTEMP 16 data.atmosphere.taint.severity
-                        , taintTextDisplay "Persistence" <| showTimeCharsTEMP 17 data.atmosphere.taint.persistence
-                        ]
-                    ]
-                ]
-            ]
-        , column [ Element.paddingXY 0 10 ]
-            [ text <| "Hydrographics"
-            , column groupAttrs
-                [ textDisplay "Percentage" <| showTimeCharsTEMP 18 data.hydrographics.percentage
-                , textDisplay "Surface Distribution" <| showTimeCharsTEMP 19 data.hydrographics.surfaceDistribution
-                ]
-            ]
-        , column [ Element.paddingXY 0 10 ]
-            [ text <| "Life"
-            , column groupAttrs
-                [ textDisplay "Biomass" <| showTimeCharsTEMP 20 data.life.biomass
-                , textDisplay "Biocomplexity" <| showTimeCharsTEMP 21 data.life.biocomplexity
-                , textDisplay "Biodiversity" <| showTimeCharsTEMP 22 data.life.biodiversity
-                , textDisplay "Compatibilty" <| showTimeCharsTEMP 23 data.life.compatibility
-                , textDisplay "Habitability" <| showTimeCharsTEMP 24 data.life.habitability
-                , textDisplay "Sophonts" <| showTimeCharsTEMP 25 data.life.sophonts
-                ]
-            ]
-        ]
-
-
-viewGasGiantAnalysisDetail : Int -> AnalyisDetailGasGiantData -> Element.Element Msg
-viewGasGiantAnalysisDetail timeChars data =
-    let
-        showTimeCharsTEMP index str =
-            let
-                offset =
-                    timeChars - (Array.get index counts |> Maybe.withDefault 0)
-            in
-            if timeChars < 0 then
-                ""
-
-            else
-                String.left offset str
-
-        strings =
-            [ data.physical.au
-            , data.physical.period
-            , data.physical.inclination
-            , data.physical.eccentricity
-            , data.physical.mass
-            , data.physical.diameter
-            , data.physical.axialTilt
-            , data.physical.moons
-            , data.physical.hasRing
-            ]
-
-        counts =
-            List.scanl (\word total -> total + (floor <| sqrt <| toFloat <| String.length word)) 0 strings
-                |> Array.fromList
-    in
-    column []
-        [ column []
-            [ text <| "Physical"
-            , row (Element.spacing 40 :: groupAttrs)
-                [ column [ Element.alignTop ]
-                    [ textDisplayNarrow "AU" <| showTimeCharsTEMP 0 data.physical.au
-                    , textDisplayNarrow "Period (yrs)" <| showTimeCharsTEMP 1 data.physical.period
-                    , textDisplayNarrow "Inclination" <| showTimeCharsTEMP 2 data.physical.inclination
-                    , textDisplayNarrow "Eccentricity" <| showTimeCharsTEMP 3 data.physical.eccentricity
-                    ]
-                , column [ Element.alignTop ]
-                    [ textDisplayMedium "Mass (earths)" <| showTimeCharsTEMP 4 data.physical.mass
-                    , textDisplayMedium "Diameter (km)" <| showTimeCharsTEMP 5 data.physical.diameter
-                    , textDisplayMedium "Axial Tilt" <| showTimeCharsTEMP 6 data.physical.axialTilt
-                    ]
-                , column [ Element.alignTop ]
-                    [ textDisplayNarrow "Moons" <| showTimeCharsTEMP 7 data.physical.moons
-                    , textDisplayNarrow "Rings" <| showTimeCharsTEMP 8 data.physical.hasRing
-                    ]
-                ]
-            ]
-        ]
-
-
-viewPlanetoidBeltAnalysisDetail : Int -> AnalyisDetailPlanetoidBeltData -> Element.Element Msg
-viewPlanetoidBeltAnalysisDetail timeChars data =
-    let
-        showTimeCharsTEMP index str =
-            let
-                offset =
-                    timeChars - (Array.get index counts |> Maybe.withDefault 0)
-            in
-            if timeChars < 0 then
-                ""
-
-            else
-                String.left offset str
-
-        strings =
-            [ data.physical.au
-            , data.physical.period
-            , data.physical.inclination
-            , data.physical.eccentricity
-            , data.physical.span
-            , data.physical.bulk
-            , data.physical.cType
-            , data.physical.mType
-            , data.physical.sType
-            , data.physical.oType
-            ]
-
-        counts =
-            List.scanl (\word total -> total + (floor <| sqrt <| toFloat <| String.length word)) 0 strings
-                |> Array.fromList
-    in
-    column []
-        [ column []
-            [ text <| "Physical"
-            , row (Element.spacing 40 :: groupAttrs)
-                [ column [ Element.alignTop ]
-                    [ textDisplayNarrow "AU" <| showTimeCharsTEMP 0 data.physical.au
-                    , textDisplayNarrow "Period (yrs)" <| showTimeCharsTEMP 1 data.physical.period
-                    , textDisplayNarrow "Inclination" <| showTimeCharsTEMP 2 data.physical.inclination
-                    , textDisplayNarrow "Eccentricity" <| showTimeCharsTEMP 3 data.physical.eccentricity
-                    ]
-                , column [ Element.alignTop ]
-                    [ textDisplayNarrow "Span" <| showTimeCharsTEMP 4 data.physical.span
-                    , textDisplayNarrow "Bulk" <| showTimeCharsTEMP 5 data.physical.bulk
-                    ]
-                , column [ Element.alignTop ]
-                    [ textDisplayNarrow "c-type" <| showTimeCharsTEMP 6 data.physical.cType
-                    , textDisplayNarrow "m-type" <| showTimeCharsTEMP 7 data.physical.mType
-                    , textDisplayNarrow "s-type" <| showTimeCharsTEMP 8 data.physical.sType
-                    , textDisplayNarrow "o-type" <| showTimeCharsTEMP 9 data.physical.oType
-                    ]
-                ]
-            ]
         ]
 
 
@@ -3312,7 +1945,7 @@ sendRouteRequest requestEntry hostConfig =
         url =
             Url.Builder.crossOrigin
                 urlHostRoot
-                (urlHostPath ++ [ "route" ])
+                (urlHostPath ++ [ "jumps" ])
                 []
 
         requestCmd =
@@ -3342,7 +1975,7 @@ fetchSingleSolarSystemRequest hostConfig hex =
         url =
             Url.Builder.crossOrigin
                 urlHostRoot
-                (urlHostPath ++ [ "solarsystem" ])
+                (urlHostPath ++ [ "starsystem" ])
                 [ Url.Builder.int "sx" hex.sectorX
                 , Url.Builder.int "sy" hex.sectorY
                 , Url.Builder.int "hx" <| hex.x + 1
@@ -4228,7 +2861,7 @@ update msg ( time, model ) =
                         buildStringPlanetoidBelt pdata =
                             { physical =
                                 { au = rnd 2 pdata.au
-                                , period = rnd 2 (ggdata.period / 365.25)
+                                , period = rnd 2 (pdata.period / 365.25)
                                 , inclination = rnd 0 pdata.inclination ++ "°"
                                 , eccentricity = rnd 2 pdata.eccentricity
                                 , bulk = rnd 0 pdata.bulk
@@ -4244,7 +2877,7 @@ update msg ( time, model ) =
                         buildStringPlanet pdata =
                             { physical =
                                 { au = rnd 2 pdata.au
-                                , period = rnd 2 (ggdata.period / 365.25)
+                                , period = rnd 2 (pdata.period / 365.25)
                                 , inclination = rnd 0 pdata.inclination ++ "°"
                                 , eccentricity = rnd 2 pdata.eccentricity
                                 , mass = rndm 2 0 pdata.mass
@@ -4389,11 +3022,6 @@ sendSectorRequest requestEntry hostConfig =
                 }
     in
     requestCmd
-
-
-auToKMs : Float -> Float
-auToKMs au =
-    au * 149597871.0
 
 
 sendRegionRequest : RequestEntry -> HostConfig -> Cmd Msg

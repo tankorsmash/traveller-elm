@@ -16,7 +16,7 @@ type alias SolarSystem =
     , nativeSophont : Bool
     , extinctSophont : Bool
     , allegiance : Maybe String
-    , name : String
+    , name : Maybe String
     , sectorName : String
     }
 
@@ -34,7 +34,7 @@ type alias RawSolarSystem =
     , sectorX : Int
     , sectorY : Int
     , allegiance : Maybe String
-    , name : String
+    , name : Maybe String
     , sectorName : String
     }
 
@@ -88,14 +88,14 @@ rawCodec =
         |> Codec.field "y" .y Codec.int
         |> Codec.field "primary_star" .primaryStar codecStarData
         |> Codec.field "gas_giant_count" .gasGiants Codec.int
-        |> Codec.field "planetoid_belt_count" .planetoidBelts Codec.int
-        |> Codec.field "terrestrial_planet_count" .terrestrialPlanets Codec.int
+        |> Codec.field "belt_count" .planetoidBelts Codec.int
+        |> Codec.field "terrestrial_count" .terrestrialPlanets Codec.int
         |> Codec.field "survey_index" .surveyIndex Codec.int
         |> Codec.field "native_sophont" .nativeSophont Codec.bool
         |> Codec.field "extinct_sophont" .extinctSophont Codec.bool
         |> Codec.field "sector_x" .sectorX Codec.int
         |> Codec.field "sector_y" .sectorY Codec.int
         |> Codec.field "allegiance" .allegiance (Codec.nullable Codec.string)
-        |> Codec.field "name" .name Codec.string
+        |> Codec.field "name" .name (Codec.nullable Codec.string)
         |> Codec.field "sector_name" .sectorName Codec.string
         |> Codec.buildObject

@@ -11,7 +11,12 @@ type alias HostConfig =
 
 default : HostConfig
 default =
-    ( "https://radiofreewaba.net", [ "deepnight", "data" ] )
+    ( "http://localhost:3000", [ "api" ] )
+
+
+
+--default =
+--    ( "https://radiofreewaba.net", [ "deepnight", "data" ] )
 
 
 {-| A full Url.Parser that looks at the query string and returns it if found

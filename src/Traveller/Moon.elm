@@ -30,14 +30,14 @@ codecMoonSize =
 codec : Codec Moon
 codec =
     Codec.object Moon
-        |> Codec.field "orbitPosition" .orbitPosition Point.codec
+        |> Codec.field "orbit_position" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
-        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
+        |> Codec.field "effective_hzco_deviation" .effectiveHZCODeviation Codec.float
         |> Codec.field "orbit" .orbit (Codec.nullable Orbit.codec)
         |> Codec.field "size" .size codecMoonSize
         |> Codec.optionalNullableField "period" .period Codec.float
-        |> Codec.field "biomassRating" .biomassRating Codec.int
-        |> Codec.field "axialTilt" .axialTilt Codec.float
-        |> Codec.optionalField "safeJumpDistance" .safeJumpDistance Codec.string
+        |> Codec.field "biomass_rating" .biomassRating Codec.int
+        |> Codec.field "axial_tilt" .axialTilt Codec.float
+        |> Codec.optionalField "safe_jump_distance" .safeJumpDistance Codec.string
         |> Codec.buildObject

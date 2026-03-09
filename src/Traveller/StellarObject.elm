@@ -17,7 +17,7 @@ type alias SharedPData =
     , size : String
     , orbit : Float
     , period : Float
-    , composition : String
+    , composition : Maybe String
     , retrograde : Bool
     , trojanOffset : Maybe Float
     , axialTilt : Float
@@ -326,58 +326,126 @@ getPlanetoidData stellarObject =
 codecPlanetoidBeltData : Codec PlanetoidBeltData
 codecPlanetoidBeltData =
     Codec.object PlanetoidBeltData
-        |> Codec.field "orbitPosition" .orbitPosition Point.codec
+        |> Codec.field "orbit_position" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
-        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
+        |> Codec.field "effective_hzco_deviation" .effectiveHZCODeviation Codec.float
         |> Codec.field "orbit" .orbit Codec.float
-        |> Codec.field "mType" .mType Codec.float
-        |> Codec.field "sType" .sType Codec.float
-        |> Codec.field "cType" .cType Codec.float
-        |> Codec.field "oType" .oType Codec.float
+        |> Codec.field "m_type" .mType Codec.float
+        |> Codec.field "s_type" .sType Codec.float
+        |> Codec.field "c_type" .cType Codec.float
+        |> Codec.field "o_type" .oType Codec.float
         |> Codec.field "span" .span Codec.float
         |> Codec.field "bulk" .bulk Codec.float
-        |> Codec.field "resourceRating" .resourceRating Codec.float
+        |> Codec.field "resource_rating" .resourceRating Codec.float
         |> Codec.field "period" .period Codec.float
-        |> Codec.field "orbitSequence" .orbitSequence Codec.string
+        |> Codec.field "orbit_sequence" .orbitSequence Codec.string
         |> Codec.field "uwp" .uwp Codec.string
-        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
-        |> Codec.field "orbitType" .orbitType Codec.int
+        |> Codec.field "safe_jump_time" .safeJumpTime Codec.string
+        |> Codec.field "orbit_type" .orbitType Codec.int
         |> Codec.field "au" .au Codec.float
         |> Codec.buildObject
 
 
 codecGasGiantData : Codec GasGiantData
 codecGasGiantData =
-    Codec.object GasGiantData
-        |> Codec.field "orbitPosition" .orbitPosition Point.codec
+    Codec.object
+        (\pos inc ecc hzco code_ diam mass_ orb mns hasRingM tj axTilt per orbitSeq sjt ot au ->
+            { orbitPosition = pos
+            , inclination = inc
+            , eccentricity = ecc
+            , effectiveHZCODeviation = hzco
+            , code = code_
+            , diameter = diam
+            , mass = mass_
+            , orbit = orb
+            , moons = mns
+            , hasRing = Maybe.withDefault False hasRingM
+            , trojanOffset = tj
+            , axialTilt = axTilt
+            , period = per
+            , orbitSequence = orbitSeq
+            , safeJumpTime = sjt
+            , orbitType = ot
+            , au = au
+            }
+        )
+        |> Codec.field "orbit_position" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
-        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
+        |> Codec.field "effective_hzco_deviation" .effectiveHZCODeviation Codec.float
         |> Codec.field "code" .code Codec.string
         |> Codec.field "diameter" .diameter Codec.float
-        |> Codec.field "mass" .mass (Codec.nullable Codec.float)
+        |> Codec.optionalNullableField "mass" .mass Codec.float
         |> Codec.field "orbit" .orbit Codec.float
-        |> Codec.field "moons" .moons (Codec.list Moon.codec)
-        |> Codec.field "hasRing" .hasRing Codec.bool
-        |> Codec.field "trojanOffset" .trojanOffset (Codec.nullable Codec.float)
-        |> Codec.field "axialTilt" .orbit Codec.float
-        |> Codec.field "period" .orbit Codec.float
-        |> Codec.field "orbitSequence" .orbitSequence Codec.string
-        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
-        |> Codec.field "orbitType" .orbitType Codec.int
+        |> Codec.field "moons"
+            .moons
+            (Codec.build
+                (Codec.encoder (Codec.list Moon.codec))
+                (JsDecode.oneOf
+                    [ Codec.decoder (Codec.list Moon.codec)
+                    , JsDecode.succeed []
+                    ]
+                )
+            )
+        |> Codec.optionalField "has_ring" (\d -> Just d.hasRing) Codec.bool
+        |> Codec.optionalNullableField "trojan_offset" .trojanOffset Codec.float
+        |> Codec.field "axial_tilt" .axialTilt Codec.float
+        |> Codec.field "period" .period Codec.float
+        |> Codec.field "orbit_sequence" .orbitSequence Codec.string
+        |> Codec.field "safe_jump_time" .safeJumpTime Codec.string
+        |> Codec.field "orbit_type" .orbitType Codec.int
         |> Codec.field "au" .au Codec.float
         |> Codec.buildObject
 
 
 codecSharedPData : Codec SharedPData
 codecSharedPData =
-    Codec.object SharedPData
+    Codec.object
+        (\atm pos inc ecc hzco sz orb per comp ret tj axTilt mns bio bioC bioDiv compat res natS extS hasRingM hydro alb den grn temp hab orbitSeq uwp_ diam grav mass_ escV sjt ot au ->
+            { atmosphere = atm
+            , orbitPosition = pos
+            , inclination = inc
+            , eccentricity = ecc
+            , effectiveHZCODeviation = hzco
+            , size = sz
+            , orbit = orb
+            , period = per
+            , composition = comp
+            , retrograde = ret
+            , trojanOffset = tj
+            , axialTilt = axTilt
+            , moons = mns
+            , biomassRating = bio
+            , biocomplexityCode = bioC
+            , biodiversityRating = bioDiv
+            , compatibilityRating = compat
+            , resourceRating = res
+            , nativeSophont = natS
+            , extinctSophont = extS
+            , hasRing = Maybe.withDefault False hasRingM
+            , hydrographics = hydro
+            , albedo = alb
+            , density = den
+            , greenhouse = grn
+            , meanTemperature = temp
+            , habitabilityRating = hab
+            , orbitSequence = orbitSeq
+            , uwp = uwp_
+            , diameter = diam
+            , gravity = grav
+            , mass = mass_
+            , escapeVelocity = escV
+            , safeJumpTime = sjt
+            , orbitType = ot
+            , au = au
+            }
+        )
         |> Codec.field "atmosphere" .atmosphere Atmosphere.codec
-        |> Codec.field "orbitPosition" .orbitPosition Point.codec
+        |> Codec.field "orbit_position" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
-        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
+        |> Codec.field "effective_hzco_deviation" .effectiveHZCODeviation Codec.float
         |> Codec.field "size"
             .size
             (Codec.oneOf Codec.string
@@ -387,59 +455,80 @@ codecSharedPData =
             )
         |> Codec.field "orbit" .orbit Codec.float
         |> Codec.field "period" .period Codec.float
-        |> Codec.field "composition" .composition Codec.string
+        |> Codec.optionalField "composition" .composition Codec.string
         |> Codec.field "retrograde" .retrograde Codec.bool
-        |> Codec.field "trojanOffset" .trojanOffset (Codec.nullable Codec.float)
-        |> Codec.field "axialTilt" .axialTilt Codec.float
-        |> Codec.field "moons" .moons (Codec.list (Codec.lazy (\_ -> Moon.codec)))
-        |> Codec.field "biomassRating" .biomassRating Codec.int
-        |> Codec.field "biocomplexityCode" .biocomplexityCode Codec.int
-        |> Codec.field "biodiversityRating" .biodiversityRating Codec.int
-        |> Codec.field "compatibilityRating" .compatibilityRating Codec.int
-        |> Codec.field "resourceRating" .resourceRating Codec.int
-        |> Codec.field "nativeSophont" .nativeSophont Codec.bool
-        |> Codec.field "extinctSophont" .extinctSophont Codec.bool
-        |> Codec.field "hasRing" .hasRing Codec.bool
+        |> Codec.optionalNullableField "trojan_offset" .trojanOffset Codec.float
+        |> Codec.field "axial_tilt" .axialTilt Codec.float
+        |> Codec.field "moons"
+            .moons
+            (Codec.build
+                (Codec.encoder (Codec.list (Codec.lazy (\_ -> Moon.codec))))
+                (JsDecode.oneOf
+                    [ Codec.decoder (Codec.list (Codec.lazy (\_ -> Moon.codec)))
+                    , JsDecode.succeed []
+                    ]
+                )
+            )
+        |> Codec.field "biomass_rating" .biomassRating Codec.int
+        |> Codec.field "biocomplexity_rating" .biocomplexityCode Codec.int
+        |> Codec.field "biodiversity_rating" .biodiversityRating Codec.int
+        |> Codec.field "compatibility_rating" .compatibilityRating Codec.int
+        |> Codec.field "resource_rating" .resourceRating Codec.int
+        |> Codec.field "native_sophont" .nativeSophont Codec.bool
+        |> Codec.field "extinct_sophont" .extinctSophont Codec.bool
+        |> Codec.optionalField "has_ring" (\d -> Just d.hasRing) Codec.bool
         |> Codec.optionalField "hydrographics" .hydrographics codecHydrographics
         |> Codec.field "albedo" .albedo Codec.float
         |> Codec.optionalField "density" .density Codec.float
         |> Codec.optionalField "greenhouse" .greenhouse Codec.float
-        |> Codec.field "meanTemperature" .meanTemperature (Codec.nullable Codec.float)
-        |> Codec.optionalField "habitabilityRating" .habitabilityRating Codec.int
-        |> Codec.field "orbitSequence" .orbitSequence Codec.string
+        |> Codec.optionalNullableField "temperature" .meanTemperature Codec.float
+        |> Codec.optionalField "habitability_rating" .habitabilityRating Codec.int
+        |> Codec.field "orbit_sequence" .orbitSequence Codec.string
         |> Codec.field "uwp" .uwp Codec.string
         |> Codec.field "diameter" .diameter Codec.float
-        |> Codec.field "gravity" .gravity (Codec.nullable Codec.float)
-        |> Codec.field "mass" .mass (Codec.nullable Codec.float)
-        |> Codec.field "escapeVelocity" .escapeVelocity (Codec.nullable Codec.float)
-        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
-        |> Codec.field "orbitType" .orbitType Codec.int
+        |> Codec.optionalNullableField "gravity" .gravity Codec.float
+        |> Codec.optionalNullableField "mass" .mass Codec.float
+        |> Codec.optionalNullableField "escape_velocity" .escapeVelocity Codec.float
+        |> Codec.field "safe_jump_time" .safeJumpTime Codec.string
+        |> Codec.field "orbit_type" .orbitType Codec.int
         |> Codec.field "au" .au Codec.float
         |> Codec.buildObject
 
 
 decodeStellarObject : JsDecode.Decoder StellarObject
 decodeStellarObject =
-    JsDecode.oneOf
-        [ JsDecode.map GasGiant (Codec.decoder codecGasGiantData)
-        , JsDecode.map TerrestrialPlanet (Codec.decoder codecSharedPData)
-        , JsDecode.map PlanetoidBelt (Codec.decoder codecPlanetoidBeltData)
-        , JsDecode.map Planetoid (Codec.decoder codecSharedPData)
-        , JsDecode.map Star (Codec.decoder codecStarData)
-        ]
+    JsDecode.field "orbit_type" JsDecode.int
+        |> JsDecode.andThen
+            (\orbitType ->
+                case orbitType of
+                    10 ->
+                        JsDecode.map GasGiant (Codec.decoder codecGasGiantData)
+
+                    11 ->
+                        JsDecode.map TerrestrialPlanet (Codec.decoder codecSharedPData)
+
+                    12 ->
+                        JsDecode.map PlanetoidBelt (Codec.decoder codecPlanetoidBeltData)
+
+                    13 ->
+                        JsDecode.map Planetoid (Codec.decoder codecSharedPData)
+
+                    _ ->
+                        JsDecode.map Star (Codec.decoder codecStarData)
+            )
 
 
 codecStarData : Codec StarData
 codecStarData =
     Codec.object InnerStarData
-        |> Codec.field "orbitPosition" .orbitPosition Point.codec
+        |> Codec.field "orbit_position" .orbitPosition Point.codec
         |> Codec.field "inclination" .inclination Codec.float
         |> Codec.field "eccentricity" .eccentricity Codec.float
-        |> Codec.field "effectiveHZCODeviation" .effectiveHZCODeviation Codec.float
-        |> Codec.field "stellarClass" .stellarClass Codec.string
-        |> Codec.field "stellarType" .stellarType Codec.string
-        |> Codec.field "subtype" .subtype (Codec.nullable Codec.int)
-        |> Codec.field "orbitType" .orbitType Codec.int
+        |> Codec.field "effective_hzco_deviation" .effectiveHZCODeviation Codec.float
+        |> Codec.field "stellar_class" .stellarClass Codec.string
+        |> Codec.field "stellar_type" .stellarType Codec.string
+        |> Codec.field "stellar_subtype" .subtype (Codec.nullable Codec.int)
+        |> Codec.field "orbit_type" .orbitType Codec.int
         |> Codec.field "mass" .mass (Codec.nullable Codec.float)
         |> Codec.field "diameter" .diameter (Codec.nullable Codec.float)
         |> Codec.field "temperature" .temperature (Codec.nullable Codec.int)
@@ -449,11 +538,11 @@ codecStarData =
         |> Codec.field "orbit" .orbit Codec.float
         |> Codec.field "period" .period Codec.float
         |> Codec.field "baseline" .baseline Codec.int
-        |> Codec.field "stellarObjects" .stellarObjects (Codec.list (Codec.lazy (\_ -> codecStellarObject)))
-        |> Codec.field "orbitSequence" .orbitSequence Codec.string
-        |> Codec.field "safeJumpTime" .safeJumpTime Codec.string
+        |> Codec.field "stellar_objects" .stellarObjects (Codec.list (Codec.lazy (\_ -> codecStellarObject)))
+        |> Codec.field "orbit_sequence" .orbitSequence Codec.string
+        |> Codec.field "safe_jump_time" .safeJumpTime Codec.string
         |> Codec.field "au" .au Codec.float
-        |> Codec.field "jumpShadow" .jumpShadow (Codec.nullable Codec.float)
+        |> Codec.field "jump_shadow" .jumpShadow (Codec.nullable Codec.float)
         |> Codec.buildObject
         |> Codec.map StarDataWrap (\(StarDataWrap data) -> data)
 

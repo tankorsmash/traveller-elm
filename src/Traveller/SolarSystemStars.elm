@@ -36,10 +36,10 @@ starTypeCodec : Codec StarType
 starTypeCodec =
     Codec.object StarTypeData
         |> Codec.field "au" .au Codec.float
-        |> Codec.field "subtype" .subtype (Codec.nullable Codec.int)
+        |> Codec.field "stellar_subtype" .subtype (Codec.nullable Codec.int)
         |> Codec.field "companion" .companion (Codec.nullable <| Codec.lazy (\_ -> starTypeCodec))
-        |> Codec.field "stellarType" .stellarType Codec.string
-        |> Codec.field "stellarClass" .stellarClass Codec.string
+        |> Codec.field "stellar_type" .stellarType Codec.string
+        |> Codec.field "stellar_class" .stellarClass Codec.string
         |> Codec.field "colour" .colour (Codec.nullable codecStarColour)
         |> Codec.field "diameter" .diameter (Codec.nullable Codec.float)
         |> Codec.buildObject
@@ -93,8 +93,8 @@ starSystemCodec =
         |> Codec.field "scan_points" .scanPoints Codec.int
         |> Codec.field "survey_index" .surveyIndex Codec.int
         |> Codec.field "gas_giant_count" .gasGiantCount Codec.int
-        |> Codec.field "terrestrial_planet_count" .terrestrialPlanetCount Codec.int
-        |> Codec.field "planetoid_belt_count" .planetoidBeltCount Codec.int
+        |> Codec.field "terrestrial_count" .terrestrialPlanetCount Codec.int
+        |> Codec.field "belt_count" .planetoidBeltCount Codec.int
         |> Codec.field "allegiance" .allegiance (Codec.nullable Codec.string)
         |> Codec.field "native_sophont" .nativeSophont Codec.bool
         |> Codec.field "extinct_sophont" .extinctSophont Codec.bool
@@ -126,8 +126,8 @@ fallibleStarSystemDecoder =
         |> required "scan_points" Decode.int
         |> required "survey_index" Decode.int
         |> required "gas_giant_count" Decode.int
-        |> required "terrestrial_planet_count" Decode.int
-        |> required "planetoid_belt_count" Decode.int
+        |> required "terrestrial_count" Decode.int
+        |> required "belt_count" Decode.int
         |> required "allegiance" (Decode.nullable Decode.string)
         |> required "native_sophont" Decode.bool
         |> required "extinct_sophont" Decode.bool
