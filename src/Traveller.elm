@@ -1058,7 +1058,7 @@ renderSectorOutline hexSize hex =
     in
     Svg.polyline
         [ points points_
-        , SvgAttrs.id "sectorOutline"
+        , SvgAttrs.id ("sectorOutline-" ++ String.fromInt hex.sectorX ++ "-" ++ String.fromInt hex.sectorY)
         , SvgAttrs.stroke "#0a0a0a40"
         , SvgAttrs.fill "none"
         , SvgAttrs.strokeWidth "3"
@@ -1240,11 +1240,27 @@ viewHexes ( { upperLeftHex, lowerRightHex }, rawHexaPoints ) { svgWidth, svgHeig
                                 )
                             |> Svg.Keyed.node "g" []
                 in
-                [ keyedHexes
-                , renderSectorOutline hexSize (upperLeftHex |> HexAddress.toSectorAddress)
-                , renderSectorOutline hexSize (lowerRightHex |> HexAddress.toSectorAddress)
-                , singlePolyHex
-                ]
+                let
+                    ulSector =
+                        HexAddress.toSectorAddress upperLeftHex
+
+                    lrSector =
+                        HexAddress.toSectorAddress lowerRightHex
+
+                    sectorOutlines =
+                        List.range (min ulSector.sectorX lrSector.sectorX) (max ulSector.sectorX lrSector.sectorX)
+                            |> List.concatMap
+                                (\sx ->
+                                    List.range (min ulSector.sectorY lrSector.sectorY) (max ulSector.sectorY lrSector.sectorY)
+                                        |> List.map
+                                            (\sy ->
+                                                renderSectorOutline hexSize { ulSector | sectorX = sx, sectorY = sy }
+                                            )
+                                )
+                in
+                [ keyedHexes ]
+                    ++ sectorOutlines
+                    ++ [ singlePolyHex ]
                     ++ labels
            )
         |> (let
