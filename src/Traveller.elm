@@ -1,6 +1,5 @@
 port module Traveller exposing (Model, ModelData, Msg(..), init, subscriptions, update, view)
 
-import Array
 import Browser.Dom
 import Browser.Events
 import Browser.Navigation
@@ -28,8 +27,6 @@ import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Element.Lazy
-import FontAwesome as Icon exposing (Icon)
-import FontAwesome.Solid as Icon
 import FormatNumber exposing (format)
 import FormatNumber.Locales exposing (Decimals(..), usLocale)
 import HostConfig exposing (HostConfig)
@@ -40,8 +37,6 @@ import Html.Events.Extra.Mouse
 import Html.Lazy
 import Http
 import Json.Decode as JsDecode
-import List.Extra as List
-import Maybe.Extra as Maybe
 import Parser
 import RemoteData exposing (RemoteData(..))
 import Result.Extra as Result
@@ -86,7 +81,6 @@ import Traveller.Hydrographics exposing (hydrographicsPercentageDescription, sur
 import Traveller.LawLevel as LawLevel
 import Traveller.Lifeforms exposing (bioChemistryCompatibilityDescription, biocomplexityDescription, biodiversityDescription, biomassDescription, habitabilityDescription)
 import Traveller.Parser exposing (UWP, hydrosphereDescription, sizeDescription, uwp)
-import Traveller.Point exposing (StellarPoint)
 import Traveller.Population exposing (populationDescription)
 import Traveller.Region as Region exposing (Region, RegionDict)
 import Traveller.Route as Route exposing (Route, RouteList)
@@ -96,8 +90,6 @@ import Traveller.Sidebar
         ( SidebarMsgs
         , sidebarWidth
         , viewSidebarColumn
-        , viewSidebarFooter
-        , viewSystemDetailsSidebar
         )
 import Traveller.SolarSystem as SolarSystem exposing (SolarSystem)
 import Traveller.SolarSystemStars exposing (FallibleStarSystem, StarSystem, StarType, StarTypeData, fallibleStarSystemDecoder, getStarTypeData, isBrownDwarfType)
@@ -110,39 +102,17 @@ import Traveller.StellarObjectView
         , JumpShadowCheckers
         , StellarObjectMsgs
         , convertColor
-        , displayStarDetails
         )
 import Traveller.StellarTaint exposing (taintPersistenceDescription, taintSeverityDescription, taintSubtypeDescription)
 import Traveller.TechLevel as TechLevel
-import Traveller.TravelCalculations exposing (auToKMs, calcDistance2F, secondsToDaysWatches, travelTime, travelTimeInSeconds)
 import Traveller.UI
     exposing
         ( colorToElementColor
         , deepnightColor
         , deepnightGray
-        , deepnightLightGray
-        , descriptionStyle
-        , floatDisplay
-        , fontDarkTextColor
         , fontTextColor
-        , groupAttrs
-        , headerAttrs
-        , imageStyle
-        , jumpShadowTextColor
         , monospaceText
-        , numberDisplay
-        , orbitStyle
-        , safeJumpStyle
-        , sequenceStyle
-        , taintTextDisplay
-        , textColor
-        , textDisplay
-        , textDisplayMedium
-        , textDisplayNarrow
-        , travelStyle
-        , travellerRed
         , uiDeepnightColorFontColour
-        , valueAttrs
         , zeroEach
         )
 import Url.Builder
