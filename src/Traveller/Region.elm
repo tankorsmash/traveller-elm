@@ -11,7 +11,7 @@ type alias Region =
     { id : Int
     , colour : Color
     , name : String
-    , labelPosition : HexAddress
+    , labelPosition : Maybe HexAddress
     , hexes : List HexAddress
     }
 
@@ -37,9 +37,12 @@ codecColour =
 
 codec : Codec Region
 codec =
-    Codec.object (\x y id colour name hexes -> Region id colour name { x = x, y = y } hexes)
-        |> Codec.field "label_x" (.labelPosition >> .x) Codec.int
-        |> Codec.field "label_y" (.labelPosition >> .y) Codec.int
+    Codec.object
+        (\mx my id colour name hexes ->
+            Region id colour name (Maybe.map2 (\x y -> { x = x, y = y }) mx my) hexes
+        )
+        |> Codec.field "label_x" (.labelPosition >> Maybe.map .x) (Codec.maybe Codec.int)
+        |> Codec.field "label_y" (.labelPosition >> Maybe.map .y) (Codec.maybe Codec.int)
         |> Codec.field "id" .id Codec.int
         |> Codec.field "colour" .colour codecColour
         |> Codec.field "name" .name Codec.string

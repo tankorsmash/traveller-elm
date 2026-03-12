@@ -11,7 +11,7 @@ type alias HostConfig =
 
 default : HostConfig
 default =
-    ( "http://localhost:3000", [ "api" ] )
+    ( "https://mytravelleruniverse.net", [ "c", "revelation", "api" ] )
 
 
 

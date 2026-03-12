@@ -859,14 +859,14 @@ renderHexWithStar starSystem hexColour hexAddrX hexAddrY vox voy size hexapoints
                             else
                                 "?"
                      in
-                     [ Svg.tspan [ SvgAttrs.fill "#109076", SvgAttrs.fontWeight "800" ]
-                        [ Svg.text <| showIfKnown gasGiantSI starSystem.gasGiantCount ]
-                     , Svg.text "–"
-                     , Svg.tspan [ SvgAttrs.fill "#809076", SvgAttrs.fontWeight "800" ]
+                     [ Svg.tspan [ SvgAttrs.fill "#809076", SvgAttrs.fontWeight "800" ]
                         [ Svg.text <| showIfKnown terrestrialSI starSystem.terrestrialPlanetCount ]
                      , Svg.text "–"
                      , Svg.tspan [ SvgAttrs.fill "#68B976", SvgAttrs.fontWeight "800" ]
                         [ Svg.text <| showIfKnown planetoidSI starSystem.planetoidBeltCount ]
+                     , Svg.text "–"
+                     , Svg.tspan [ SvgAttrs.fill "#109076", SvgAttrs.fontWeight "800" ]
+                        [ Svg.text <| showIfKnown gasGiantSI starSystem.gasGiantCount ]
                      ]
                     )
                 ]
@@ -2380,9 +2380,10 @@ update msg ( time, model ) =
 
                 regionLabelDict : Dict.Dict String String
                 regionLabelDict =
-                    List.map
+                    List.filterMap
                         (\region ->
-                            ( HexAddress.toKey region.labelPosition, region.name )
+                            region.labelPosition
+                                |> Maybe.map (\pos -> ( HexAddress.toKey pos, region.name ))
                         )
                         regions
                         |> Dict.fromList
@@ -2408,7 +2409,7 @@ update msg ( time, model ) =
                     { id = 1
                     , colour = Color.blue
                     , name = "Stub Hennlix Nebula"
-                    , labelPosition = { x = -308, y = -104 }
+                    , labelPosition = Just { x = -308, y = -104 }
                     , hexes =
                         [ { x = -308, y = -104 }
                         , { x = -308, y = -105 }
@@ -2429,9 +2430,10 @@ update msg ( time, model ) =
 
                 regionLabelDict : Dict.Dict String String
                 regionLabelDict =
-                    List.map
+                    List.filterMap
                         (\region ->
-                            ( HexAddress.toKey region.labelPosition, region.name )
+                            region.labelPosition
+                                |> Maybe.map (\pos -> ( HexAddress.toKey pos, region.name ))
                         )
                         [ stub ]
                         |> Dict.fromList
